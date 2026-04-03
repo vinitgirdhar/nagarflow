@@ -1,19 +1,13 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
 import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon } from 'lucide-react';
 
 const STATS = [
-  { label: 'Forecast Accuracy', value: '94.1%', sub: 'XGBoost + Prophet' },
+  { label: 'Forecast Accuracy', value: '94.1%', sub: 'AiRLLM Live Engine' },
   { label: 'Surge Window', value: '48hr', sub: 'pre-positioning lead' },
-  { label: 'Active Surges', value: '2', sub: 'Ward 7, Ward 9' },
+  { label: 'Active Surges', value: '2', sub: 'Dynamic Detection' },
   { label: 'Events Tracked', value: '5', sub: 'calendar-aware' },
-];
-
-const ZONES_PRED = [
-  { name: 'Ward 1', demand: 42 }, { name: 'Ward 2', demand: 68 },
-  { name: 'Ward 5', demand: 85 }, { name: 'Ward 7', demand: 95 },
-  { name: 'Ward 9', demand: 88 }, { name: 'Ward 11', demand: 72 },
 ];
 
 interface EventData {
@@ -46,6 +40,16 @@ function getColor(v: number) {
 export default function PredictionsPage() {
   const surgeRef = useRef<HTMLCanvasElement>(null);
   const accRef = useRef<HTMLCanvasElement>(null);
+  const [zonesPred, setZonesPred] = useState<{name: string, demand: number}[]>([]);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:5000/api/predictions')
+      .then(res => res.json())
+      .then(data => {
+        setZonesPred(data.slice(0, 18));
+      })
+      .catch(err => console.error("Error fetching live predictions:", err));
+  }, []);
 
   useEffect(() => {
     const surge = surgeRef.current;
@@ -143,9 +147,10 @@ export default function PredictionsPage() {
       </div>
 
       {/* 4-Hour Zone Prediction */}
-      <div className="card__title" style={{ marginBottom: '.75rem' }}>4-Hour Zone Prediction</div>
+      <div className="card__title" style={{ marginBottom: '.75rem' }}>AiRLLM Zone Predictions (Live DB)</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '.5rem', marginBottom: '2rem' }}>
-        {ZONES_PRED.map(z => (
+        {zonesPred.length === 0 ? <p className="mono" style={{color: 'var(--secondary)', gridColumn: 'span 6'}}>Loading live predictions from AiRLLM Pipeline...</p> : null}
+        {zonesPred.map(z => (
           <div key={z.name} style={{ textAlign: 'center', padding: '.75rem .5rem', borderRadius: '8px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', transition: 'border-color .3s,transform .2s', cursor: 'default' }}>
             <div className="mono" style={{ fontSize: '10px', color: 'var(--accent)' }}>{z.name}</div>
             <div style={{ width: '100%', height: '60px', margin: '.5rem 0', position: 'relative', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
