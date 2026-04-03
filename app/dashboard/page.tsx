@@ -1,6 +1,17 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+
+const STAGGER_CONTAINER: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } }
+};
+
+const FADE_UP: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
 
 const ZONES = [
   { name: 'Ward 1 - Colaba', lat: 18.906, lng: 72.8126, pred: 0.9, real: 0.7, equity: 0.15 },
@@ -125,24 +136,24 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell title="Dashboard" badges={[{ type: 'live', text: 'LIVE' }, { type: 'alert', text: '3 Alerts' }]}>
-      <div className="page-header">
+      <motion.div className="page-header" variants={FADE_UP} initial="hidden" animate="show">
         <h1 className="page-header__title">City Command Center</h1>
         <p className="page-header__sub">Real-time demand prediction, equity correction, and fleet dispatch</p>
-      </div>
+      </motion.div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {STATS.map((s, i) => (
-          <div key={i} className="card">
+          <motion.div key={i} className="card" variants={FADE_UP}>
             <div className="card__label">{s.label}</div>
             <div className="card__value">{s.value}</div>
             <div className="card__sub">{s.sub}</div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Map Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+      <motion.div variants={FADE_UP} initial="hidden" animate="show" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
           <span className="form-label" style={{ margin: 0 }}>Layer:</span>
           <button className={`btn btn--sm ${layer === 'pred' ? 'btn--primary' : 'btn--outline'}`} onClick={() => handleLayerChange('pred')}>Prediction</button>
@@ -162,11 +173,11 @@ export default function DashboardPage() {
           </label>
           <input type="range" min="0" max="48" defaultValue="0" onChange={handleTimeChange} />
         </div>
-      </div>
+      </motion.div>
 
       {/* Map + Sidebar */}
-      <div className="grid-2-1">
-        <div>
+      <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" className="grid-2-1">
+        <motion.div variants={FADE_UP}>
           <div className="map-container map-container--lg" ref={mapRef}></div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '.75rem' }}>
             {[['#C1440E', 'Critical'], ['#E8933A', 'High'], ['#D4A96A', 'Medium'], ['#7A8C5E', 'Low']].map(([color, label]) => (
@@ -175,9 +186,9 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </div>
-        <div>
-          <div className="card" style={{ marginBottom: '1rem' }}>
+        </motion.div>
+        <motion.div variants={STAGGER_CONTAINER}>
+          <motion.div variants={FADE_UP} className="card" style={{ marginBottom: '1rem' }}>
             <div className="card__title">Priority Zones</div>
             <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
               {sorted.map((z, i) => {
@@ -191,8 +202,8 @@ export default function DashboardPage() {
                 );
               })}
             </div>
-          </div>
-          <div className="card">
+          </motion.div>
+          <motion.div variants={FADE_UP} className="card">
             <div className="card__title">Active Alerts</div>
             {ALERTS.map((a, i) => (
               <div key={i} className="feed-item" style={{ marginBottom: '.5rem' }}>
@@ -200,9 +211,9 @@ export default function DashboardPage() {
                 <div className="feed-item__text">{a.text}</div>
               </div>
             ))}
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
 
       {/* Live Ticker */}
       <div style={{ background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '.75rem 1rem', marginTop: '1.5rem', fontFamily: "'Space Mono',monospace", fontSize: '11px', color: 'var(--primary)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
