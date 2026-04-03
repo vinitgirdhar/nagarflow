@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -20,7 +21,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react';
 
-const NAV_LINKS = [
+const ADMIN_LINKS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/complaints', icon: MapPin, label: 'Complaints' },
   { href: '/predictions', icon: LineChart, label: 'Predictions' },
@@ -29,6 +30,10 @@ const NAV_LINKS = [
   { href: '/simulation', icon: Dna, label: 'Simulation' },
   { href: '/agencies', icon: Network, label: 'Agencies' },
   { href: '/reports', icon: FileText, label: 'Reports' },
+];
+
+const MAINTENANCE_LINKS = [
+  { href: '/maintenance', icon: Truck, label: 'Active Dispatch' },
 ];
 
 interface TopbarBadge {
@@ -43,6 +48,7 @@ interface SidebarProps {
 
 export default function DashboardShell({ title, badges, children }: SidebarProps & { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState('admin');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -50,10 +56,20 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
   useEffect(() => {
     const stored = sessionStorage.getItem('nagarflow_role') || 'admin';
     setRole(stored);
-  }, []);
+    
+    // Redirect logic if wrong role for path
+    if (stored === 'maintenance' && pathname !== '/maintenance' && pathname !== '/login') {
+      router.push('/maintenance');
+    }
+    if (stored === 'admin' && pathname === '/maintenance') {
+      router.push('/dashboard');
+    }
+  }, [pathname, router]);
 
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
   const initials = role.charAt(0).toUpperCase();
+
+  const linksToShow = role === 'admin' ? ADMIN_LINKS : MAINTENANCE_LINKS;
 
   return (
     <div className={`app ${isCollapsed ? 'collapsed' : ''}`}>
@@ -64,7 +80,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
           <span className="sidebar__logo-text">NagarFlow</span>
         </div>
         <nav className="sidebar__nav">
-          {NAV_LINKS.map(l => {
+          {linksToShow.map(l => {
             const Icon = l.icon;
             const isActive = pathname === l.href;
             return (

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+import MicOperator from '../components/MicOperator';
 
 const STAGGER_CONTAINER: Variants = {
   hidden: { opacity: 0 },
@@ -13,21 +14,6 @@ const FADE_UP: Variants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
 };
 
-const ZONES = [
-  { name: 'Ward 1 - Colaba', lat: 18.906, lng: 72.8126, pred: 0.9, real: 0.7, equity: 0.15 },
-  { name: 'Ward 2 - Sandhurst', lat: 18.955, lng: 72.832, pred: 0.75, real: 0.4, equity: 0.35 },
-  { name: 'Ward 3 - Byculla', lat: 18.978, lng: 72.833, pred: 0.6, real: 0.55, equity: 0.05 },
-  { name: 'Ward 4 - Malabar Hill', lat: 18.952, lng: 72.795, pred: 0.3, real: 0.35, equity: -0.05 },
-  { name: 'Ward 5 - Dadar', lat: 19.017, lng: 72.844, pred: 0.85, real: 0.82, equity: 0.03 },
-  { name: 'Ward 6 - Mahim', lat: 19.037, lng: 72.841, pred: 0.45, real: 0.3, equity: 0.2 },
-  { name: 'Ward 7 - Andheri', lat: 19.119, lng: 72.846, pred: 0.95, real: 0.6, equity: 0.35 },
-  { name: 'Ward 8 - Borivali', lat: 19.229, lng: 72.856, pred: 0.55, real: 0.5, equity: 0.1 },
-  { name: 'Ward 9 - Kurla', lat: 19.07, lng: 72.879, pred: 0.88, real: 0.85, equity: 0.03 },
-  { name: 'Ward 10 - Mulund', lat: 19.173, lng: 72.949, pred: 0.4, real: 0.38, equity: 0.02 },
-  { name: 'Ward 11 - Ghatkopar', lat: 19.086, lng: 72.908, pred: 0.7, real: 0.5, equity: 0.25 },
-  { name: 'Ward 12 - Chembur', lat: 19.062, lng: 72.896, pred: 0.65, real: 0.6, equity: 0.08 },
-];
-
 function getColor(v: number) {
   if (v >= 0.8) return '#C1440E';
   if (v >= 0.6) return '#E8933A';
@@ -36,30 +22,27 @@ function getColor(v: number) {
 }
 
 const STATS = [
-  { label: 'Trucks Active', value: '12', sub: 'of 18 deployed' },
-  { label: 'Zones Covered', value: '87%', sub: '34 of 39 zones' },
-  { label: 'Prediction Acc.', value: '94.1%', sub: 'last 24hr' },
+  { label: 'Trucks Active', value: '15', sub: 'of 15 deployed' },
+  { label: 'Zones Covered', value: '87%', sub: 'MMR Grid Matrix' },
+  { label: 'Prediction Acc.', value: '94.1%', sub: 'AiRLLM Core Active' },
   { label: 'Equity Score', value: '0.91', sub: 'bias-corrected' },
-  { label: 'Avg Response', value: '18m', sub: '−4.2m from baseline' },
-];
-
-const ALERTS = [
-  { text: 'Ward 7 demand surge +38% — 3 trucks pre-positioned', level: 'critical' },
-  { text: 'Equity correction: Ward 2 under-served, 2 tankers rerouted', level: 'high' },
-  { text: 'NLP flagged critical complaint: "Road collapsed in Dadar"', level: 'critical' },
+  { label: 'Network State', value: 'NOMINAL', sub: 'Polling Port 5000' },
 ];
 
 export default function DashboardPage() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [layer, setLayer] = useState<'pred' | 'real'>('pred');
-  const [equityOn, setEquityOn] = useState(true);
-  const [timeVal, setTimeVal] = useState('Now');
-  const zonesRef = useRef(ZONES.map(z => ({ ...z })));
-  const mapObjRef = useRef<any>(null);
-  const circlesRef = useRef<any[]>([]);
+  
+  // Live State
+  const [zonesLive, setZonesLive] = useState<any[]>([]);
+  const [trucksLive, setTrucksLive] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<string[]>(['[NOMINAL] System initialized. Routing logic operational.']);
 
+  const mapObjRef = useRef<any>(null);
+  const layerGroupRef = useRef<any>(null);
+
+  // 1. Setup Leaflet Map Geometry
   useEffect(() => {
-    // Load Leaflet CSS
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -70,78 +53,134 @@ export default function DashboardPage() {
     script.onload = () => {
       const L = (window as any).L;
       if (!L || !mapRef.current) return;
-      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OpenStreetMap ©CARTO', maxZoom: 18 }).addTo(map);
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 11);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
       mapObjRef.current = map;
+      layerGroupRef.current = L.layerGroup().addTo(map);
 
-      const truckIcon = L.divIcon({ className: '', html: '<div style="background:#E8933A;width:10px;height:10px;border-radius:50%;border:2px solid #F2E8D9;box-shadow:0 0 8px rgba(232,147,58,.6)"></div>', iconSize: [10, 10] });
-      [[19.02, 72.85], [19.08, 72.89], [19.12, 72.84], [18.96, 72.82], [19.17, 72.95]].forEach((p: any) => {
-        L.marker(p, { icon: truckIcon }).addTo(map).bindPopup('🚛 Active Truck');
-      });
-
-      drawHeatmap(map, zonesRef.current, layer, equityOn, circlesRef);
-
-      // Live updates
-      setInterval(() => {
-        const randomZone = zonesRef.current[Math.floor(Math.random() * zonesRef.current.length)];
-        randomZone.pred = Math.min(1, Math.max(0.1, randomZone.pred + (Math.random() - 0.5) * 0.1));
-        if (mapObjRef.current) drawHeatmap(mapObjRef.current, zonesRef.current, layer, equityOn, circlesRef);
-      }, 5000);
+      // Force instant fetch on map load completion
+      fetchDashboardData();
+      fetchDispatchSuggestions();
     };
     document.head.appendChild(script);
+
+    // Dynamic 10-Second Polling Interval
+    const pollId = setInterval(() => {
+      fetchDashboardData();
+    }, 10000);
+    return () => clearInterval(pollId);
   }, []);
 
-  function drawHeatmap(map: any, zones: typeof ZONES, lyr: 'pred' | 'real', eq: boolean, cRef: React.MutableRefObject<any[]>) {
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/dashboard');
+      if (res.ok) {
+        const data = await res.json();
+        setZonesLive(data.predictions || []);
+        setTrucksLive(data.trucks || []);
+        redrawMap(data.predictions || [], data.trucks || []);
+      }
+    } catch (e) {
+        console.warn('Backend disconnected. Check app.py polling.');
+    }
+  };
+
+  const fetchDispatchSuggestions = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/dispatch');
+      if (res.ok) setSuggestions(await res.json());
+    } catch (e) {}
+  };
+
+  const redrawMap = (zones: any[], trucks: any[]) => {
     const L = (window as any).L;
-    if (!L) return;
-    cRef.current.forEach(c => map.removeLayer(c));
-    cRef.current = [];
+    if (!L || !mapObjRef.current || !layerGroupRef.current) return;
+    
+    // Clear old drawings cleanly
+    layerGroupRef.current.clearLayers();
+    
+    // 1. Draw Heatmap Zones (Size + Color controlled by LLM Output)
     zones.forEach(z => {
-      let val = lyr === 'pred' ? z.pred : z.real;
-      if (eq && z.equity > 0.1) val = Math.min(1, val + z.equity * 0.5);
-      const c = L.circleMarker([z.lat, z.lng], {
-        radius: 18 + val * 20,
+      const val = z.priority_score / 100.0;
+      L.circleMarker([z.lat, z.lon], {
+        radius: 12 + (val * 25),
         fillColor: getColor(val),
         fillOpacity: 0.45,
         color: getColor(val),
-        weight: 2, opacity: 0.8
-      }).addTo(map);
-      c.bindPopup(`<b>${z.name}</b><br>Demand: ${(val * 100).toFixed(0)}%<br>Equity Gap: ${z.equity > 0 ? '+' : ''}${(z.equity * 100).toFixed(0)}%`);
-      cRef.current.push(c);
+        weight: 2,
+        opacity: 0.8
+      }).addTo(layerGroupRef.current).bindPopup(`<b>${z.zone}</b><br>Priority Score: ${z.priority_score}%`);
     });
-  }
 
-  const handleLayerChange = (newLayer: 'pred' | 'real') => {
-    setLayer(newLayer);
-    if (mapObjRef.current) drawHeatmap(mapObjRef.current, zonesRef.current, newLayer, equityOn, circlesRef);
-  };
+    // 2. Draw Active Trucks and Dynamic Route Lines
+    const truckIcon = L.divIcon({ className: '', html: '<div style="background:#5a4a3a;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>', iconSize: [12, 12] });
+    const busyIcon = L.divIcon({ className: '', html: '<div style="background:#C1440E;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(193,68,14,.8)"></div>', iconSize: [12, 12] });
 
-  const handleEquityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEquityOn(e.target.checked);
-    if (mapObjRef.current) drawHeatmap(mapObjRef.current, zonesRef.current, layer, e.target.checked, circlesRef);
-  };
+    trucks.forEach(t => {
+      const isBusy = t.status.startsWith('en_route_to_');
+      L.marker([t.lat, t.lon], { icon: isBusy ? busyIcon : truckIcon })
+        .addTo(layerGroupRef.current)
+        .bindPopup(`<b>${t.name}</b><br>Status: ${t.status}`);
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const h = +e.target.value;
-    setTimeVal(h === 0 ? 'Now' : `+${h}hr`);
-    zonesRef.current.forEach(z => {
-      z.pred = Math.min(1, Math.max(0, z.pred + Math.sin(h * 0.3 + z.lat) * 0.15));
+      // Draw dashed geometry lines exactly when accepted
+      if (isBusy) {
+        const targetZone = t.status.replace('en_route_to_', '');
+        const zInfo = zones.find(z => z.zone === targetZone);
+        if (zInfo) {
+           L.polyline([[t.lat, t.lon], [zInfo.lat, zInfo.lon]], {
+               color: '#C1440E', weight: 4, dashArray: '6, 6', opacity: 0.8
+           }).addTo(layerGroupRef.current);
+        }
+      }
     });
-    if (mapObjRef.current) drawHeatmap(mapObjRef.current, zonesRef.current, layer, equityOn, circlesRef);
   };
 
-  const sorted = [...ZONES].sort((a, b) => b.pred - a.pred);
+  // --- Core Logistics Mutators --- 
+  const handleAccept = async (truckId: number, zone: string, e?: any) => {
+    if(e) e.target.innerHTML = "Dispatching...";
+    try {
+      await fetch('http://127.0.0.1:5000/api/dispatch/accept', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ truck_id: truckId, zone: zone })
+      });
+      setAlerts(prev => [`[LOGISTICS] Locked. Truck-${truckId} routed to ${zone}`, ...prev].slice(0, 3));
+      await fetchDashboardData(); 
+      await fetchDispatchSuggestions(); 
+    } catch(e) {}
+  };
 
-  const msgs = ['Zone 7 surge +38% — trucks deployed', 'Equity gap Ward 2 corrected', 'RL dispatcher: fuel saved 15%', '48hr forecast updated', 'Report generated: 94.1% accuracy'];
+  const handleArrive = async (truckId: number, zone: string, e?: any) => {
+    if(e) e.target.innerHTML = "Logging...";
+    try {
+      await fetch('http://127.0.0.1:5000/api/dispatch/arrive', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ truck_id: truckId, zone: zone })
+      });
+      setAlerts(prev => [`[RESOLVED] Truck-${truckId} confirmed arrival. Zone timestamp reset.`, ...prev].slice(0, 3));
+      await fetchDashboardData();
+      await fetchDispatchSuggestions();
+    } catch(e) {}
+  };
+  
+  const handleSurgeOverride = async () => {
+    try {
+      await fetch('http://127.0.0.1:5000/api/simulate-surge', {method: 'POST'});
+      setAlerts(prev => ['[WARNING] Operator Force Override: Unknown region flooded with +35% anomaly.', ...prev].slice(0, 3));
+      await fetchDashboardData(); // Force map to explode
+      await fetchDispatchSuggestions(); // Generate emergency routing
+    } catch(e) {}
+  };
 
   return (
-    <DashboardShell title="Dashboard" badges={[{ type: 'live', text: 'LIVE' }, { type: 'alert', text: '3 Alerts' }]}>
-      <motion.div className="page-header" variants={FADE_UP} initial="hidden" animate="show">
-        <h1 className="page-header__title">City Command Center</h1>
-        <p className="page-header__sub">Real-time demand prediction, equity correction, and fleet dispatch</p>
+    <DashboardShell title="Dashboard" badges={[{ type: 'live', text: 'POLLED 10s' }, { type: 'alert', text: 'Live Commands' }]}>
+      <motion.div className="page-header" variants={FADE_UP} initial="hidden" animate="show" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+        <div>
+           <h1 className="page-header__title">City Logistics & Action Grid</h1>
+           <p className="page-header__sub">Full interactive dispatch layout rendering geometry straight from your 311 SQLite cluster.</p>
+        </div>
+        <button onClick={handleSurgeOverride} className="btn btn--primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)', color: 'white', fontWeight: 600}}>⚡ Inject +35% System Surge</button>
       </motion.div>
 
-      {/* Stats */}
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {STATS.map((s, i) => (
           <motion.div key={i} className="card" variants={FADE_UP}>
@@ -152,76 +191,66 @@ export default function DashboardPage() {
         ))}
       </motion.div>
 
-      {/* Map Controls */}
-      <motion.div variants={FADE_UP} initial="hidden" animate="show" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <span className="form-label" style={{ margin: 0 }}>Layer:</span>
-          <button className={`btn btn--sm ${layer === 'pred' ? 'btn--primary' : 'btn--outline'}`} onClick={() => handleLayerChange('pred')}>Prediction</button>
-          <button className={`btn btn--sm ${layer === 'real' ? 'btn--primary' : 'btn--outline'}`} onClick={() => handleLayerChange('real')}>Reality</button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-          <span className="form-label" style={{ margin: 0 }}>Equity:</span>
-          <label className="toggle">
-            <input type="checkbox" checked={equityOn} onChange={handleEquityChange} />
-            <div className="toggle__track"></div>
-            <div className="toggle__thumb"></div>
-          </label>
-        </div>
-        <div style={{ flex: 1, minWidth: '200px' }}>
-          <label><span className="form-label" style={{ margin: 0, display: 'inline' }}>Time: </span>
-            <span className="mono" style={{ fontSize: '12px', color: 'var(--glow)', minWidth: '80px', display: 'inline-block' }}>{timeVal}</span>
-          </label>
-          <input type="range" min="0" max="48" defaultValue="0" onChange={handleTimeChange} />
-        </div>
-      </motion.div>
-
-      {/* Map + Sidebar */}
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" className="grid-2-1">
         <motion.div variants={FADE_UP}>
-          <div className="map-container map-container--lg" ref={mapRef}></div>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '.75rem' }}>
-            {[['#C1440E', 'Critical'], ['#E8933A', 'High'], ['#D4A96A', 'Medium'], ['#7A8C5E', 'Low']].map(([color, label]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontFamily: "'Space Mono',monospace", fontSize: '10px', color: 'var(--secondary)' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color }}></div>{label}
-              </div>
-            ))}
-          </div>
+          <div className="map-container map-container--lg" ref={mapRef} style={{height: '520px'}}></div>
         </motion.div>
-        <motion.div variants={STAGGER_CONTAINER}>
-          <motion.div variants={FADE_UP} className="card" style={{ marginBottom: '1rem' }}>
-            <div className="card__title">Priority Zones</div>
-            <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              {sorted.map((z, i) => {
-                const pct = (z.pred * 100).toFixed(0);
-                const cls = z.pred >= 0.8 ? '--critical' : z.pred >= 0.6 ? '--high' : z.pred >= 0.4 ? '--medium' : '--low';
+
+        {/* Dynamic Action Array Sidebar */}
+        <motion.div variants={STAGGER_CONTAINER} style={{ display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          
+          <motion.div variants={FADE_UP} className="card" style={{ flexShrink: 0 }}>
+             <div className="card__title">Live Operator Log</div>
+             {alerts.map((msg, i) => (
+                <div key={i} className="feed-item" style={{ marginBottom: '.25rem' }}>
+                  <div className="feed-item__text mono" style={{fontSize: '11px', color: i === 0 ? 'var(--text-heading)' : 'var(--secondary)'}}>{msg}</div>
+                </div>
+             ))}
+          </motion.div>
+
+          <motion.div variants={FADE_UP} style={{ flexShrink: 0 }}>
+             <MicOperator onTranscribed={(data) => {
+                setAlerts(prev => [`[VOICE LOGGED] ${data.zone}: ${data.issue_type} (Severity: ${data.severity}). Analytics injecting into Pipeline.`, ...prev].slice(0, 3));
+             }} />
+          </motion.div>
+
+          <motion.div variants={FADE_UP} className="card" style={{ flexShrink: 0 }}>
+            <div className="card__title">Active Threat DB Log (Top 5)</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {zonesLive.slice(0, 5).map((z, i) => {
+                const cls = z.priority_score >= 80 ? '--critical' : z.priority_score >= 60 ? '--high' : '--medium';
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.6rem .75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--text-heading)', fontWeight: 500 }}>{z.name}</span>
-                    <span className={`badge badge${cls}`}>{pct}%</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.4rem .75rem', borderBottom: '1px solid var(--border-subtle)', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-heading)', fontWeight: 500 }}>{z.zone}</span>
+                    <span className={`badge badge${cls}`}>{z.priority_score}%</span>
                   </div>
                 );
               })}
             </div>
           </motion.div>
-          <motion.div variants={FADE_UP} className="card">
-            <div className="card__title">Active Alerts</div>
-            {ALERTS.map((a, i) => (
-              <div key={i} className="feed-item" style={{ marginBottom: '.5rem' }}>
-                <div className="feed-item__header"><span className={`badge badge--${a.level}`}>{a.level}</span></div>
-                <div className="feed-item__text">{a.text}</div>
-              </div>
-            ))}
+
+          {/* Core Interactive Fleet Haversine Commands */}
+          <motion.div variants={FADE_UP} className="card" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="card__title" style={{ color: 'var(--primary)'}}>Haversine Target Array</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginTop: '.75rem' }}>
+               {suggestions.length === 0 ? <div className="mono" style={{fontSize: '11px', color: 'var(--secondary)', padding: '1rem 0'}}>Network balanced. No routing suggestions.</div> : 
+                 suggestions.map(s => (
+                  <div key={`${s.truck_id}-${s.zone}`} style={{border: '1px solid var(--primary)', background: 'rgba(122,140,94, 0.05)', borderRadius: '6px', padding: '.6rem'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.3rem'}}>
+                      <span style={{fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)'}}>{s.truck_name} ➔ {s.zone}</span>
+                      <span className="mono" style={{fontSize: '10px', color: 'var(--accent)'}}>ETA {s.eta_mins}m</span>
+                    </div>
+                    <div style={{display: 'flex', gap: '.5rem', marginTop: '.3rem'}}>
+                      <button onClick={(e) => handleAccept(s.truck_id, s.zone, e)} className="btn btn--sm btn--primary" style={{flex: 1, padding: '.3rem'}}>Send</button>
+                      <button onClick={(e) => handleArrive(s.truck_id, s.zone, e)} className="btn btn--sm btn--outline" style={{flex: 1, padding: '.3rem', background: 'var(--bg)'}}>Arrive</button>
+                    </div>
+                  </div>
+                 ))
+               }
+            </div>
           </motion.div>
         </motion.div>
       </motion.div>
-
-      {/* Live Ticker */}
-      <div style={{ background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px', padding: '.75rem 1rem', marginTop: '1.5rem', fontFamily: "'Space Mono',monospace", fontSize: '11px', color: 'var(--primary)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-        <span style={{ display: 'inline-block', animation: 'scroll-ticker 20s linear infinite' }}>
-          {msgs.join('  ●  ')}
-        </span>
-      </div>
-      <style>{`@keyframes scroll-ticker{from{transform:translateX(100%)}to{transform:translateX(-100%)}}`}</style>
     </DashboardShell>
   );
 }

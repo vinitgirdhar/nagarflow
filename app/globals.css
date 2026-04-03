@@ -35,7 +35,20 @@ body {
   font-family: 'DM Sans', sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── HIDE SCROLLBARS GLOBALLY ──────────── */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+/* ──────────────────────────────────────── */
+
 h1,h2,h3,h4 { font-family: 'Playfair Display', serif; color: var(--text-heading); }
 .mono { font-family: 'Space Mono', monospace; }
 

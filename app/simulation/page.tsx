@@ -159,7 +159,7 @@ export default function SimulationPage() {
         </div>
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Simulation Log</div>
-          <div className="log" style={{ maxHeight: '400px' }}>
+          <div className="log">
             {simLog.map((l, i) => <div key={i} className="log-entry"><span>[SIM]</span> {l}</div>)}
           </div>
         </div>

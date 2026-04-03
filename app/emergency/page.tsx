@@ -145,7 +145,7 @@ export default function EmergencyPage() {
         {/* Event Log */}
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Auto-Trigger Event Log</div>
-          <div className="log" ref={logRef} style={{ maxHeight: '500px' }}>
+          <div className="log" ref={logRef}>
             {log.map((e, i) => (
               <div key={i} className="log-entry"><span>{e.time}</span> {e.text}</div>
             ))}
