@@ -121,10 +121,10 @@ export default function DashboardPage() {
 
   const sorted = [...ZONES].sort((a, b) => b.pred - a.pred);
 
-  const msgs = ['⬡ Zone 7 surge +38% — trucks deployed', '◈ Equity gap Ward 2 corrected', '◆ RL dispatcher: fuel saved 15%', '▲ 48hr forecast updated', '✦ Report generated: 94.1% accuracy'];
+  const msgs = ['Zone 7 surge +38% — trucks deployed', 'Equity gap Ward 2 corrected', 'RL dispatcher: fuel saved 15%', '48hr forecast updated', 'Report generated: 94.1% accuracy'];
 
   return (
-    <DashboardShell title="Dashboard" badges={[{ type: 'live', text: '● LIVE' }, { type: 'alert', text: '3 Alerts' }]}>
+    <DashboardShell title="Dashboard" badges={[{ type: 'live', text: 'LIVE' }, { type: 'alert', text: '3 Alerts' }]}>
       <div className="page-header">
         <h1 className="page-header__title">City Command Center</h1>
         <p className="page-header__sub">Real-time demand prediction, equity correction, and fleet dispatch</p>

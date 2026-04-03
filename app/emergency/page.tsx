@@ -1,20 +1,24 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import { Thermometer, CloudRain, Wind, Droplets, Sun, AlertTriangle, AlertCircle, ShieldAlert, RefreshCw, AlertOctagon, LucideIcon } from 'lucide-react';
 
-const WEATHER = [
-  { icon: '🌡️', label: 'Temperature', value: '28°C', sub: 'Feels like 32°C' },
-  { icon: '🌧️', label: 'Rainfall', value: '45mm', sub: 'Heavy (next 6hr)' },
-  { icon: '💨', label: 'Wind Speed', value: '38 km/h', sub: 'Gusty NW' },
-  { icon: '💧', label: 'Humidity', value: '89%', sub: 'Very high' },
+
+interface WeatherData { icon: LucideIcon; label: string; value: string; sub: string; }
+const WEATHER: WeatherData[] = [
+  { icon: Thermometer, label: 'Temperature', value: '28°C', sub: 'Feels like 32°C' },
+  { icon: CloudRain, label: 'Rainfall', value: '45mm', sub: 'Heavy (next 6hr)' },
+  { icon: Wind, label: 'Wind Speed', value: '38 km/h', sub: 'Gusty NW' },
+  { icon: Droplets, label: 'Humidity', value: '89%', sub: 'Very high' },
 ];
 
-const STATES = [
-  { name: 'Clear', cls: 'clear', icon: '☀️', actions: 'Normal operations\nStandard routing' },
-  { name: 'Alert', cls: 'alert', icon: '⚠️', actions: 'Monitor active\nPre-stage resources' },
-  { name: 'Warning', cls: 'warning', icon: '🟠', actions: 'Risky roads flagged\nRoutes reconfigured' },
-  { name: 'Emergency', cls: 'emergency', icon: '🔴', actions: 'Full reconfiguration\nAll units deployed' },
-  { name: 'Recovery', cls: 'recovery', icon: '🔵', actions: 'Gradual restore\nDamage assessment' },
+interface StateData { name: string; cls: string; icon: LucideIcon; actions: string; }
+const STATES: StateData[] = [
+  { name: 'Clear', cls: 'clear', icon: Sun, actions: 'Normal operations\nStandard routing' },
+  { name: 'Alert', cls: 'alert', icon: AlertTriangle, actions: 'Monitor active\nPre-stage resources' },
+  { name: 'Warning', cls: 'warning', icon: AlertCircle, actions: 'Risky roads flagged\nRoutes reconfigured' },
+  { name: 'Emergency', cls: 'emergency', icon: ShieldAlert, actions: 'Full reconfiguration\nAll units deployed' },
+  { name: 'Recovery', cls: 'recovery', icon: RefreshCw, actions: 'Gradual restore\nDamage assessment' },
 ];
 
 const STATE_DESCS = [
@@ -87,14 +91,17 @@ export default function EmergencyPage() {
       {/* Weather */}
       <div className="card__title" style={{ marginBottom: '.75rem' }}>Live Weather Data (NOAA Feed)</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1rem', marginBottom: '2rem' }}>
-        {WEATHER.map((w, i) => (
+        {WEATHER.map((w, i) => {
+          const Icon = w.icon;
+          return (
           <div key={i} className="card" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '36px', marginBottom: '.5rem' }}>{w.icon}</div>
+            <div style={{ marginBottom: '.5rem', display: 'flex', justifyContent: 'center' }}><Icon size={32} strokeWidth={1.5} color="var(--primary)" /></div>
             <div className="card__label">{w.label}</div>
             <div className="card__value" style={{ fontSize: '24px' }}>{w.value}</div>
             <div className="card__sub">{w.sub}</div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid-2">
@@ -108,19 +115,22 @@ export default function EmergencyPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '.5rem', marginTop: '1rem' }}>
-            {STATES.map((s, i) => (
+            {STATES.map((s, i) => {
+              const Icon = s.icon;
+              return (
               <div key={i} style={{ padding: '.75rem', borderRadius: '8px', background: 'var(--dark-surface)', border: `1px solid ${i === currentState ? 'var(--glow)' : 'var(--border-subtle)'}`, textAlign: 'center', transition: 'all .3s', ...(i === currentState ? { background: 'rgba(232,147,58,.08)' } : {}) }}>
-                <div style={{ fontSize: '20px', margin: '.25rem 0' }}>{s.icon}</div>
+                <div style={{ margin: '.25rem 0', display: 'flex', justifyContent: 'center', color: i === currentState ? 'var(--glow)' : 'var(--primary)' }}><Icon size={24} /></div>
                 <div className="mono" style={{ fontSize: '11px', color: i === currentState ? 'var(--glow)' : 'var(--secondary)', marginBottom: '.3rem' }}>{s.name}</div>
                 <div style={{ fontSize: '10px', color: '#5a4a3a', lineHeight: 1.4 }}>{s.actions.split('\n').map((a, j) => <span key={j}>{a}<br /></span>)}</div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ fontSize: '13px', color: 'var(--secondary)', marginTop: '.75rem', lineHeight: 1.6 }}>{STATE_DESCS[currentState]}</div>
 
           <div style={{ background: 'rgba(185,45,45,.06)', border: '1px solid rgba(185,45,45,.2)', borderRadius: '12px', padding: '1.25rem', marginTop: '1.5rem' }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '16px', color: 'var(--danger)', marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>⚠️ Manual Override</div>
+            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '16px', color: 'var(--danger)', marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}><AlertOctagon size={18} /> Manual Override</div>
             <p style={{ fontSize: '12px', color: 'var(--secondary)' }}>Override auto-triggered protocol state. Use with caution.</p>
             <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
               <button className="btn btn--outline btn--sm" onClick={() => override(0)}>Force CLEAR</button>

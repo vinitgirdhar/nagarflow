@@ -1,6 +1,12 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { 
+  Network, SlidersHorizontal, MessageSquare, Globe2, TrendingUp, 
+  CloudLightning, MonitorPlay, Users, BrainCircuit, FileBarChart,
+  Radio, Scale, Calculator, Bot, Map, FileOutput, ChevronDown
+} from 'lucide-react';
+
 
 const TICKER_ALERTS = [
   '⬡ Zone 7 — demand surge +38% — 3 trucks pre-positioned 48hrs ahead',
@@ -22,26 +28,26 @@ const STATS_DATA = [
 ];
 
 const FEATURES_DATA = [
-  { id: 'F01', icon: '◎', name: 'Equity-Corrected Demand Engine', value: 'Poor areas served even without complaints', desc: 'Calculates expected vs actual complaints per ward. When actual < expected, priority is amplified. Systemic under-reporting in low-income wards is corrected to guarantee proportional resource dispatch.', tech: ['XGBoost', 'GeoPandas', 'NetworkX'], wide: true },
-  { id: 'F02', icon: '⊞', name: 'Dual-Layer Map + Time Slider', value: 'Forecast vs reality time-scrub UI', desc: 'Side-by-side heatmap layers let operators toggle between prediction and live complaint data. Drag the time slider to scrub through 48-hour windows and verify AI accuracy.', tech: ['Leaflet.js', 'React', 'Prophet'] },
-  { id: 'F03', icon: '◈', name: 'NLP Complaint Intelligence', value: 'Urgency, emotion & category from 311 text', desc: 'Fine-tuned BERT model classifies incoming 311 service requests by urgency, location, and service type. "Road collapsed" is prioritised; "grass is long" is not.', tech: ['HuggingFace', 'spaCy', 'FastAPI'] },
-  { id: 'F04', icon: '⬡', name: 'Social Media Demand Miner', value: 'Twitter & Reddit fill silent reporting gaps', desc: 'Mines geo-tagged posts on Twitter and Reddit using BERT classification. Detects "flood here", "garbage piled up" and other hidden problems where formal 311 reporting is absent.', tech: ['Tweepy', 'PRAW', 'BERT'] },
-  { id: 'F05', icon: '▲', name: 'Predictive Surge Forecaster', value: '48-hour calendar-aware pre-positioning', desc: 'Combines historical demand, calendar events (festivals, elections, matches) and weather signals to forecast surge demand 48 hours ahead for proactive fleet staging.', tech: ['XGBoost', 'Prophet', 'NOAA API'] },
-  { id: 'F06', icon: '◆', name: 'Weather Emergency Protocols', value: 'Auto fleet reconfiguration on weather triggers', desc: 'State machine (Clear→Alert→Warning→Emergency→Recovery) autonomously reconfigures fleet, avoids risky roads, and pre-deploys resources based on NOAA weather feeds — no human needed.', tech: ['NOAA API', 'OR-Tools', 'Redis'] },
-  { id: 'F07', icon: '⊛', name: 'Digital Twin Simulator', value: 'What-if sandbox before committing resources', desc: 'Full discrete-event simulation. Operators run scenarios — "What if demand +40%?", "What if trucks break?" — and see outcomes on a live map before making real-world decisions.', tech: ['SimPy', 'PostgreSQL', 'FastAPI'] },
-  { id: 'F08', icon: '⊕', name: 'Multi-Agency Coordination Hub', value: 'Garbage + Water + Maintenance on one board', desc: 'Graph-based conflict detection identifies resource overlaps between sanitation, water, and maintenance departments. Automatically negotiates priority and prevents duplicate routing.', tech: ['NetworkX', 'GCN', 'OR-Tools'] },
-  { id: 'F09', icon: '✦', name: 'RL Autonomous Dispatcher', value: 'PPO agent: max coverage, min fuel, min time', desc: 'Proximal Policy Optimization agent trained on historical dispatch scenarios. Suggests which truck goes where with full reasoning. Operators can accept or override every suggestion.', tech: ['Stable-Baselines3', 'PyTorch', 'Redis'] },
-  { id: 'F10', icon: '⊜', name: 'Auto Report Generator', value: 'End-of-day LLM-generated KPI PDF', desc: 'AI pipeline compiles zone coverage, missed deployments, equity scores, prediction accuracy, and operator decisions into a structured PDF daily report with charts and recommendations.', tech: ['Claude API', 'FastAPI', 'PostgreSQL'], full: true },
+  { id: 'F01', icon: Scale, name: 'Equity-Corrected Demand Engine', value: 'Poor areas served even without complaints', desc: 'Calculates expected vs actual complaints per ward. When actual < expected, priority is amplified. Systemic under-reporting in low-income wards is corrected to guarantee proportional resource dispatch.', tech: ['XGBoost', 'GeoPandas', 'NetworkX'], wide: true },
+  { id: 'F02', icon: SlidersHorizontal, name: 'Dual-Layer Map + Time Slider', value: 'Forecast vs reality time-scrub UI', desc: 'Side-by-side heatmap layers let operators toggle between prediction and live complaint data. Drag the time slider to scrub through 48-hour windows and verify AI accuracy.', tech: ['Leaflet.js', 'React', 'Prophet'] },
+  { id: 'F03', icon: MessageSquare, name: 'NLP Complaint Intelligence', value: 'Urgency, emotion & category from 311 text', desc: 'Fine-tuned BERT model classifies incoming 311 service requests by urgency, location, and service type. "Road collapsed" is prioritised; "grass is long" is not.', tech: ['HuggingFace', 'spaCy', 'FastAPI'] },
+  { id: 'F04', icon: Globe2, name: 'Social Media Demand Miner', value: 'Twitter & Reddit fill silent reporting gaps', desc: 'Mines geo-tagged posts on Twitter and Reddit using BERT classification. Detects "flood here", "garbage piled up" and other hidden problems where formal 311 reporting is absent.', tech: ['Tweepy', 'PRAW', 'BERT'] },
+  { id: 'F05', icon: TrendingUp, name: 'Predictive Surge Forecaster', value: '48-hour calendar-aware pre-positioning', desc: 'Combines historical demand, calendar events (festivals, elections, matches) and weather signals to forecast surge demand 48 hours ahead for proactive fleet staging.', tech: ['XGBoost', 'Prophet', 'NOAA API'] },
+  { id: 'F06', icon: CloudLightning, name: 'Weather Emergency Protocols', value: 'Auto fleet reconfiguration on weather triggers', desc: 'State machine (Clear→Alert→Warning→Emergency→Recovery) autonomously reconfigures fleet, avoids risky roads, and pre-deploys resources based on NOAA weather feeds — no human needed.', tech: ['NOAA API', 'OR-Tools', 'Redis'] },
+  { id: 'F07', icon: MonitorPlay, name: 'Digital Twin Simulator', value: 'What-if sandbox before committing resources', desc: 'Full discrete-event simulation. Operators run scenarios — "What if demand +40%?", "What if trucks break?" — and see outcomes on a live map before making real-world decisions.', tech: ['SimPy', 'PostgreSQL', 'FastAPI'] },
+  { id: 'F08', icon: Users, name: 'Multi-Agency Coordination Hub', value: 'Garbage + Water + Maintenance on one board', desc: 'Graph-based conflict detection identifies resource overlaps between sanitation, water, and maintenance departments. Automatically negotiates priority and prevents duplicate routing.', tech: ['NetworkX', 'GCN', 'OR-Tools'] },
+  { id: 'F09', icon: BrainCircuit, name: 'RL Autonomous Dispatcher', value: 'PPO agent: max coverage, min fuel, min time', desc: 'Proximal Policy Optimization agent trained on historical dispatch scenarios. Suggests which truck goes where with full reasoning. Operators can accept or override every suggestion.', tech: ['Stable-Baselines3', 'PyTorch', 'Redis'] },
+  { id: 'F10', icon: FileBarChart, name: 'Auto Report Generator', value: 'End-of-day LLM-generated KPI PDF', desc: 'AI pipeline compiles zone coverage, missed deployments, equity scores, prediction accuracy, and operator decisions into a structured PDF daily report with charts and recommendations.', tech: ['Claude API', 'FastAPI', 'PostgreSQL'], full: true },
 ];
 
 const PIPELINE_NODES = [
-  { icon: '📡', label: 'APIs + Social', tip: '311 complaints, Twitter, Reddit, NOAA' },
-  { icon: '🧠', label: 'NLP Engine', tip: 'Urgency, emotion & category extraction' },
-  { icon: '⚖️', label: 'Equity Engine', tip: 'Bias-corrected demand amplification' },
-  { icon: '📊', label: 'Prediction Index', tip: '48-hr XGBoost + Prophet forecast' },
-  { icon: '🤖', label: 'RL Dispatcher', tip: 'PPO agent: optimal fleet routing' },
-  { icon: '🗺️', label: 'Live Dashboard', tip: 'Heatmap, dispatch, alerts' },
-  { icon: '📄', label: 'Auto Report', tip: 'LLM-generated daily KPI PDF' },
+  { icon: Radio, label: 'APIs + Social', tip: '311 complaints, Twitter, Reddit, NOAA' },
+  { icon: MessageSquare, label: 'NLP Engine', tip: 'Urgency, emotion & category extraction' },
+  { icon: Scale, label: 'Equity Engine', tip: 'Bias-corrected demand amplification' },
+  { icon: Calculator, label: 'Prediction Index', tip: '48-hr XGBoost + Prophet forecast' },
+  { icon: Bot, label: 'RL Dispatcher', tip: 'PPO agent: optimal fleet routing' },
+  { icon: Map, label: 'Live Dashboard', tip: 'Heatmap, dispatch, alerts' },
+  { icon: FileOutput, label: 'Auto Report', tip: 'LLM-generated daily KPI PDF' },
 ];
 
 const SCENARIOS_DATA = [
@@ -326,7 +332,7 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="nav" id="nav" ref={navRef} aria-label="Main navigation">
-        <span className="nav__logo">UrbanPulse AI</span>
+        <span className="nav__logo">NagarFlow</span>
         <ul className="nav__links">
           <li><a href="#features" data-section="features">Features</a></li>
           <li><a href="#pipeline" data-section="pipeline">Pipeline</a></li>
@@ -341,12 +347,12 @@ export default function LandingPage() {
         <div className="hero__fog"></div>
         <div className="hero__noise" style={{ filter: 'url(#noise-filter)', background: 'var(--text-heading)' }}></div>
         <div className="hero__content reveal">
-          <h1 className="hero__title">UrbanPulse AI</h1>
+          <h1 className="hero__title">NagarFlow</h1>
           <p className="hero__tagline">The city&apos;s brain. Predict. Dispatch. Learn.</p>
           <p className="hero__sub">Zero hardware · 48-hr forecast · Equity-first dispatch</p>
           <Link href="/login" className="hero__cta" id="hero-cta">Enter Dashboard →</Link>
         </div>
-        <div className="hero__chevron" aria-hidden="true">⌄</div>
+        <div className="hero__chevron" aria-hidden="true"><ChevronDown size={32} /></div>
       </section>
 
       {/* STATS */}
@@ -368,18 +374,20 @@ export default function LandingPage() {
       <section className="features" id="features" aria-label="Platform features">
         <h2 className="section-title reveal">10 Intelligence Modules</h2>
         <div className="features__grid">
-          {FEATURES_DATA.map(f => (
+          {FEATURES_DATA.map(f => {
+            const Icon = f.icon;
+            return (
             <div key={f.id} className={`feature-card reveal-card ${f.wide ? 'feature-card--wide' : ''} ${f.full ? 'feature-card--full' : ''}`} tabIndex={0} role="button" aria-label={f.name}>
               <div className="feature-card__inner">
                 <div className="feature-card__front">
                   <div className="card__id mono">{f.id}</div>
-                  <div className="card__icon">{f.icon}</div>
+                  <div className="card__icon"><Icon size={28} strokeWidth={1.5} /></div>
                   <h3 className="card__name">{f.name}</h3>
                   <p className="card__value-text">{f.value}</p>
                 </div>
                 <div className="feature-card__back">
                   <div className="card__id mono" style={{ color: 'rgba(242,232,217,.6)' }}>{f.id}</div>
-                  <div className="card__icon" style={{ color: 'var(--surface)' }}>{f.icon}</div>
+                  <div className="card__icon" style={{ color: 'var(--surface)' }}><Icon size={28} strokeWidth={1.5} /></div>
                   <h3 className="card__back-name">{f.name}</h3>
                   <p className="card__back-desc">{f.desc}</p>
                   <div className="card__pills">
@@ -388,7 +396,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -399,15 +408,18 @@ export default function LandingPage() {
         <h2 className="section-title reveal">How It Works</h2>
         <p className="pipeline__subtitle reveal">Seven-stage urban intelligence pipeline — raw data to live dispatch</p>
         <div className="pipeline__row">
-          {PIPELINE_NODES.map((n, i) => (
+          {PIPELINE_NODES.map((n, i) => {
+            const Icon = n.icon;
+            return (
             <div key={i} className="pipeline__node">
               <div className="pipeline__circle" data-idx={i}>
-                {n.icon}
+                <Icon size={26} strokeWidth={1.5} />
                 <div className="pipeline__tooltip">{n.tip}</div>
               </div>
               <div className="pipeline__label mono">{n.label}</div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -457,7 +469,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="footer" id="footer">
         <div className="footer__center reveal">
-          <div className="footer__name">UrbanPulse AI</div>
+          <div className="footer__name">NagarFlow</div>
           <div className="footer__sub">Zero Hardware. Total Intelligence. 100% Software.</div>
         </div>
         <div className="footer__bottom">
