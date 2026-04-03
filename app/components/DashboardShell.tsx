@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
+import PageTransition from './PageTransition';
 import { 
   LayoutDashboard, 
   MapPin, 
@@ -64,19 +66,21 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
         <nav className="sidebar__nav">
           {NAV_LINKS.map(l => {
             const Icon = l.icon;
+            const isActive = pathname === l.href;
             return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`sidebar__link ${pathname === l.href ? 'active' : ''}`}
-                id={`nav-${l.href.replace('/', '')}`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <div className="sidebar__link-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={isCollapsed ? 22 : 18} strokeWidth={pathname === l.href ? 2.5 : 2} />
-                </div>
-                <span className="sidebar__link-label">{l.label}</span>
-              </Link>
+              <motion.div key={l.href} whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
+                <Link
+                  href={l.href}
+                  className={`sidebar__link ${isActive ? 'active' : ''}`}
+                  id={`nav-${l.href.replace('/', '')}`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <div className="sidebar__link-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={isCollapsed ? 22 : 18} strokeWidth={isActive ? 2.5 : 2} />
+                  </div>
+                  <span className="sidebar__link-label">{l.label}</span>
+                </Link>
+              </motion.div>
             );
           })}
         </nav>
@@ -98,12 +102,12 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
         {/* Topbar */}
         <header className="topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button className="hamburger" id="hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="hamburger" id="hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu size={22} />
-            </button>
-            <button className="collapse-toggle" onClick={() => setIsCollapsed(!isCollapsed)} title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.1, color: 'var(--primary)' }} whileTap={{ scale: 0.9 }} className="collapse-toggle" onClick={() => setIsCollapsed(!isCollapsed)} title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
               {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
-            </button>
+            </motion.button>
             <span className="topbar__title">{title}</span>
           </div>
           <div className="topbar__right">
@@ -118,7 +122,9 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
         </header>
 
         <div className="content">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </div>
       </div>
     </div>
