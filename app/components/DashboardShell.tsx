@@ -2,16 +2,29 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { 
+  LayoutDashboard, 
+  MapPin, 
+  LineChart, 
+  Truck, 
+  AlertTriangle, 
+  Dna, 
+  Network, 
+  FileText,
+  Menu,
+  ChevronLeft,
+  ArrowLeftRight
+} from 'lucide-react';
 
 const NAV_LINKS = [
-  { href: '/dashboard', icon: '📊', label: 'Dashboard' },
-  { href: '/complaints', icon: '📍', label: 'Complaints' },
-  { href: '/predictions', icon: '📈', label: 'Predictions' },
-  { href: '/dispatch', icon: '🚚', label: 'Dispatch' },
-  { href: '/emergency', icon: '🌧️', label: 'Emergency' },
-  { href: '/simulation', icon: '🧪', label: 'Simulation' },
-  { href: '/agencies', icon: '🤝', label: 'Agencies' },
-  { href: '/reports', icon: '📄', label: 'Reports' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/complaints', icon: MapPin, label: 'Complaints' },
+  { href: '/predictions', icon: LineChart, label: 'Predictions' },
+  { href: '/dispatch', icon: Truck, label: 'Dispatch' },
+  { href: '/emergency', icon: AlertTriangle, label: 'Emergency' },
+  { href: '/simulation', icon: Dna, label: 'Simulation' },
+  { href: '/agencies', icon: Network, label: 'Agencies' },
+  { href: '/reports', icon: FileText, label: 'Reports' },
 ];
 
 interface TopbarBadge {
@@ -30,7 +43,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem('urbanpulse_role') || 'admin';
+    const stored = sessionStorage.getItem('nagarflow_role') || 'admin';
     setRole(stored);
   }, []);
 
@@ -43,26 +56,35 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} id="sidebar">
         <div className="sidebar__logo">
           <span className="sidebar__logo-dot"></span>
-          UrbanPulse AI
+          NagarFlow
         </div>
         <nav className="sidebar__nav">
-          {NAV_LINKS.map(l => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`sidebar__link ${pathname === l.href ? 'active' : ''}`}
-              id={`nav-${l.href.replace('/', '')}`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <span className="sidebar__link-icon">{l.icon}</span>
-              {l.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map(l => {
+            const Icon = l.icon;
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`sidebar__link ${pathname === l.href ? 'active' : ''}`}
+                id={`nav-${l.href.replace('/', '')}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <div className="sidebar__link-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={18} strokeWidth={pathname === l.href ? 2.5 : 2} />
+                </div>
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="sidebar__footer">
-          Role: {roleLabel}<br />
-          <Link href="/login" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '10px' }}>↩ Switch Role</Link><br />
-          <Link href="/" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '10px', marginTop: '4px', display: 'inline-block' }}>← Landing Page</Link>
+          <div style={{ marginBottom: '8px' }}>Role: <span style={{ color: 'var(--text-heading)' }}>{roleLabel}</span></div>
+          <Link href="/login" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ArrowLeftRight size={12} /> Switch Role
+          </Link>
+          <Link href="/" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ChevronLeft size={12} /> Landing Page
+          </Link>
         </div>
       </aside>
 
@@ -71,7 +93,9 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
         {/* Topbar */}
         <header className="topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button className="hamburger" id="hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+            <button className="hamburger" id="hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <Menu size={22} />
+            </button>
             <span className="topbar__title">{title}</span>
           </div>
           <div className="topbar__right">
@@ -80,7 +104,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
             ))}
             <div className="topbar__user">
               <div className="topbar__avatar">{initials}</div>
-              <span className="mono" style={{ fontSize: '11px' }}>{role}</span>
+              <span className="mono" style={{ fontSize: '11px', fontWeight: 600 }}>{role.toUpperCase()}</span>
             </div>
           </div>
         </header>

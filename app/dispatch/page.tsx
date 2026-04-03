@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { Bot, Check, X } from 'lucide-react';
 import DashboardShell from '../components/DashboardShell';
 
 const STATS = [
@@ -81,11 +82,15 @@ export default function DispatchPage() {
 
         {/* RL Suggestions + Vehicle list */}
         <div>
-          <div className="card__title" style={{ marginBottom: '.75rem' }}>🤖 RL Dispatcher Suggestions</div>
+          <div className="card__title" style={{ marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Bot size={18} color="var(--primary)" /> RL Dispatcher Suggestions
+          </div>
           {suggestions.map(s => (
             <div key={s.id} style={{ background: 'rgba(193,68,14,.06)', border: '1px solid rgba(193,68,14,.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '15px', color: 'var(--text-heading)' }}>🤖 {s.id}: {s.truck} → {s.to}</div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '15px', color: 'var(--text-heading)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Bot size={16} /> {s.id}: {s.truck} → {s.to}
+                </div>
                 <div className="mono" style={{ fontSize: '11px', color: 'var(--glow)' }}>Confidence: {s.confidence}</div>
               </div>
               <div className="mono" style={{ fontSize: '10px', color: '#5a4a3a', padding: '.5rem', background: '#0a0806', borderRadius: '4px', marginBottom: '.75rem' }}>From: {s.from} | Truck: {s.truck}</div>
@@ -93,8 +98,8 @@ export default function DispatchPage() {
               <div style={{ display: 'flex', gap: '.75rem' }}>
                 {s.status === 'pending' ? (
                   <>
-                    <button className="btn btn--success btn--sm" onClick={() => handleAction(s.id, 'accepted')}>✓ Accept</button>
-                    <button className="btn btn--danger btn--sm" onClick={() => handleAction(s.id, 'rejected')}>✕ Reject</button>
+                    <button className="btn btn--success btn--sm" onClick={() => handleAction(s.id, 'accepted')}><Check size={14} /> Accept</button>
+                    <button className="btn btn--danger btn--sm" onClick={() => handleAction(s.id, 'rejected')}><X size={14} /> Reject</button>
                   </>
                 ) : (
                   <span className={`badge badge--${s.status === 'accepted' ? 'active' : 'critical'}`}>{s.status}</span>

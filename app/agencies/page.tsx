@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import { Truck, Droplets, Wrench, AlertTriangle, CheckCircle2, AlertOctagon, LucideIcon } from 'lucide-react';
+
 
 const AGENCY_STATS = [
   { label: 'Active Departments', value: '3', sub: 'Sanitation, Water, Maintenance' },
@@ -9,9 +11,11 @@ const AGENCY_STATS = [
   { label: 'Shared Resources', value: '8', sub: 'cross-dept vehicles' },
 ];
 
-const DEPTS = [
+interface DeptData { id: string; name: string; icon: LucideIcon; color: string; vehicles: any[]; zones: string[]; schedule: number[]; }
+
+const DEPTS: DeptData[] = [
   {
-    id: 'sanitation', name: 'Sanitation', icon: '🚛', color: '#C1440E',
+    id: 'sanitation', name: 'Sanitation', icon: Truck, color: '#C1440E',
     vehicles: [
       { id: 'T-100', type: 'Garbage Truck', zone: 'Ward 5', status: 'active', load: '72%' },
       { id: 'T-101', type: 'Garbage Truck', zone: 'Ward 1', status: 'active', load: '85%' },
@@ -22,7 +26,7 @@ const DEPTS = [
     schedule: [1, 1, 2, 2, 1, 0, 0, 1, 2, 1, 1, 0],
   },
   {
-    id: 'water', name: 'Water Supply', icon: '💧', color: '#5a8ca0',
+    id: 'water', name: 'Water Supply', icon: Droplets, color: '#5a8ca0',
     vehicles: [
       { id: 'T-102', type: 'Water Tanker', zone: 'Ward 9', status: 'active', load: '90%' },
       { id: 'T-103', type: 'Water Tanker', zone: 'Depot 1', status: 'idle', load: '0%' },
@@ -32,7 +36,7 @@ const DEPTS = [
     schedule: [0, 1, 1, 0, 0, 1, 2, 2, 1, 0, 0, 1],
   },
   {
-    id: 'maintenance', name: 'Maintenance', icon: '🔧', color: '#D4A96A',
+    id: 'maintenance', name: 'Maintenance', icon: Wrench, color: '#D4A96A',
     vehicles: [
       { id: 'T-104', type: 'Maintenance Van', zone: 'Ward 3', status: 'active', load: '65%' },
       { id: 'T-107', type: 'Maintenance Van', zone: 'Workshop', status: 'maintenance', load: '0%' },
@@ -72,10 +76,12 @@ export default function AgenciesPage() {
       </div>
 
       {/* Conflicts */}
-      <div className="card__title" style={{ marginBottom: '.75rem' }}>⚠️ Active Conflict Alerts</div>
+      <div className="card__title" style={{ marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <AlertTriangle size={18} color="var(--danger)" /> Active Conflict Alerts
+      </div>
       {conflicts.map((c, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.75rem 1rem', background: 'rgba(185,45,45,.06)', border: `1px solid ${c.resolved ? 'var(--accent)' : 'rgba(185,45,45,.2)'}`, borderRadius: '8px', marginBottom: '.75rem', opacity: c.resolved ? 0.5 : 1 }}>
-          <div style={{ fontSize: '20px' }}>{c.resolved ? '✅' : '⚠️'}</div>
+          <div style={{ display: 'flex' }}>{c.resolved ? <CheckCircle2 size={20} color="var(--accent)" /> : <AlertOctagon size={20} color="var(--danger)" />}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '13px', color: c.resolved ? 'var(--accent)' : 'var(--danger)', fontWeight: 500 }}>{c.title}</div>
             <div style={{ fontSize: '11px', color: 'var(--secondary)', marginTop: '.15rem' }}>{c.detail}</div>
@@ -91,14 +97,23 @@ export default function AgenciesPage() {
 
       {/* Department Tabs */}
       <div className="tabs" style={{ marginTop: '2rem' }}>
-        {DEPTS.map(d => (
-          <button key={d.id} className={`tab ${d.id === activeTab ? 'active' : ''}`} onClick={() => setActiveTab(d.id)}>{d.icon} {d.name}</button>
-        ))}
+        {DEPTS.map(d => {
+          const Icon = d.icon;
+          return (
+          <button key={d.id} className={`tab ${d.id === activeTab ? 'active' : ''}`} onClick={() => setActiveTab(d.id)}>
+            <div style={{display:'flex', alignItems:'center', gap:'6px'}}>
+              <Icon size={16} /> {d.name}
+            </div>
+          </button>
+          );
+        })}
       </div>
 
       {/* Dept Content */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '1rem' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', background: dept.color + '22' }}>{dept.icon}</div>
+        <div style={{ width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: dept.color, background: dept.color + '22' }}>
+          <dept.icon size={22} />
+        </div>
         <div>
           <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '18px', color: 'var(--text-heading)' }}>{dept.name} Department</div>
           <span className="badge badge--info">{dept.vehicles.length} vehicles · {dept.zones.length} zones</span>
@@ -144,16 +159,19 @@ export default function AgenciesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12,1fr)', gap: '2px', marginBottom: '.25rem' }}>
             {HOURS.map(h => <div key={h} className="mono" style={{ fontSize: '9px', color: '#5a4a3a', textAlign: 'center' }}>{h}</div>)}
           </div>
-          {DEPTS.map(d => (
+          {DEPTS.map(d => {
+            const Icon = d.icon;
+            return (
             <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '4px' }}>
-              <div className="mono" style={{ width: '80px', fontSize: '10px', color: 'var(--secondary)' }}>{d.icon} {d.name.slice(0, 4)}</div>
+              <div className="mono" style={{ width: '80px', fontSize: '10px', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><Icon size={12} /> {d.name.slice(0, 4)}</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12,1fr)', gap: '2px', flex: 1 }}>
                 {d.schedule.map((s, i) => (
                   <div key={i} style={{ height: '28px', borderRadius: '3px', background: SCHED_COLORS[s], border: s === 2 ? '1px solid rgba(193,68,14,.4)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '8px', color: 'rgba(242,232,217,.6)' }}>{SCHED_LABELS[s]}</div>
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </DashboardShell>

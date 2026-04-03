@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import { MessageSquareText, MessageCircle } from 'lucide-react';
 
 const STATS = [
   { label: 'Total Complaints', value: '247', sub: 'last 24 hours' },
@@ -25,11 +26,11 @@ const COMPLAINTS = [
 ];
 
 const SOCIAL = [
-  { platform: 'twitter', handle: '@mumbai_citizen', text: 'Massive garbage pileup at Ward 7 crossing, been here for 4 days now! @BMCMumbai do something! 🤮', time: '5m ago', location: 'Ward 7, Andheri' },
+  { platform: 'twitter', handle: '@mumbai_citizen', text: 'Massive garbage pileup at Ward 7 crossing, been here for 4 days now! @BMCMumbai do something!', time: '5m ago', location: 'Ward 7, Andheri' },
   { platform: 'reddit', handle: 'r/mumbai', text: 'Anyone else having water supply issues in Ghatkopar? No water since morning.', time: '12m ago', location: 'Ward 11, Ghatkopar' },
-  { platform: 'twitter', handle: '@road_warrior_mum', text: 'AVOID Dadar station area — road completely collapsed, major traffic jam building up 🚗🚗', time: '18m ago', location: 'Ward 5, Dadar' },
+  { platform: 'twitter', handle: '@road_warrior_mum', text: 'AVOID Dadar station area — road completely collapsed, major traffic jam building up.', time: '18m ago', location: 'Ward 5, Dadar' },
   { platform: 'reddit', handle: 'r/mumbai', text: 'The new drainage near Kurla station is already overflowing after just light rain. Horrible planning.', time: '25m ago', location: 'Ward 9, Kurla' },
-  { platform: 'twitter', handle: '@clean_mumbai', text: 'Great work by BMC cleaning Juhu Beach yesterday! 👏 But Ward 2 still neglected.', time: '40m ago', location: 'Ward 2, Sandhurst' },
+  { platform: 'twitter', handle: '@clean_mumbai', text: 'Great work by BMC cleaning Juhu Beach yesterday! But Ward 2 still neglected.', time: '40m ago', location: 'Ward 2, Sandhurst' },
   { platform: 'twitter', handle: '@flood_watch', text: "Water logging starting near Andheri subway. Rain hasn't even been heavy. Drainage blocked?", time: '55m ago', location: 'Ward 7, Andheri' },
   { platform: 'reddit', handle: 'r/IndiaInfra', text: 'Broken water pipe flooding entire lane in Mahim. Nobody from water dept responding.', time: '1h ago', location: 'Ward 6, Mahim' },
 ];
@@ -47,7 +48,7 @@ export default function ComplaintsPage() {
   });
 
   return (
-    <DashboardShell title="Complaint Insights" badges={[{ type: 'live', text: '● NLP Active' }, { type: 'alert', text: '5 Critical' }]}>
+    <DashboardShell title="Complaint Insights" badges={[{ type: 'live', text: 'NLP Active' }, { type: 'alert', text: '5 Critical' }]}>
       <div className="page-header">
         <h1 className="page-header__title">Complaint Insights</h1>
         <p className="page-header__sub">NLP-processed 311 complaints + social media signals</p>
@@ -114,8 +115,8 @@ export default function ComplaintsPage() {
             {SOCIAL.map((s, i) => (
               <div key={i} className="feed-item">
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.75rem' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, background: s.platform === 'twitter' ? 'rgba(29,161,242,.15)' : 'rgba(255,69,0,.15)' }}>
-                    {s.platform === 'twitter' ? '𝕏' : '⊜'}
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: s.platform === 'twitter' ? 'rgba(29,161,242,.15)' : 'rgba(255,69,0,.15)', color: s.platform === 'twitter' ? '#1da1f2' : '#ff4500' }}>
+                    {s.platform === 'twitter' ? <MessageSquareText size={16} /> : <MessageCircle size={16} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div className="feed-item__header">

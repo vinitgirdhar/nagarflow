@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import { TrendingUp, Truck, CloudRain, Clock, Building, TriangleAlert } from 'lucide-react';
 
 const WEATHER_LABELS = ['Clear', 'Light Rain', 'Moderate', 'Heavy', 'Extreme'];
 const ZONE_NAMES = ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12','W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'];
@@ -96,9 +97,9 @@ export default function SimulationPage() {
         <div className="grid-2" style={{ gap: '2rem' }}>
           <div>
             {[
-              { label: '📈 Demand Increase', val: demand + '%', min: 0, max: 100, value: demand, onChange: (v: number) => setDemand(v) },
-              { label: '🚛 Vehicle Failures', val: failure + '%', min: 0, max: 50, value: failure, onChange: (v: number) => setFailure(v) },
-              { label: '🌧️ Weather Severity', val: WEATHER_LABELS[weather], min: 0, max: 4, value: weather, onChange: (v: number) => setWeather(v) },
+              { label: <><TrendingUp size={14} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'4px'}}/> Demand Increase</>, val: demand + '%', min: 0, max: 100, value: demand, onChange: (v: number) => setDemand(v) },
+              { label: <><Truck size={14} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'4px'}}/> Vehicle Failures</>, val: failure + '%', min: 0, max: 50, value: failure, onChange: (v: number) => setFailure(v) },
+              { label: <><CloudRain size={14} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'4px'}}/> Weather Severity</>, val: WEATHER_LABELS[weather], min: 0, max: 4, value: weather, onChange: (v: number) => setWeather(v) },
             ].map((s, i) => (
               <div key={i} style={{ marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
@@ -112,14 +113,14 @@ export default function SimulationPage() {
           <div>
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.5rem' }}>
-                <label className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}>⏱️ Simulation Duration</label>
+                <label className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}><Clock size={14} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'4px'}}/> Simulation Duration</label>
                 <span className="mono" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--glow)' }}>{duration}hr</span>
               </div>
               <input type="range" min={4} max={72} value={duration} step={4} onChange={e => setDuration(+e.target.value)} />
             </div>
             <div style={{ marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.5rem' }}>
-                <label className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}>🏢 Zones Affected</label>
+                <label className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}><Building size={14} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'4px'}}/> Zones Affected</label>
               </div>
               <select className="input" value={zone} onChange={e => setZone(e.target.value)}>
                 <option value="all">All Zones</option>
@@ -130,7 +131,7 @@ export default function SimulationPage() {
               </select>
             </div>
             <button className="btn btn--primary btn--lg" onClick={runSim} disabled={running} style={{ width: '100%', marginTop: '.5rem', justifyContent: 'center' }}>
-              {running ? '⏳ Simulating...' : '▶ Run Simulation'}
+              {running ? '⏳ Simulating...' : 'Run Simulation'}
             </button>
           </div>
         </div>
@@ -165,8 +166,8 @@ export default function SimulationPage() {
       </div>
 
       {overloadAlert && (
-        <div style={{ background: 'rgba(185,45,45,.1)', border: '1px solid rgba(185,45,45,.3)', borderRadius: '8px', padding: '1rem', fontFamily: "'Space Mono',monospace", fontSize: '12px', color: 'var(--danger)', marginTop: '1rem', animation: 'pulse-text 1.5s infinite' }}>
-          ⚠ FLEET OVERLOAD DETECTED — Demand exceeds available vehicle capacity. PPO recommends deploying 2 reserve trucks from depot.
+        <div style={{ background: 'rgba(185,45,45,.1)', border: '1px solid rgba(185,45,45,.3)', borderRadius: '8px', padding: '1rem', fontFamily: "'Space Mono',monospace", fontSize: '12px', color: 'var(--danger)', marginTop: '1rem', animation: 'pulse-text 1.5s infinite', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <TriangleAlert size={18} /> FLEET OVERLOAD DETECTED — Demand exceeds available vehicle capacity. PPO recommends deploying 2 reserve trucks from depot.
         </div>
       )}
     </DashboardShell>

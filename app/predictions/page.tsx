@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon } from 'lucide-react';
 
 const STATS = [
   { label: 'Forecast Accuracy', value: '94.1%', sub: 'XGBoost + Prophet' },
@@ -15,12 +16,20 @@ const ZONES_PRED = [
   { name: 'Ward 9', demand: 88 }, { name: 'Ward 11', demand: 72 },
 ];
 
-const EVENTS = [
-  { icon: '🎉', name: 'Ganesh Chaturthi Procession', detail: 'Ward 5, Ward 9 — starts in 36hr', impact: '+45%', color: '#C1440E' },
-  { icon: '🏏', name: 'Cricket Match — Wankhede', detail: 'Ward 1 — starts in 18hr', impact: '+28%', color: '#E8933A' },
-  { icon: '🌧️', name: 'Heavy Rain Warning', detail: 'All wards — 12-24hr window', impact: '+35%', color: '#C1440E' },
-  { icon: '🏪', name: 'Weekly Market Day', detail: 'Ward 3, Ward 6 — tomorrow', impact: '+15%', color: '#D4A96A' },
-  { icon: '🗳️', name: 'Local Election Activity', detail: 'Ward 2, Ward 8 — in 48hr', impact: '+20%', color: '#D4A96A' },
+interface EventData {
+  icon: LucideIcon;
+  name: string;
+  detail: string;
+  impact: string;
+  color: string;
+}
+
+const EVENTS: EventData[] = [
+  { icon: PartyPopper, name: 'Ganesh Chaturthi Procession', detail: 'Ward 5, Ward 9 — starts in 36hr', impact: '+45%', color: '#C1440E' },
+  { icon: Trophy, name: 'Cricket Match — Wankhede', detail: 'Ward 1 — starts in 18hr', impact: '+28%', color: '#E8933A' },
+  { icon: CloudRain, name: 'Heavy Rain Warning', detail: 'All wards — 12-24hr window', impact: '+35%', color: '#C1440E' },
+  { icon: Store, name: 'Weekly Market Day', detail: 'Ward 3, Ward 6 — tomorrow', impact: '+15%', color: '#D4A96A' },
+  { icon: CheckSquare, name: 'Local Election Activity', detail: 'Ward 2, Ward 8 — in 48hr', impact: '+20%', color: '#D4A96A' },
 ];
 
 const BIAS = [
@@ -152,16 +161,19 @@ export default function PredictionsPage() {
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Event Impact Timeline</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-            {EVENTS.map((e, i) => (
+            {EVENTS.map((e, i) => {
+              const Icon = e.icon;
+              return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.75rem 1rem', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '20px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'rgba(193,68,14,.1)' }}>{e.icon}</div>
+                <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'rgba(193,68,14,.1)', color: 'var(--primary)' }}><Icon size={18} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '14px', color: 'var(--text-heading)', fontWeight: 500 }}>{e.name}</div>
                   <div className="mono" style={{ fontSize: '11px', color: 'var(--secondary)', marginTop: '.2rem' }}>{e.detail}</div>
                 </div>
                 <div className="mono" style={{ fontSize: '12px', fontWeight: 700, color: e.color }}>{e.impact}</div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
