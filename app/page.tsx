@@ -207,14 +207,15 @@ export default function LandingPage() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // Dynamically load Three.js
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-    script.defer = true;
-    script.onload = () => {
+    let renderer: any = null;
+    let animId: number | null = null;
+    let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
+    let resizeHandler: (() => void) | null = null;
+
+    const initThree = () => {
       const THREE = (window as any).THREE;
-      if (!THREE) return;
-      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      if (!THREE || !canvas) return;
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
       renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
       const scene = new THREE.Scene();
@@ -271,23 +272,23 @@ export default function LandingPage() {
         trucks.push({ mesh: m, t: Math.random(), path: roadPaths[t % roadPaths.length], speed: .0015 + Math.random() * .001 });
       }
       let mx = 0, my = 0, tx = 0, ty = 0;
-      const onMouseMove = (e: MouseEvent) => {
+      mouseMoveHandler = (e: MouseEvent) => {
         mx = (e.clientX / window.innerWidth - .5) * .28;
         my = (e.clientY / window.innerHeight - .5) * .28;
       };
-      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mousemove', mouseMoveHandler);
       const clock = new THREE.Clock();
       let isVisible = true;
       const heroElem = document.getElementById('hero');
       if (heroElem) new IntersectionObserver(([e]) => { isVisible = e.isIntersecting; }, { threshold: 0.01 }).observe(heroElem);
-      const onResize = () => {
+      resizeHandler = () => {
         const W = canvas.offsetWidth, H = canvas.offsetHeight;
         camera.aspect = W / H; camera.updateProjectionMatrix();
         renderer.setSize(W, H);
       };
-      window.addEventListener('resize', onResize);
+      window.addEventListener('resize', resizeHandler);
       function animate() {
-        requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
         if (!isVisible) return;
         const t = clock.getElapsedTime();
         tx += (mx - tx) * .05;
@@ -313,8 +314,23 @@ export default function LandingPage() {
       }
       animate();
     };
-    document.head.appendChild(script);
-    return () => { if (script.parentNode) script.parentNode.removeChild(script); };
+
+    if ((window as any).THREE) {
+      initThree();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+      script.defer = true;
+      script.onload = initThree;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (animId !== null) cancelAnimationFrame(animId);
+      if (mouseMoveHandler) document.removeEventListener('mousemove', mouseMoveHandler);
+      if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+      if (renderer) { renderer.dispose(); renderer = null; }
+    };
   }, []);
 
   const tickerContent = [...TICKER_ALERTS, ...TICKER_ALERTS].map((t, i) => (

@@ -60,16 +60,25 @@ export default function MaintenancePage() {
 
   // Initialize Map
   useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+    let destroyed = false;
 
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
+    if (!document.querySelector('link[href*="leaflet@1.9.4"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    const initMap = () => {
       const L = (window as any).L;
-      if (!L || !mapRef.current) return;
+      if (!L || !mapRef.current || destroyed) return;
+
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+        mapObjRef.current = null;
+        layerGroupRef.current = null;
+      }
+
       const map = L.map(mapRef.current, { zoomControl: false }).setView(OPERATOR_START, 11);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
       mapObjRef.current = map;
@@ -77,7 +86,24 @@ export default function MaintenancePage() {
       
       renderMap();
     };
-    document.head.appendChild(script);
+
+    if ((window as any).L) {
+      initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      destroyed = true;
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+        mapObjRef.current = null;
+        layerGroupRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

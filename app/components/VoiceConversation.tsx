@@ -62,10 +62,17 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
       mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size < 1000) {
+          setConversation(prev => [...prev, { role: 'ai', text: 'Recording too short. Hold the mic button longer while speaking.' }]);
+          setProcessing(false);
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
         await handleConversation(audioBlob);
         stream.getTracks().forEach(t => t.stop());
       };
-      mediaRecorder.start();
+      // Capture data every 200ms for reliable chunks
+      mediaRecorder.start(200);
       setRecording(true);
     } catch {
       alert('Microphone access denied.');
@@ -84,6 +91,8 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
   const handleConversation = async (blob: Blob) => {
     const formData = new FormData();
     formData.append('audio', blob, 'voice.webm');
+    // Send conversation history so Gemini has memory/context
+    formData.append('history', JSON.stringify(conversation));
 
     try {
       const res = await fetch('http://127.0.0.1:5000/api/voice-conversation', {
@@ -95,24 +104,23 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
         const data = await res.json();
 
         if (!data.success) {
-          // CRASH FIX: guard against undefined extracted before calling onTranscribed
           setConversation(prev => [...prev, { role: 'ai', text: `Error: ${data.error || 'Check your API keys in .env and restart app.py.'}` }]);
           setProcessing(false);
           return;
         }
 
-        // User's spoken words
+        // User's spoken words (transcribed by Gemini)
         if (data.transcript) {
           setConversation(prev => [...prev, { role: 'user', text: data.transcript }]);
         }
 
-        // AI's confirmation reply text
+        // AI's conversational reply
         if (data.reply_text) {
           setConversation(prev => [...prev, { role: 'ai', text: data.reply_text }]);
         }
 
-        // Save extracted data and bubble up - SAFE: only call if data.extracted exists
-        if (data.extracted && data.extracted.zone) {
+        // Only update extracted pill if a valid complaint was logged
+        if (data.complaint_logged && data.extracted && data.extracted.zone !== 'Unknown') {
           setLastExtracted(data.extracted);
           if (onTranscribed) onTranscribed(data.extracted);
         }
@@ -132,8 +140,8 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
 
   const getStatusLabel = () => {
     if (recording) return '🔴 Listening...';
-    if (processing) return '⚙️ Sarvam STT + Gemini NLU...';
-    if (playing) return '🔊 Sarvam AI speaking...';
+    if (processing) return '⚙️ Gemini listening + Sarvam replying...';
+    if (playing) return '🔊 Shubh is speaking...';
     return 'Hold mic to report an incident';
   };
 

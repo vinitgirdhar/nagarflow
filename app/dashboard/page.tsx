@@ -43,16 +43,27 @@ export default function DashboardPage() {
 
   // 1. Setup Leaflet Map Geometry
   useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
+    let destroyed = false;
 
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
+    // Ensure CSS is loaded (idempotent — won't duplicate)
+    if (!document.querySelector('link[href*="leaflet@1.9.4"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    const initMap = () => {
       const L = (window as any).L;
-      if (!L || !mapRef.current) return;
+      if (!L || !mapRef.current || destroyed) return;
+
+      // Prevent double-init on the same DOM node
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+        mapObjRef.current = null;
+        layerGroupRef.current = null;
+      }
+
       const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 14);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
       mapObjRef.current = map;
@@ -62,13 +73,33 @@ export default function DashboardPage() {
       fetchDashboardData();
       fetchDispatchSuggestions();
     };
-    document.head.appendChild(script);
+
+    // If Leaflet is already loaded (returning via client-side navigation), init immediately.
+    // Otherwise, inject the script and wait for onload.
+    if ((window as any).L) {
+      initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
 
     // Dynamic 10-Second Polling Interval
     const pollId = setInterval(() => {
       fetchDashboardData();
     }, 10000);
-    return () => clearInterval(pollId);
+
+    // Cleanup: destroy map instance & stop polling on unmount
+    return () => {
+      destroyed = true;
+      clearInterval(pollId);
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+        mapObjRef.current = null;
+        layerGroupRef.current = null;
+      }
+    };
   }, []);
 
   const fetchDashboardData = async () => {
@@ -113,8 +144,16 @@ export default function DashboardPage() {
     });
 
     // 2. Draw Active Trucks and Dynamic Route Lines
-    const truckIcon = L.divIcon({ className: '', html: '<div style="background:#5a4a3a;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(0,0,0,.5)"></div>', iconSize: [12, 12] });
-    const busyIcon = L.divIcon({ className: '', html: '<div style="background:#C1440E;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px rgba(193,68,14,.8)"></div>', iconSize: [12, 12] });
+    const truckIcon = L.divIcon({ 
+      className: '', 
+      html: '<div style="font-size:18px; line-height:18px; text-shadow:0 2px 4px rgba(0,0,0,0.5); filter:grayscale(100%) opacity(0.8)">🚛</div>', 
+      iconSize: [18, 18], iconAnchor: [9, 9] 
+    });
+    const busyIcon = L.divIcon({ 
+      className: '', 
+      html: '<div style="font-size:22px; line-height:22px; text-shadow:0 0 10px rgba(193,68,14,1)">🚛</div>', 
+      iconSize: [22, 22], iconAnchor: [11, 11] 
+    });
 
     trucks.forEach(t => {
       const isBusy = t.status.startsWith('en_route_to_');
@@ -153,8 +192,8 @@ export default function DashboardPage() {
       
       const truckIcon = L.divIcon({ 
         className: 'dispatch-anim-truck', 
-        html: '<div style="background:#C1440E;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(193,68,14,.8);transition:transform 0.1s linear"></div>', 
-        iconSize: [16, 16] 
+        html: '<div style="font-size:26px; line-height:26px; text-shadow:0 0 15px rgba(193,68,14,1); transition:transform 0.1s linear">🚛</div>', 
+        iconSize: [26, 26], iconAnchor: [13, 13] 
       });
       
       const animMarker = L.marker(start, { icon: truckIcon }).addTo(layerGroupRef.current);

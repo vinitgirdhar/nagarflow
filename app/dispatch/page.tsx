@@ -33,29 +33,48 @@ export default function DispatchPage() {
   const [suggestions, setSuggestions] = useState(INITIAL_SUGGESTIONS);
 
   useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
+    let mapInstance: any = null;
+
+    if (!document.querySelector('link[href*="leaflet@1.9.4"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    const initMap = () => {
       const L = (window as any).L;
       if (!L || !mapRef.current) return;
-      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM ©CARTO', maxZoom: 18 }).addTo(map);
+
+      mapInstance = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM ©CARTO', maxZoom: 18 }).addTo(mapInstance);
       const routes = [
         { color: '#C1440E', points: [[19.02, 72.85], [19.04, 72.86], [19.07, 72.87], [19.09, 72.88]] },
         { color: '#E8933A', points: [[18.96, 72.82], [18.97, 72.84], [19.00, 72.85], [19.02, 72.86]] },
         { color: '#7A8C5E', points: [[19.12, 72.84], [19.14, 72.85], [19.17, 72.86], [19.19, 72.87]] },
       ];
-      routes.forEach((r: any) => L.polyline(r.points, { color: r.color, weight: 3, opacity: 0.7, dashArray: '8 4' }).addTo(map));
-      const truckIcon = L.divIcon({ className: '', html: '<div style="background:#E8933A;width:12px;height:12px;border-radius:50%;border:2px solid #F2E8D9;box-shadow:0 0 8px rgba(232,147,58,.6)"></div>', iconSize: [12, 12] });
-      [[19.02, 72.85], [19.00, 72.85], [19.14, 72.85], [19.08, 72.91]].forEach((p: any, i) => L.marker(p, { icon: truckIcon }).addTo(map).bindPopup(`🚛 Truck T-${100 + i}`));
+      routes.forEach((r: any) => L.polyline(r.points, { color: r.color, weight: 3, opacity: 0.7, dashArray: '8 4' }).addTo(mapInstance));
+      const truckIcon = L.divIcon({ className: '', html: '<div style="font-size:18px; line-height:18px; text-shadow:0 2px 4px rgba(0,0,0,0.5)">🚛</div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+      [[19.02, 72.85], [19.00, 72.85], [19.14, 72.85], [19.08, 72.91]].forEach((p: any, i) => L.marker(p, { icon: truckIcon }).addTo(mapInstance).bindPopup(`🚛 Truck T-${100 + i}`));
       const zoneIcon = L.divIcon({ className: '', html: '<div style="width:24px;height:24px;border-radius:50%;background:rgba(193,68,14,.2);border:2px solid #C1440E;display:flex;align-items:center;justify-content:center;font-size:10px;color:#C1440E;font-weight:bold">!</div>', iconSize: [24, 24] });
-      [[19.119, 72.846, 'Ward 7 — Demand 95%'], [19.07, 72.879, 'Ward 9 — Demand 88%']].forEach((z: any) => L.marker([z[0], z[1]], { icon: zoneIcon }).addTo(map).bindPopup(z[2]));
+      [[19.119, 72.846, 'Ward 7 — Demand 95%'], [19.07, 72.879, 'Ward 9 — Demand 88%']].forEach((z: any) => L.marker([z[0], z[1]], { icon: zoneIcon }).addTo(mapInstance).bindPopup(z[2]));
     };
-    document.head.appendChild(script);
+
+    if ((window as any).L) {
+      initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (mapInstance) {
+        mapInstance.remove();
+        mapInstance = null;
+      }
+    };
   }, []);
 
   const handleAction = (id: string, action: 'accepted' | 'rejected') => {
