@@ -1,11 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardShell from '../components/DashboardShell';
 import { TrendingUp, Truck, CloudRain, Clock, Building, TriangleAlert } from 'lucide-react';
 
 const WEATHER_LABELS = ['Clear', 'Light Rain', 'Moderate', 'Heavy', 'Extreme'];
-const ZONE_NAMES = ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12','W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'];
-const BASE_DEMAND = [35,50,40,25,70,38,80,42,75,30,55,48,30,45,35,20,65,33,75,38,70,25,50,43];
 
 function getColor(v: number) {
   if (v >= 80) return '#C1440E';
@@ -15,6 +13,7 @@ function getColor(v: number) {
 }
 
 interface ResultCard { label: string; value: string; delta: string; color?: string; deltaColor?: string; }
+interface ZoneData { zone: string; priority_score: number; }
 
 export default function SimulationPage() {
   const [demand, setDemand] = useState(0);
@@ -23,62 +22,116 @@ export default function SimulationPage() {
   const [duration, setDuration] = useState(24);
   const [zone, setZone] = useState('all');
   const [running, setRunning] = useState(false);
-  const [afterDemand, setAfterDemand] = useState(BASE_DEMAND);
+  
+  const [baselineData, setBaselineData] = useState<ZoneData[]>([]);
+  const [afterDemand, setAfterDemand] = useState<ZoneData[]>([]);
+  
   const [results, setResults] = useState<ResultCard[]>([
     { label: 'Fleet Coverage', value: '87%', delta: 'Baseline', color: 'var(--accent)' },
     { label: 'Avg Response Time', value: '18min', delta: 'Baseline' },
     { label: 'Overloaded Zones', value: '0', delta: 'No overload', color: 'var(--accent)' },
     { label: 'Missed Deployments', value: '2.1%', delta: 'Baseline' },
   ]);
-  const [simLog, setSimLog] = useState<string[]>(['[READY] Simulator initialized. Adjust parameters and click "Run Simulation".']);
+  const [simLog, setSimLog] = useState<string[]>(['[READY] Simulator initialized. Fetching city baseline...']);
   const [overloadAlert, setOverloadAlert] = useState(false);
+
+  // Fetch baseline on load
+  useEffect(() => {
+    fetchBaseline();
+  }, []);
+
+  const fetchBaseline = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/simulation/baseline');
+      if (res.ok) {
+        const data = await res.json();
+        setBaselineData(data);
+        setAfterDemand(data);
+        setSimLog(['[READY] City Baseline loaded successfully. Adjust parameters and click "Run Simulation".']);
+      }
+    } catch (e) {
+      setSimLog(['[ERROR] Could not connect to Simulation Engine. Check app.py status.']);
+    }
+  };
 
   const addLog = (text: string) => setSimLog(prev => [...prev, text]);
 
-  const runSim = () => {
+  const runSim = async () => {
     setRunning(true);
-    setSimLog([]);
-    let logQueue: Array<{ text: string; delay: number }> = [
-      { text: `[SIM] Simulation started: demand +${demand}%, failures ${failure}%, weather=${WEATHER_LABELS[weather]}, duration=${duration}hr, zone=${zone}`, delay: 200 },
-      { text: '[SIM] Loading city model...', delay: 600 },
-      { text: '[SIM] Injecting demand multiplier...', delay: 1000 },
-      { text: `[SIM] Vehicle fleet: ${Math.round(18 * (1 - failure / 100))} of 18 operational`, delay: 1400 },
-      { text: '[SIM] Running discrete event simulation (SimPy)...', delay: 1800 },
-      { text: '[SIM] Computing route optimizations...', delay: 2400 },
+    setSimLog(['[SIM] Starting City Digital Twin Simulation...']);
+    
+    // Smooth UI logging simulation
+    let logQueue = [
+      { text: `[SIM] Parameters: demand +${demand}%, failures ${failure}%, weather=${WEATHER_LABELS[weather]}, duration=${duration}hr`, delay: 500 },
+      { text: '[SIM] Querying current city state from SQLite...', delay: 1200 },
+      { text: '[SIM] Applying Monte-Carlo demand perturbations...', delay: 2000 },
     ];
     logQueue.forEach(({ text, delay }) => setTimeout(() => addLog(text), delay));
 
-    setTimeout(() => {
-      const newDemand = BASE_DEMAND.map(d => Math.min(100, Math.max(0, d * (1 + demand / 100) + weather * 5 + (Math.random() - 0.3) * 10)));
-      setAfterDemand(newDemand);
-      const overloaded = newDemand.filter(d => d >= 80).length;
-      const fleet = Math.round(18 * (1 - failure / 100));
-      const coverage = Math.max(20, 87 - demand * 0.4 - failure * 0.6 - weather * 3);
-      const responseTime = Math.round(18 + demand * 0.15 + failure * 0.3 + weather * 2);
-      const missed = Math.min(50, 2.1 + demand * 0.2 + failure * 0.4);
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/simulation/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demand, failures: failure, weather, duration, zone_filter: zone })
+      });
 
-      setResults([
-        { label: 'Fleet Coverage', value: coverage.toFixed(1) + '%', delta: `${(coverage - 87).toFixed(1)}% from baseline`, color: coverage < 60 ? 'var(--danger)' : coverage < 75 ? 'var(--glow)' : 'var(--accent)', deltaColor: coverage < 75 ? 'var(--danger)' : 'var(--accent)' },
-        { label: 'Avg Response Time', value: responseTime + 'min', delta: `+${responseTime - 18}min from baseline`, color: responseTime > 25 ? 'var(--danger)' : 'var(--text-heading)', deltaColor: responseTime > 22 ? 'var(--danger)' : 'var(--secondary)' },
-        { label: 'Overloaded Zones', value: overloaded.toString(), delta: overloaded > 3 ? 'CRITICAL: Fleet stretched' : 'Manageable', color: overloaded > 3 ? 'var(--danger)' : 'var(--glow)', deltaColor: overloaded > 3 ? 'var(--danger)' : 'var(--accent)' },
-        { label: 'Missed Deployments', value: missed.toFixed(1) + '%', delta: `+${(missed - 2.1).toFixed(1)}% from baseline`, color: missed > 10 ? 'var(--danger)' : 'var(--text-heading)', deltaColor: missed > 10 ? 'var(--danger)' : 'var(--secondary)' },
-      ]);
+      if (res.ok) {
+        const resultData = await res.json();
+        
+        setTimeout(() => {
+          setAfterDemand(resultData.after);
+          const stats = resultData.stats;
+          
+          setResults([
+            { 
+                label: 'Fleet Coverage', 
+                value: stats.coverage + '%', 
+                delta: `${(stats.coverage - 87).toFixed(1)}% from baseline`, 
+                color: stats.coverage < 60 ? 'var(--danger)' : stats.coverage < 75 ? 'var(--glow)' : 'var(--accent)', 
+                deltaColor: stats.coverage < 75 ? 'var(--danger)' : 'var(--accent)' 
+            },
+            { 
+                label: 'Avg Response Time', 
+                value: stats.response_time + 'min', 
+                delta: `+${stats.response_time - 18}min from baseline`, 
+                color: stats.response_time > 25 ? 'var(--danger)' : 'var(--text-heading)', 
+                deltaColor: stats.response_time > 22 ? 'var(--danger)' : 'var(--secondary)' 
+            },
+            { 
+                label: 'Overloaded Zones', 
+                value: stats.overloaded.toString(), 
+                delta: stats.overloaded > 3 ? 'CRITICAL: Fleet stretched' : 'Manageable', 
+                color: stats.overloaded > 3 ? 'var(--danger)' : 'var(--glow)', 
+                deltaColor: stats.overloaded > 3 ? 'var(--danger)' : 'var(--accent)' 
+            },
+            { 
+                label: 'Missed Deployments', 
+                value: stats.missed + '%', 
+                delta: `+${(stats.missed - 2.1).toFixed(1)}% from baseline`, 
+                color: stats.missed > 10 ? 'var(--danger)' : 'var(--text-heading)', 
+                deltaColor: stats.missed > 10 ? 'var(--danger)' : 'var(--secondary)' 
+            },
+          ]);
 
-      addLog(`[SIM] Simulation complete: ${overloaded} zones overloaded, coverage ${coverage.toFixed(1)}%`);
-      if (overloaded > 3) addLog('[SIM] ⚠ FLEET OVERLOAD — PPO recommends 2 reserve trucks from depot');
-      if (weather >= 3) addLog('[SIM] ⚠ Emergency protocol would auto-trigger at this weather level');
-      setOverloadAlert(overloaded > 3);
+          addLog(`[SIM] Discrete event simulation complete.`);
+          addLog(`[SIM] Result: ${stats.overloaded} zones at CRITICAL status.`);
+          setOverloadAlert(stats.overloaded > 3);
+          setRunning(false);
+        }, 3000);
+      }
+    } catch (e) {
       setRunning(false);
-    }, 3000);
+      addLog('[ERROR] Simulation API connection failed.');
+    }
   };
 
-  const renderGrid = (data: number[]) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '4px', padding: '1rem', height: '100%' }}>
+  const renderGrid = (data: ZoneData[]) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
       {data.map((d, i) => {
-        const val = Math.min(100, Math.max(0, Math.round(d)));
+        const val = d.priority_score;
         return (
-          <div key={i} style={{ borderRadius: '4px', background: getColor(val), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '9px', color: 'rgba(242,232,217,.7)', transition: 'background .5s', flexDirection: 'column', gap: '2px', padding: '4px' }}>
-            <span>{ZONE_NAMES[i]}</span><span>{val}%</span>
+          <div key={i} style={{ borderRadius: '4px', background: getColor(val), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '9px', color: 'rgba(242,232,217,.7)', transition: 'background .5s', flexDirection: 'column', gap: '2px', padding: '4px', textAlign: 'center' }}>
+            <span style={{fontWeight: 700}}>{d.zone}</span><span>{val}%</span>
           </div>
         );
       })}
@@ -124,14 +177,14 @@ export default function SimulationPage() {
               </div>
               <select className="input" value={zone} onChange={e => setZone(e.target.value)}>
                 <option value="all">All Zones</option>
-                <option value="north">North (Ward 7,8,10)</option>
-                <option value="central">Central (Ward 3,5,6)</option>
-                <option value="south">South (Ward 1,2,4)</option>
-                <option value="east">East (Ward 9,11,12)</option>
+                <option value="north">North Mumbai</option>
+                <option value="central">Central Mumbai</option>
+                <option value="south">South Mumbai</option>
+                <option value="navi">Navi Mumbai</option>
               </select>
             </div>
             <button className="btn btn--primary btn--lg" onClick={runSim} disabled={running} style={{ width: '100%', marginTop: '.5rem', justifyContent: 'center' }}>
-              {running ? '⏳ Simulating...' : 'Run Simulation'}
+              {running ? '⏳ Simulating Citywide Impact...' : 'Run Simulation'}
             </button>
           </div>
         </div>
@@ -139,10 +192,10 @@ export default function SimulationPage() {
 
       {/* Before/After */}
       <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
-        {[{ label: 'BEFORE (Current State)', data: BASE_DEMAND }, { label: 'AFTER (Simulation Result)', data: afterDemand }].map((g, i) => (
+        {[{ label: 'BEFORE (Real-Time City State)', data: baselineData }, { label: 'AFTER (Simulated Response)', data: afterDemand }].map((g, i) => (
           <div key={i} style={{ flex: 1 }}>
             <div className="mono" style={{ fontSize: '11px', color: 'var(--accent)', textAlign: 'center', marginBottom: '.5rem' }}>{g.label}</div>
-            <div style={{ width: '100%', height: '280px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>{renderGrid(g.data)}</div>
+            <div style={{ width: '100%', height: '320px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>{renderGrid(g.data)}</div>
           </div>
         ))}
       </div>
@@ -159,7 +212,7 @@ export default function SimulationPage() {
         </div>
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Simulation Log</div>
-          <div className="log">
+          <div className="log" style={{ height: '240px', overflowY: 'auto' }}>
             {simLog.map((l, i) => <div key={i} className="log-entry"><span>[SIM]</span> {l}</div>)}
           </div>
         </div>
@@ -167,7 +220,7 @@ export default function SimulationPage() {
 
       {overloadAlert && (
         <div style={{ background: 'rgba(185,45,45,.1)', border: '1px solid rgba(185,45,45,.3)', borderRadius: '8px', padding: '1rem', fontFamily: "'Space Mono',monospace", fontSize: '12px', color: 'var(--danger)', marginTop: '1rem', animation: 'pulse-text 1.5s infinite', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TriangleAlert size={18} /> FLEET OVERLOAD DETECTED — Demand exceeds available vehicle capacity. PPO recommends deploying 2 reserve trucks from depot.
+          <TriangleAlert size={18} /> FLEET OVERLOAD DETECTED — Simulated demand exceeds vehicle capacity. PPO recommends mobilizing backup fleet from external wards.
         </div>
       )}
     </DashboardShell>

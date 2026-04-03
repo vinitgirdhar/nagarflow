@@ -115,7 +115,7 @@ export default function AgenciesPage() {
           <dept.icon size={22} />
         </div>
         <div>
-          <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '18px', color: 'var(--text-heading)' }}>{dept.name} Department</div>
+          <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '18px', color: 'var(--text-heading)', fontWeight: 600 }}>{dept.name} Department</div>
           <span className="badge badge--info">{dept.vehicles.length} vehicles · {dept.zones.length} zones</span>
         </div>
       </div>

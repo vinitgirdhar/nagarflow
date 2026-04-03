@@ -130,7 +130,7 @@ export default function EmergencyPage() {
           <div style={{ fontSize: '13px', color: 'var(--secondary)', marginTop: '.75rem', lineHeight: 1.6 }}>{STATE_DESCS[currentState]}</div>
 
           <div style={{ background: 'rgba(185,45,45,.06)', border: '1px solid rgba(185,45,45,.2)', borderRadius: '12px', padding: '1.25rem', marginTop: '1.5rem' }}>
-            <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '16px', color: 'var(--danger)', marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}><AlertOctagon size={18} /> Manual Override</div>
+            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '16px', color: 'var(--danger)', marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 700 }}><AlertOctagon size={18} /> Manual Override</div>
             <p style={{ fontSize: '12px', color: 'var(--secondary)' }}>Override auto-triggered protocol state. Use with caution.</p>
             <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
               <button className="btn btn--outline btn--sm" onClick={() => override(0)}>Force CLEAR</button>

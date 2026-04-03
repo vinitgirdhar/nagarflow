@@ -88,7 +88,7 @@ export default function DispatchPage() {
           {suggestions.map(s => (
             <div key={s.id} style={{ background: 'rgba(193,68,14,.06)', border: '1px solid rgba(193,68,14,.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '.75rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '15px', color: 'var(--text-heading)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '15px', color: 'var(--text-heading)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                   <Bot size={16} /> {s.id}: {s.truck} → {s.to}
                 </div>
                 <div className="mono" style={{ fontSize: '11px', color: 'var(--glow)' }}>Confidence: {s.confidence}</div>

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
-import MicOperator from '../components/MicOperator';
+import VoiceConversation from '../components/VoiceConversation';
 
 const STAGGER_CONTAINER: Variants = {
   hidden: { opacity: 0 },
@@ -53,7 +53,7 @@ export default function DashboardPage() {
     script.onload = () => {
       const L = (window as any).L;
       if (!L || !mapRef.current) return;
-      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 11);
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 14);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
       mapObjRef.current = map;
       layerGroupRef.current = L.layerGroup().addTo(map);
@@ -136,17 +136,64 @@ export default function DashboardPage() {
   };
 
   // --- Core Logistics Mutators --- 
-  const handleAccept = async (truckId: number, zone: string, e?: any) => {
-    if(e) e.target.innerHTML = "Dispatching...";
-    try {
-      await fetch('http://127.0.0.1:5000/api/dispatch/accept', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ truck_id: truckId, zone: zone })
+  const handleAccept = async (truckId: number, zoneName: string, e?: any) => {
+    const L = (window as any).L;
+    if (!L || !mapObjRef.current || !layerGroupRef.current) return;
+
+    // 1. Locate Source (Truck) and Destination (Zone)
+    const truck = trucksLive.find(t => t.id === truckId);
+    const zInfo = zonesLive.find(z => z.zone === zoneName);
+
+    if (truck && zInfo && e) {
+      e.target.innerHTML = "Dispatching...";
+      
+      // 2. Setup Animation Layer
+      const start = [truck.lat, truck.lon];
+      const end = [zInfo.lat, zInfo.lon];
+      
+      const truckIcon = L.divIcon({ 
+        className: 'dispatch-anim-truck', 
+        html: '<div style="background:#C1440E;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 15px rgba(193,68,14,.8);transition:transform 0.1s linear"></div>', 
+        iconSize: [16, 16] 
       });
-      setAlerts(prev => [`[LOGISTICS] Locked. Truck-${truckId} routed to ${zone}`, ...prev].slice(0, 3));
-      await fetchDashboardData(); 
-      await fetchDispatchSuggestions(); 
-    } catch(e) {}
+      
+      const animMarker = L.marker(start, { icon: truckIcon }).addTo(layerGroupRef.current);
+      const animLine = L.polyline([start, start], { color: '#C1440E', weight: 4, dashArray: '6, 6', opacity: 0.6 }).addTo(layerGroupRef.current);
+      
+      // 3. Kick off Linear Interpolation (2 seconds)
+      const duration = 2000;
+      const startTime = performance.now();
+      
+      const animate = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const currentLat = start[0] + (end[0] - start[0]) * progress;
+        const currentLon = start[1] + (end[1] - start[1]) * progress;
+        
+        animMarker.setLatLng([currentLat, currentLon]);
+        animLine.setLatLngs([start, [currentLat, currentLon]]);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Finish animation and sync with backend
+          setTimeout(async () => {
+             try {
+                await fetch('http://127.0.0.1:5000/api/dispatch/accept', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ truck_id: truckId, zone: zoneName })
+                });
+                setAlerts(prev => [`[LOGISTICS] Locked. Truck-${truckId} routed to ${zoneName}`, ...prev].slice(0, 3));
+                await fetchDashboardData(); 
+                await fetchDispatchSuggestions(); 
+             } catch(err) {}
+          }, 200);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }
   };
 
   const handleArrive = async (truckId: number, zone: string, e?: any) => {
@@ -209,8 +256,10 @@ export default function DashboardPage() {
           </motion.div>
 
           <motion.div variants={FADE_UP} style={{ flexShrink: 0 }}>
-             <MicOperator onTranscribed={(data) => {
-                setAlerts(prev => [`[VOICE LOGGED] ${data.zone}: ${data.issue_type} (Severity: ${data.severity}). Analytics injecting into Pipeline.`, ...prev].slice(0, 3));
+             <VoiceConversation onTranscribed={(data) => {
+                if(data && data.zone) {
+                  setAlerts(prev => [`[VOICE LOGGED] ${data.zone}: ${data.issue_type} (Severity: ${data.severity}). Injecting into pipeline.`, ...prev].slice(0, 3));
+                }
              }} />
           </motion.div>
 

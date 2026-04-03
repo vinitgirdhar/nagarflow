@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4rem' }}>
               <div style={{ width: '12px', height: '12px', background: 'var(--primary)', borderRadius: '50%' }}></div>
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: '24px', fontWeight: 700 }}>NagarFlow</div>
+              <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '24px', fontWeight: 800 }}>NagarFlow</div>
             </div>
             <h1 style={{ fontSize: 'clamp(40px, 4.5vw, 64px)', lineHeight: 1.1, marginBottom: '2rem', color: '#fff' }}>
               The city&apos;s nervous system.
@@ -64,7 +64,7 @@ export default function LoginPage() {
             </Link>
 
             <div style={{ marginBottom: '3rem' }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '36px', marginBottom: '.5rem', color: 'var(--text-heading)' }}>Authenticate</h2>
+              <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: '36px', marginBottom: '.5rem', color: 'var(--text-heading)', fontWeight: 700 }}>Authenticate</h2>
               <p style={{ color: 'var(--secondary)', fontSize: '15px' }}>Enter credentials to access the command center.</p>
             </div>
 
