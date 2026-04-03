@@ -7,6 +7,7 @@ interface ConversationTurn {
 }
 
 export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (data: any) => void }) {
+  const [sessionActive, setSessionActive] = useState(false);
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -16,6 +17,40 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const startSession = async () => {
+    setProcessing(true);
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/voice-greet', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setSessionActive(true);
+          setConversation([{ role: 'ai', text: data.text }]);
+          playAudio(data.audio);
+        } else {
+          alert(`Sarvam Error: ${data.error}. Check app.py console.`);
+        }
+      }
+    } catch (e) {
+      alert("Connection Failed. Start app.py first.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const playAudio = (base64: string) => {
+    setPlaying(true);
+    const audioBytes = atob(base64);
+    const byteArray = new Uint8Array(audioBytes.length);
+    for (let i = 0; i < audioBytes.length; i++) byteArray[i] = audioBytes.charCodeAt(i);
+    const audioBlob = new Blob([byteArray], { type: 'audio/wav' });
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.onended = () => { setPlaying(false); URL.revokeObjectURL(audioUrl); };
+    audio.play().catch(() => setPlaying(false));
+  };
 
   const startRecording = async (e: any) => {
     e.preventDefault();
@@ -82,18 +117,8 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
           if (onTranscribed) onTranscribed(data.extracted);
         }
 
-        // Play Sarvam TTS audio reply
         if (data.confirmation_audio) {
-          setPlaying(true);
-          const audioBytes = atob(data.confirmation_audio);
-          const byteArray = new Uint8Array(audioBytes.length);
-          for (let i = 0; i < audioBytes.length; i++) byteArray[i] = audioBytes.charCodeAt(i);
-          const audioBlob = new Blob([byteArray], { type: 'audio/wav' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
-          audio.onended = () => { setPlaying(false); URL.revokeObjectURL(audioUrl); };
-          audio.play().catch(() => setPlaying(false));
+          playAudio(data.confirmation_audio);
         }
       } else {
         setConversation(prev => [...prev, { role: 'ai', text: 'Connection failed. Check that app.py is running.' }]);
@@ -126,6 +151,12 @@ export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px' }}>
             <Loader size={20} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
           </div>
+        ) : !sessionActive ? (
+          <button 
+             onClick={startSession}
+             style={{ background: 'var(--primary)', border: 'none', borderRadius: '20px', padding: '0.4rem 0.8rem', color: 'white', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+             Start Chat
+          </button>
         ) : playing ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', background: 'rgba(122,140,94,0.2)', borderRadius: '50%' }}>
             <Volume2 size={20} color="var(--primary)" />
