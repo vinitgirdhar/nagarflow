@@ -23,6 +23,29 @@ interface ConversationTurn {
   text: string;
 }
 
+interface BrowserSpeechRecognitionResult {
+  transcript: string;
+}
+
+interface BrowserSpeechRecognitionEvent {
+  results: BrowserSpeechRecognitionResult[][];
+}
+
+interface BrowserSpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: BrowserSpeechRecognitionEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+interface BrowserSpeechRecognitionCtor {
+  new (): BrowserSpeechRecognitionLike;
+}
+
 interface AgentResponse {
   success: boolean;
   audio?: string | null;
@@ -32,6 +55,7 @@ interface AgentResponse {
   extracted?: ExtractedComplaint;
   reply_text?: string;
   transcript?: string;
+  voice_mode?: 'sarvam' | 'browser';
 }
 
 const BACKEND_URL = 'http://127.0.0.1:5000';
@@ -45,12 +69,14 @@ export default function VoiceConversation({
   const [conversation, setConversation] = useState<ConversationTurn[]>([]);
   const [errorText, setErrorText] = useState('');
   const [lastExtracted, setLastExtracted] = useState<ExtractedComplaint | null>(null);
+  const [useBrowserVoice, setUseBrowserVoice] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const recognitionRef = useRef<BrowserSpeechRecognitionLike | null>(null);
   const cancelSubmitRef = useRef(false);
 
   function cleanupAudio() {
@@ -76,11 +102,23 @@ export default function VoiceConversation({
     chunksRef.current = [];
   }
 
+  function cleanupRecognition() {
+    if (recognitionRef.current) {
+      recognitionRef.current.onresult = null;
+      recognitionRef.current.onerror = null;
+      recognitionRef.current.onend = null;
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+  }
+
   useEffect(() => {
     return () => {
       cancelSubmitRef.current = true;
       cleanupAudio();
       cleanupRecorder();
+      cleanupRecognition();
+      window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -88,10 +126,31 @@ export default function VoiceConversation({
     cancelSubmitRef.current = true;
     cleanupAudio();
     cleanupRecorder();
+    cleanupRecognition();
+    window.speechSynthesis.cancel();
     setPhase('idle');
     setConversation([]);
     setErrorText('');
     setLastExtracted(null);
+    setUseBrowserVoice(false);
+  };
+
+  const speakText = (text: string, onEnded?: () => void) => {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      onEnded?.();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(trimmed);
+    utterance.lang = 'hi-IN';
+    utterance.rate = 0.96;
+    utterance.pitch = 1;
+    utterance.onend = () => onEnded?.();
+    utterance.onerror = () => onEnded?.();
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
   };
 
   const playAudio = async (base64Audio?: string | null, onEnded?: () => void) => {
@@ -136,9 +195,24 @@ export default function VoiceConversation({
     }
   };
 
+  const playAgentReply = async (replyText?: string, base64Audio?: string | null, onEnded?: () => void) => {
+    if (base64Audio) {
+      await playAudio(base64Audio, onEnded);
+      return;
+    }
+
+    if (replyText) {
+      speakText(replyText, onEnded);
+      return;
+    }
+
+    onEnded?.();
+  };
+
   const startSession = async () => {
     cleanupAudio();
     cleanupRecorder();
+    cleanupRecognition();
     setConversation([]);
     setLastExtracted(null);
     setErrorText('');
@@ -154,8 +228,9 @@ export default function VoiceConversation({
         return;
       }
 
+      setUseBrowserVoice(data.voice_mode === 'browser' || !data.audio);
       setConversation([{ speaker: 'agent', text: data.reply_text }]);
-      await playAudio(data.audio, () => setPhase('ready'));
+      await playAgentReply(data.reply_text, data.audio, () => setPhase('ready'));
     } catch {
       setPhase('error');
       setErrorText('Could not reach the backend. Start app.py and try again.');
@@ -196,7 +271,7 @@ export default function VoiceConversation({
         onTranscribed?.(data.extracted);
       }
 
-      await playAudio(data.audio, () => {
+      await playAgentReply(data.reply_text, data.audio, () => {
         setPhase(data.call_ended ? 'completed' : 'ready');
       });
     } catch {
@@ -205,8 +280,108 @@ export default function VoiceConversation({
     }
   };
 
+  const submitTranscript = async (transcript: string) => {
+    setPhase('processing');
+    setErrorText('');
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/agent/respond-text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript }),
+      });
+      const data = await readAgentResponse(response);
+
+      if (!response.ok || !data.success || !data.reply_text) {
+        setPhase('error');
+        setErrorText(data.error || 'The agent could not process that recording.');
+        return;
+      }
+
+      setConversation((current) => [
+        ...current,
+        { speaker: 'user', text: transcript },
+        { speaker: 'agent', text: data.reply_text! },
+      ]);
+
+      if (data.complaint_logged && data.extracted) {
+        setLastExtracted(data.extracted);
+        onTranscribed?.(data.extracted);
+      }
+
+      await playAgentReply(data.reply_text, data.audio, () => {
+        setPhase(data.call_ended ? 'completed' : 'ready');
+      });
+    } catch {
+      setPhase('error');
+      setErrorText('The backend could not process your transcript. Please try again.');
+    }
+  };
+
+  const startBrowserRecognition = async () => {
+    const SpeechRecognitionCtor =
+      ((window as Window & {
+        SpeechRecognition?: BrowserSpeechRecognitionCtor;
+        webkitSpeechRecognition?: BrowserSpeechRecognitionCtor;
+      }).SpeechRecognition ||
+        (window as Window & {
+          SpeechRecognition?: BrowserSpeechRecognitionCtor;
+          webkitSpeechRecognition?: BrowserSpeechRecognitionCtor;
+        }).webkitSpeechRecognition) as BrowserSpeechRecognitionCtor | undefined;
+
+    if (!SpeechRecognitionCtor) {
+      setPhase('error');
+      setErrorText('Browser speech recognition is not supported here. Please use Chrome or Edge.');
+      return;
+    }
+
+    cleanupRecognition();
+    cleanupAudio();
+    setErrorText('');
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'hi-IN';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = async (event: BrowserSpeechRecognitionEvent) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || '';
+      cleanupRecognition();
+
+      if (!transcript) {
+        setPhase('ready');
+        setErrorText('I could not hear that clearly. Please try again.');
+        return;
+      }
+
+      await submitTranscript(transcript);
+    };
+
+    recognition.onerror = () => {
+      cleanupRecognition();
+      setPhase('error');
+      setErrorText('Browser speech recognition failed. Please try again.');
+    };
+
+    recognition.onend = () => {
+      if (recognitionRef.current) {
+        cleanupRecognition();
+        setPhase('ready');
+      }
+    };
+
+    recognition.start();
+    setPhase('recording');
+  };
+
   const startRecording = async () => {
     if (phase !== 'ready') {
+      return;
+    }
+
+    if (useBrowserVoice) {
+      await startBrowserRecognition();
       return;
     }
 
@@ -266,6 +441,12 @@ export default function VoiceConversation({
   };
 
   const stopRecording = () => {
+    if (recognitionRef.current && phase === 'recording') {
+      recognitionRef.current.stop();
+      setPhase('processing');
+      return;
+    }
+
     if (mediaRecorderRef.current && phase === 'recording') {
       mediaRecorderRef.current.stop();
       setPhase('processing');
@@ -277,7 +458,7 @@ export default function VoiceConversation({
       case 'greeting':
         return 'Connecting...';
       case 'ready':
-        return 'Connected · Agent listening';
+        return useBrowserVoice ? 'Connected · Browser voice mode' : 'Connected · Agent listening';
       case 'recording':
         return 'Recording your voice...';
       case 'processing':
@@ -346,6 +527,11 @@ export default function VoiceConversation({
               <div style={{ fontSize: '12px', color: phase === 'error' ? 'var(--danger)' : 'var(--accent)', marginTop: '0.2rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: phase === 'error' ? 'var(--danger)' : 'var(--accent)', display: 'inline-block', animation: (phase === 'recording' || phase === 'processing') ? 'pulse 1.5s infinite' : 'none' }}></span>
                 {getStatusText()}
+                {useBrowserVoice ? (
+                  <span className="mono" style={{ fontSize: '10px', color: 'var(--accent)' }}>
+                    browser fallback
+                  </span>
+                ) : null}
               </div>
             )}
             {phase === 'idle' && (
