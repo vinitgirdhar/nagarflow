@@ -1,8 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
-import { ClipboardList, BarChart, AlertTriangle, TrendingUp, Bot, Download, Eye, AlertOctagon } from 'lucide-react';
+import { ClipboardList, BarChart, AlertTriangle, TrendingUp, Bot, Download, Eye, AlertOctagon, FileDown, Loader2 } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const FADE_UP: Variants = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } };
 
@@ -22,8 +25,10 @@ function getReportIcon(type: string) {
 export default function ReportsPage() {
   const perfRef = useRef<HTMLCanvasElement>(null);
   const covRef = useRef<HTMLCanvasElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   
   const [data, setData] = useState<any>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [tooltip, setTooltip] = useState<{ x: number, y: number, show: boolean, content: string } | null>(null);
 
   useEffect(() => {
@@ -148,12 +153,175 @@ export default function ReportsPage() {
     { label: 'Fleet Efficiency', value: data ? data.kpis.efficiency : 0, color: '#E8933A' },
   ];
 
+  const downloadPDF = async () => {
+    setIsExporting(true);
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+      const reportId = `NF-AUDIT-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const timestamp = new Date().toLocaleString();
+
+      // --- HEADER ---
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(22);
+      pdf.setTextColor(193, 68, 14); // --primary
+      pdf.text('NAGARFLOW — SYSTEM AUDIT REPORT', margin, 60);
+
+      pdf.setDrawColor(221, 210, 196); // --border-subtle
+      pdf.line(margin, 75, pageWidth - margin, 75);
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(122, 107, 90); // --secondary
+      pdf.text(`REPORT ID: ${reportId}`, margin, 95);
+      pdf.text(`GENERATED: ${timestamp}`, pageWidth - margin - 150, 95);
+
+      // --- EXECUTIVE SUMMARY ---
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(28, 20, 16); // --text-heading
+      pdf.text('1. EXECUTIVE SUMMARY', margin, 130);
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.setTextColor(74, 63, 52); // --text-body
+      const summary = `This document serves as the formal physical audit report for the NagarFlow Unified Command. It evaluates the current performance and integrity of the AiRLLM dispatch engine across 52 Mumbai wards. The current system status is ${data?.trigger_retrain ? 'CRITICAL (DRIFT DETECTED)' : 'OPTIMAL (MAINTAINING THRESHOLDS)'}.`;
+      pdf.text(pdf.splitTextToSize(summary, pageWidth - margin * 2), margin, 150);
+
+      // --- KEY METRICS TABLE ---
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(28, 20, 16);
+      pdf.text('2. KEY OPERATIONAL METRICS', margin, 210);
+
+      const metricRows = kpis.map(k => [k.label, `${k.value}%`]);
+      autoTable(pdf, {
+        startY: 225,
+        head: [['Metric', 'Value']],
+        body: metricRows,
+        margin: { left: margin },
+        tableWidth: pageWidth - margin * 2,
+        styles: { font: 'helvetica', fontSize: 10, cellPadding: 8 },
+        headStyles: { fillColor: [193, 68, 14], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 245, 240] } // --bg
+      });
+
+      // --- ANALYTICAL FIGURES ---
+      let currentY = (pdf as any).lastAutoTable.finalY + 40;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('3. ANALYTICAL VISUALIZATIONS', margin, currentY);
+      currentY += 20;
+
+      // Capture Perf Graph
+      if (perfRef.current) {
+        const perfCanvas = await html2canvas(perfRef.current, { scale: 2 });
+        const perfImg = perfCanvas.toDataURL('image/png');
+        const imgW = pageWidth - margin * 2;
+        const imgH = 150; // CONSTRAINED HEIGHT for single-page
+        
+        pdf.addImage(perfImg, 'PNG', margin, currentY, imgW, imgH);
+        currentY += imgH + 10;
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text('Figure 3.1: Weekly Validation Drift Engine — Tracking AiRLLM vs. Physical Feedback', margin, currentY);
+        currentY += 25;
+      }
+
+      // Capture Coverage Graph
+      if (covRef.current) {
+        const covCanvas = await html2canvas(covRef.current, { scale: 2 });
+        const covImg = covCanvas.toDataURL('image/png');
+        const imgW = pageWidth - margin * 2;
+        const imgH = 150; // CONSTRAINED HEIGHT for single-page
+        
+        pdf.addImage(covImg, 'PNG', margin, currentY, imgW, imgH);
+        currentY += imgH + 10;
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text('Figure 3.2: Zone Disparity Layout — Ward-level geospatial service coverage analytics', margin, currentY);
+        currentY += 30;
+      }
+
+      // --- SYSTEM FINDINGS & ALERTS ---
+      if (data?.trigger_retrain) {
+        const alertH = 60;
+        // Safety check to ensure alert fits before footer
+        if (currentY + alertH > pageHeight - 60) {
+          currentY = pageHeight - 60 - alertH - 10; 
+        }
+
+        pdf.setFillColor(185, 45, 45, 0.1);
+        pdf.setDrawColor(185, 45, 45);
+        pdf.rect(margin, currentY, pageWidth - margin * 2, alertH, 'FD');
+        
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(185, 45, 45); // --danger
+        pdf.text('CRITICAL FINDING: SYSTEMIC MODEL DRIFT', margin + 15, currentY + 20);
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(28, 20, 16);
+        const alertMsg = `Emergency: Accuracy failure detected. The current error margin is ${Number(data.recent_error_margin).toFixed(1)}%. Immediate AiRLLM retraining is recommended.`;
+        pdf.text(pdf.splitTextToSize(alertMsg, pageWidth - margin * 2 - 30), margin + 15, currentY + 35);
+      }
+
+      // --- FOOTER ---
+      const totalPages = (pdf as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(122, 107, 90);
+        pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 50, pageHeight - 25);
+        pdf.text('NAGARFLOW — UNIFIED COMMAND CENTER', margin, pageHeight - 25);
+        pdf.setDrawColor(221, 210, 196);
+        pdf.line(margin, pageHeight - 45, pageWidth - margin, pageHeight - 45);
+      }
+
+      pdf.save(`NagarFlow_Audit_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Programmatic Export Error:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <DashboardShell title="Reports" badges={[{ type: 'live', text: 'Validation API' }]}>
-      <div className="page-header">
-        <h1 className="page-header__title">Validation & Analytics</h1>
-        <p className="page-header__sub">Physical feedback loop continuously auditing AiRLLM hallucination thresholds.</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
+        <div>
+          <h1 className="page-header__title">Validation & Analytics</h1>
+          <p className="page-header__sub">Physical feedback loop continuously auditing AiRLLM hallucination thresholds.</p>
+        </div>
+        <button 
+          className={`btn ${isExporting ? 'btn--outline' : 'btn--primary'}`} 
+          onClick={downloadPDF} 
+          disabled={isExporting}
+          style={{ gap: '0.75rem', height: '44px', padding: '0 1.5rem' }}
+        >
+          {isExporting ? (
+            <>
+              <Loader2 size={18} className="spin" />
+              GENERATE PDF...
+            </>
+          ) : (
+            <>
+              <FileDown size={18} />
+              DOWNLOAD PDF
+            </>
+          )}
+        </button>
       </div>
+
+      <div ref={reportRef} style={{ paddingBottom: '2rem' }}>
 
       {data && data.trigger_retrain && (
          <motion.div variants={FADE_UP} initial="hidden" animate="show" style={{ background: 'rgba(211, 47, 47, 0.1)', border: '2px solid rgba(211, 47, 47, 0.8)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -254,6 +422,7 @@ export default function ReportsPage() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </DashboardShell>
   );

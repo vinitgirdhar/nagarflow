@@ -409,6 +409,45 @@ def get_predictions():
     conn.close()
     return jsonify(formatted)
 
+@app.route('/api/weather/zones', methods=['GET'])
+def get_weather_zones():
+    from fleet_manager import get_zone_coordinates
+    zones = list(ZONE_ALIAS_MAP.keys())
+    weather_data = []
+    
+    import hashlib
+    for zone in zones:
+        lat, lon = get_zone_coordinates(zone)
+        # Deterministic but varied values for the demo
+        h = int(hashlib.md5(zone.encode()).hexdigest(), 16)
+        
+        # Temp: 27-36 (Coastal cooler, Inland hotter)
+        # Simple heuristic: if lon < 72.84 (Western coastal), it's cooler
+        is_coastal = lon < 72.84
+        base_temp = 28 if is_coastal else 32
+        temp = base_temp + (h % 5)
+        
+        # AQI: 50-320 (Industrial identifiers like Dharavi/Kurla/Chembur higher)
+        base_aqi = 60
+        if any(ind in zone.lower() for ind in ['dharavi', 'kurla', 'chembur', 'vikhroli', 'parel']):
+            base_aqi = 180
+        aqi = base_aqi + (h % 140)
+        
+        # Wind: 10-45 km/h (Coastal windier)
+        wind = (15 if is_coastal else 5) + (h % 25)
+        
+        weather_data.append({
+            "name": zone,
+            "lat": lat,
+            "lon": lon,
+            "temperature": temp,
+            "aqi": aqi,
+            "wind": wind,
+            "condition": "Humid" if is_coastal else "Clear"
+        })
+        
+    return jsonify(weather_data)
+
 @app.route('/api/dispatch', methods=['GET'])
 def get_dispatch():
     try:

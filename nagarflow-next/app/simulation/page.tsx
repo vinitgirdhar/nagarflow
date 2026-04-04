@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import DashboardShell from '../components/DashboardShell';
-import { TrendingUp, Truck, CloudRain, Clock, Building, TriangleAlert } from 'lucide-react';
+import { TrendingUp, Truck, CloudRain, Clock, Building, TriangleAlert, Search } from 'lucide-react';
 
 const WEATHER_LABELS = ['Clear', 'Light Rain', 'Moderate', 'Heavy', 'Extreme'];
 
@@ -21,6 +21,7 @@ export default function SimulationPage() {
   const [weather, setWeather] = useState(0);
   const [duration, setDuration] = useState(24);
   const [zone, setZone] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [running, setRunning] = useState(false);
   
   const [baselineData, setBaselineData] = useState<ZoneData[]>([]);
@@ -125,24 +126,58 @@ export default function SimulationPage() {
     }
   };
 
-  const renderGrid = (data: ZoneData[]) => (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
-      {data.map((d, i) => {
-        const val = d.priority_score;
-        return (
-          <div key={i} style={{ borderRadius: '4px', background: getColor(val), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '9px', color: 'rgba(242,232,217,.7)', transition: 'background .5s', flexDirection: 'column', gap: '2px', padding: '4px', textAlign: 'center' }}>
-            <span style={{fontWeight: 700}}>{d.zone}</span><span>{val}%</span>
+  const renderGrid = (data: ZoneData[]) => {
+    const filtered = data.filter(d => 
+      d.zone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
+        {filtered.length > 0 ? filtered.map((d, i) => {
+          const val = d.priority_score;
+          return (
+            <div key={i} style={{ borderRadius: '4px', background: getColor(val), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '10px', color: 'rgba(255,255,255,.9)', transition: 'background .5s', flexDirection: 'column', gap: '2px', padding: '10px', textAlign: 'center', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)' }}>
+              <span style={{fontWeight: 800, textTransform: 'uppercase'}}>{d.zone}</span><span>{val}%</span>
+            </div>
+          );
+        }) : (
+          <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '2rem', color: 'var(--secondary)' }} className="mono">
+            No wards found matching "{searchTerm}"
           </div>
-        );
-      })}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   return (
     <DashboardShell title="Simulation" badges={[{ type: 'info', text: 'SimPy Engine' }]}>
-      <div className="page-header">
-        <h1 className="page-header__title">Digital Twin Simulator</h1>
-        <p className="page-header__sub">What-if scenario sandbox — test before committing real resources</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+        <div>
+          <h1 className="page-header__title" style={{ marginBottom: '0.25rem' }}>Digital Twin Simulator</h1>
+          <p className="page-header__sub">What-if scenario sandbox — test before committing real resources</p>
+        </div>
+        <div style={{ position: 'relative', width: '340px' }}>
+          <input 
+            type="text" 
+            placeholder="Search city areas..." 
+            className="input" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ 
+              paddingLeft: '3rem', 
+              height: '42px',
+              background: 'var(--surface)', 
+              borderRadius: '12px', 
+              border: '1px solid var(--border-subtle)',
+              fontFamily: 'inherit',
+              boxShadow: 'var(--shadow-sm)',
+              fontSize: '14px'
+            }}
+          />
+          <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--secondary)', opacity: 0.8, display: 'flex', alignItems: 'center' }}>
+            <Search size={18} strokeWidth={2.5} />
+          </div>
+        </div>
       </div>
 
       {/* Controls */}
