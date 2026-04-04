@@ -154,12 +154,22 @@ export default function DispatchPage() {
     }
 
     if (!mapInstanceRef.current) {
-      mapInstanceRef.current = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OSM &copy; CARTO',
-        maxZoom: 18,
-      }).addTo(mapInstanceRef.current);
-      layerGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+      // Aggressive guard against Leaflet internal registry errors
+      if ((mapRef.current as any)._leaflet_id) {
+        return; 
+      }
+      
+      try {
+        mapInstanceRef.current = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OSM &copy; CARTO',
+          maxZoom: 18,
+        }).addTo(mapInstanceRef.current);
+        layerGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+      } catch (e) {
+        console.warn("NagarFlow Map Sync Error:", e);
+        return;
+      }
     }
 
     redrawMap(truckData, predictionData);
