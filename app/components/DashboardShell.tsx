@@ -121,7 +121,14 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
             <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="hamburger" id="hamburger" aria-label="Toggle menu" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu size={22} />
             </motion.button>
-            <motion.button whileHover={{ scale: 1.1, color: 'var(--primary)' }} whileTap={{ scale: 0.9 }} className="collapse-toggle" onClick={() => setIsCollapsed(!isCollapsed)} title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+            <motion.button 
+              whileHover={{ scale: 1.1, color: 'var(--primary)' }} 
+              whileTap={{ scale: 0.9 }} 
+              className="collapse-toggle" 
+              onClick={() => setIsCollapsed(!isCollapsed)} 
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              suppressHydrationWarning={true}
+            >
               {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
             </motion.button>
             <span className="topbar__title">{title}</span>

@@ -197,7 +197,13 @@ export default function AgenciesPage() {
           <h1 className="page-header__title">Multi-Agency Coordination</h1>
           <p className="page-header__sub">Official BMC and NMMC operations directory for garbage pickup, water supply, drainage, sewerage, and engineering services.</p>
         </div>
-        <button className="btn btn--outline" onClick={() => loadAgencies(true)} disabled={isRefreshing} style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem' }}>
+        <button 
+          className="btn btn--outline" 
+          onClick={() => loadAgencies(true)} 
+          disabled={isRefreshing} 
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem' }}
+          suppressHydrationWarning={true}
+        >
           <RefreshCcw size={15} className={isRefreshing ? 'spin' : ''} />
           {isRefreshing ? 'Refreshing...' : 'Refresh Sources'}
         </button>
@@ -223,13 +229,26 @@ export default function AgenciesPage() {
           style={{ maxWidth: '320px' }}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
+          suppressHydrationWarning={true}
         />
-        <select className="input" style={{ maxWidth: '180px' }} value={cityFilter} onChange={(event) => setCityFilter(event.target.value)}>
+        <select 
+          className="input" 
+          style={{ maxWidth: '180px' }} 
+          value={cityFilter} 
+          onChange={(event) => setCityFilter(event.target.value)}
+          suppressHydrationWarning={true}
+        >
           {cities.map((city) => (
             <option key={city} value={city}>{city}</option>
           ))}
         </select>
-        <select className="input" style={{ maxWidth: '220px' }} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+        <select 
+          className="input" 
+          style={{ maxWidth: '220px' }} 
+          value={categoryFilter} 
+          onChange={(event) => setCategoryFilter(event.target.value)}
+          suppressHydrationWarning={true}
+        >
           {categories.map((category) => (
             <option key={category} value={category}>{category}</option>
           ))}

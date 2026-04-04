@@ -278,26 +278,35 @@ export default function DashboardPage() {
       </motion.div>
 
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" className="grid-2-1">
-        <motion.div variants={FADE_UP}>
+        <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="map-container map-container--lg" ref={mapRef} style={{height: '520px'}}></div>
+          
+          {/* Shifted: Live Operator Log now sits at the bottom of the map */}
+          <motion.div variants={FADE_UP} className="card card--glass" style={{ flexShrink: 0, padding: '1rem 1.5rem' }}>
+             <div className="card__title" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.5rem' }}>
+                <div className="sidebar__logo-dot" style={{ width: '6px', height: '6px' }}></div>
+                Live Operator Log
+             </div>
+             <div className="log-scroll-area" style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+                {alerts.map((msg, i) => (
+                  <div key={i} className="feed-item" style={{ border: 'none', background: 'transparent', padding: '2px 0', boxShadow: 'none', marginBottom: 0 }}>
+                    <div className="feed-item__text mono" style={{fontSize: '11px', color: i === 0 ? 'var(--text-heading)' : 'var(--secondary)'}}>
+                      <span style={{ color: 'var(--primary)', marginRight: '.5rem'}}>[{new Date().toLocaleTimeString([], {hour12: false})}]</span>
+                      {msg}
+                    </div>
+                  </div>
+                ))}
+             </div>
+          </motion.div>
         </motion.div>
 
         {/* Dynamic Action Array Sidebar */}
         <motion.div variants={STAGGER_CONTAINER} style={{ display: 'flex', flexDirection: 'column', gap: '1rem'}}>
           
-          <motion.div variants={FADE_UP} className="card" style={{ flexShrink: 0 }}>
-             <div className="card__title">Live Operator Log</div>
-             {alerts.map((msg, i) => (
-                <div key={i} className="feed-item" style={{ marginBottom: '.25rem' }}>
-                  <div className="feed-item__text mono" style={{fontSize: '11px', color: i === 0 ? 'var(--text-heading)' : 'var(--secondary)'}}>{msg}</div>
-                </div>
-             ))}
-          </motion.div>
-
           <motion.div variants={FADE_UP} style={{ flexShrink: 0 }}>
              <VoiceConversation onTranscribed={(data) => {
                 if(data && data.zone) {
-                  setAlerts(prev => [`[SARVAM AGENT] ${data.zone}: ${data.issue_type} logged with ${data.severity} severity.`, ...prev].slice(0, 3));
+                  setAlerts(prev => [`[SARVAM AGENT] ${data.zone}: ${data.issue_type} logged with ${data.severity} severity.`, ...prev].slice(0, 10));
                 }
              }} />
           </motion.div>
@@ -317,24 +326,43 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          {/* Core Interactive Fleet Haversine Commands */}
-          <motion.div variants={FADE_UP} className="card" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            <div className="card__title" style={{ color: 'var(--primary)'}}>Haversine Target Array</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', marginTop: '.75rem' }}>
-               {suggestions.length === 0 ? <div className="mono" style={{fontSize: '11px', color: 'var(--secondary)', padding: '1rem 0'}}>Network balanced. No routing suggestions.</div> : 
+          {/* Core Interactive Fleet Haversine Commands - Blends in perfectly */}
+          <motion.div variants={FADE_UP} className="card card--glass" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', maxHeight: '550px' }}>
+            <div className="card__title" style={{ color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Haversine Target Array
+              <span className="badge badge--low">Matrix Core Active</span>
+            </div>
+            <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', marginTop: '.75rem', overflowY: 'auto', paddingRight: '.5rem' }}>
+               {suggestions.length === 0 ? (
+                 <div className="mono" style={{fontSize: '11px', color: 'var(--secondary)', padding: '1.5rem', textAlign: 'center', opacity: 0.6}}>
+                    // Network balanced. <br/> No active routing suggestions.
+                 </div>
+               ) : (
                  suggestions.map(s => (
-                  <div key={`${s.truck_id}-${s.zone}`} style={{border: '1px solid var(--primary)', background: 'rgba(122,140,94, 0.05)', borderRadius: '6px', padding: '.6rem'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.3rem'}}>
-                      <span style={{fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)'}}>{s.truck_name} ➔ {s.zone}</span>
-                      <span className="mono" style={{fontSize: '10px', color: 'var(--accent)'}}>ETA {s.eta_mins}m</span>
+                  <div key={`${s.truck_id}-${s.zone}`} className="dispatch-card-premium">
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem'}}>
+                      <div style={{ display: 'flex', flexDirection: 'column'}}>
+                        <span className="mono" style={{fontSize: '10px', color: 'var(--secondary)', textTransform: 'uppercase'}}>Fleet Asset</span>
+                        <span style={{fontSize: '13px', fontWeight: 700, color: 'var(--text-heading)'}}>{s.truck_name}</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span className="mono" style={{fontSize: '10px', color: 'var(--accent)', display: 'block'}}>EST. REACH</span>
+                        <span style={{fontSize: '13px', fontWeight: 700, color: 'var(--primary)'}}>{s.eta_mins} MIN</span>
+                      </div>
                     </div>
-                    <div style={{display: 'flex', gap: '.5rem', marginTop: '.3rem'}}>
-                      <button onClick={(e) => handleAccept(s.truck_id, s.zone, e)} className="btn btn--sm btn--primary" style={{flex: 1, padding: '.3rem'}}>Send</button>
-                      <button onClick={(e) => handleArrive(s.truck_id, s.zone, e)} className="btn btn--sm btn--outline" style={{flex: 1, padding: '.3rem', background: 'var(--bg)'}}>Arrive</button>
+                    
+                    <div style={{ background: 'rgba(28, 20, 16, 0.03)', borderRadius: '4px', padding: '.5rem', marginBottom: '.75rem', borderLeft: '2px solid var(--primary)'}}>
+                      <div className="mono" style={{fontSize: '9px', color: 'var(--secondary)'}}>TARGET SECTOR</div>
+                      <div style={{fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)'}}>{s.zone}</div>
+                    </div>
+
+                    <div style={{display: 'flex', gap: '.5rem' }}>
+                      <button onClick={(e) => handleAccept(s.truck_id, s.zone, e)} className="btn btn--sm btn--primary" style={{flex: 1.5, borderRadius: '4px', fontWeight: 700}}>DISPATCH</button>
+                      <button onClick={(e) => handleArrive(s.truck_id, s.zone, e)} className="btn btn--sm btn--outline" style={{flex: 1, borderRadius: '4px', padding: '.3rem', background: 'var(--surface)', fontSize: '10px'}}>LOG ARRIVAL</button>
                     </div>
                   </div>
                  ))
-               }
+               )}
             </div>
           </motion.div>
         </motion.div>
