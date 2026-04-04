@@ -25,6 +25,7 @@ const CATEGORIES = [
 ];
 
 import { Waves, Trash2, Construction, AlertTriangle, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SimulationPage() {
   const [demand, setDemand] = useState(0);
@@ -160,28 +161,49 @@ export default function SimulationPage() {
     };
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
+      <motion.div 
+        layout
+        initial="hidden"
+        animate="show"
+        variants={{
+          show: {
+            transition: {
+              staggerChildren: 0.02
+            }
+          }
+        }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', padding: '1rem', height: '100%', overflowY: 'auto' }}
+      >
         {filtered.length > 0 ? filtered.map((d, i) => {
           const val = d.priority_score;
           return (
-            <div key={i} style={{ 
-              borderRadius: '6px', 
-              background: getColor(val), 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              fontFamily: "'Space Mono',monospace", 
-              fontSize: '12px', 
-              color: 'white', 
-              transition: 'background .5s', 
-              flexDirection: 'column', 
-              gap: '4px', 
-              padding: '12px', 
-              textAlign: 'center', 
-              boxShadow: 'inset 0 0 15px rgba(0,0,0,0.2)',
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-              position: 'relative'
-            }}>
+            <motion.div 
+              key={i} 
+              variants={{
+                hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
+                show: { opacity: 1, scale: 1, filter: 'blur(0px)' }
+              }}
+              whileHover={{ scale: 1.05, zIndex: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}
+              style={{ 
+                borderRadius: '6px', 
+                background: getColor(val), 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                fontFamily: "'Space Mono',monospace", 
+                fontSize: '12px', 
+                color: 'white', 
+                transition: 'background .2s, transform 0.2s', 
+                flexDirection: 'column', 
+                gap: '4px', 
+                padding: '12px', 
+                textAlign: 'center', 
+                boxShadow: 'inset 0 0 15px rgba(0,0,0,0.2)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                position: 'relative',
+                cursor: 'pointer'
+              }}
+            >
               {d.category && (
                 <div style={{ 
                   position: 'absolute', 
@@ -197,14 +219,14 @@ export default function SimulationPage() {
               )}
               <span style={{fontWeight: 900, textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.02em'}}>{d.zone}</span>
               <span style={{opacity: 0.9, fontWeight: 700}}>{val}%</span>
-            </div>
+            </motion.div>
           );
         }) : (
           <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '2rem', color: 'var(--secondary)' }} className="mono">
             No wards found matching "{searchTerm}"
           </div>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -239,8 +261,12 @@ export default function SimulationPage() {
         </div>
       </div>
 
-      {/* Category Chips */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ delay: 0.2 }}
+        style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}
+      >
         {CATEGORIES.map(cat => (
           <button
             key={cat.id}
@@ -265,7 +291,7 @@ export default function SimulationPage() {
             {cat.icon} {cat.label}
           </button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Controls */}
       <div style={{ background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' }}>

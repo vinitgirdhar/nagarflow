@@ -1,8 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Check, Truck, X } from 'lucide-react';
+import { Bot, Check, Truck, X, MapPin, Activity } from 'lucide-react';
+import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+
+const STAGGER_CONTAINER: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const FADE_UP: Variants = {
+  hidden: { opacity: 0, y: 30, filter: 'blur(10px)', scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    filter: 'blur(0px)', 
+    scale: 1,
+    transition: { type: 'spring', stiffness: 200, damping: 25 } 
+  }
+};
 
 type TruckRecord = {
   id: number;
@@ -276,7 +293,7 @@ export default function DispatchPage() {
         throw new Error('Dispatch accept failed');
       }
 
-      setDismissedSuggestionKeys((current) => [...current, getSuggestionKey(suggestion)]);
+      setDismissedSuggestionKeys((current: string[]) => [...current, getSuggestionKey(suggestion)]);
       await loadData();
     } catch {
       setErrorText('The route could not be accepted. Please try again.');
@@ -286,16 +303,16 @@ export default function DispatchPage() {
   };
 
   const handleSkip = (suggestion: SuggestionRecord) => {
-    setDismissedSuggestionKeys((current) => [...current, getSuggestionKey(suggestion)]);
-    setSuggestions((current) =>
-      current.filter((item) => getSuggestionKey(item) !== getSuggestionKey(suggestion)),
+    setDismissedSuggestionKeys((current: string[]) => [...current, getSuggestionKey(suggestion)]);
+    setSuggestions((current: SuggestionRecord[]) =>
+      current.filter((item: SuggestionRecord) => getSuggestionKey(item) !== getSuggestionKey(suggestion)),
     );
   };
 
-  const activeVehicles = vehicles.filter((vehicle) => vehicle.status !== 'idle').length;
-  const enRouteVehicles = vehicles.filter((vehicle) => vehicle.status.startsWith('en_route_to_')).length;
+  const activeVehicles = vehicles.filter((vehicle: TruckRecord) => vehicle.status !== 'idle').length;
+  const enRouteVehicles = vehicles.filter((vehicle: TruckRecord) => vehicle.status.startsWith('en_route_to_')).length;
   const avgEta = suggestions.length
-    ? `${Math.round(suggestions.reduce((sum, suggestion) => sum + suggestion.eta_mins, 0) / suggestions.length)}m`
+    ? `${Math.round(suggestions.reduce((sum: number, suggestion: SuggestionRecord) => sum + suggestion.eta_mins, 0) / suggestions.length)}m`
     : '0m';
 
   return (
@@ -335,158 +352,167 @@ export default function DispatchPage() {
       </div>
 
       {errorText ? (
-        <div className="card" style={{ marginBottom: '1rem', borderColor: 'rgba(193,68,14,0.25)' }}>
-          <div className="card__title">Dispatch Status</div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--danger)' }}>
+          <div className="card__title" style={{ color: 'var(--danger)' }}>Dispatch Status Error</div>
           <p className="card__sub" style={{ marginTop: '.5rem' }}>{errorText}</p>
-        </div>
+        </motion.div>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        <div>
-          <div className="card__title" style={{ marginBottom: '.75rem' }}>Live Fleet GPS Tracker</div>
-          <div className="map-container map-container--lg" ref={mapRef}></div>
-        </div>
+      <motion.div 
+        variants={STAGGER_CONTAINER} 
+        initial="hidden" 
+        animate="show" 
+        style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.1fr', gap: '2rem', alignItems: 'flex-start' }}
+      >
+        {/* Left Column: Primary Operations */}
+        <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <div className="card card--glass" style={{ padding: '0', overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <MapPin size={18} color="var(--primary)" />
+              <div className="card__title">Live Fleet GPS Tracker</div>
+              <div className="badge badge--low" style={{ marginLeft: 'auto' }}>GEOMETRY ACTIVE</div>
+            </div>
+            <div className="map-container map-container--lg" ref={mapRef} style={{ height: '500px', border: 'none', borderRadius: '0' }}></div>
+          </div>
 
-        <div>
-          <div className="card__title" style={{ marginBottom: '.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Bot size={18} color="var(--primary)" /> AiRLLM Live Dispatcher Matcher
+          <div className="card card--glass" style={{ padding: '0', overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Activity size={18} color="var(--accent)" />
+              <div className="card__title">Vehicles Stream</div>
+            </div>
+            <div className="table-wrap" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+              <table style={{ borderCollapse: 'collapse' }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--dark-surface)' }}>
+                  <tr>
+                    <th style={{ padding: '1rem' }}>ID</th>
+                    <th style={{ padding: '1rem' }}>Truck</th>
+                    <th style={{ padding: '1rem' }}>Type</th>
+                    <th style={{ padding: '1rem' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehicles.map((vehicle: TruckRecord) => {
+                    const isEnRoute = vehicle.status.startsWith('en_route_to_');
+                    const badgeType = isEnRoute ? 'active' : vehicle.status === 'idle' ? 'info' : 'critical';
+
+                    return (
+                      <tr key={vehicle.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '1rem' }}><span className="mono" style={{ fontSize: '11px' }}>{vehicle.id}</span></td>
+                        <td style={{ padding: '1rem', fontWeight: 600 }}>{vehicle.name}</td>
+                        <td style={{ padding: '1rem' }}>
+                          <span
+                            className="mono"
+                            style={{
+                              ...getTruckTypeBadgeStyle(vehicle.truck_type),
+                              fontSize: '10px',
+                              padding: '4px 8px',
+                              borderRadius: '999px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {vehicle.truck_type_label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isEnRoute ? 'var(--accent)' : vehicle.status === 'idle' ? 'var(--secondary)' : 'var(--danger)' }}></div>
+                            <span className={`badge badge--${badgeType}`} style={{ whiteSpace: 'nowrap', fontSize: '10px' }}>
+                              {vehicle.status.replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Right Column: AI Suggestions */}
+        <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
+            <Bot size={22} color="var(--primary)" /> 
+            <div className="card__title" style={{ fontSize: '18px' }}>AiRLLM Matcher</div>
           </div>
 
           {!loading && suggestions.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px', marginBottom: '1.5rem' }}>
-              All high-priority zones are currently handled. Fleet is synchronized.
+            <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)' }}>
+              All high-priority zones are currently handled. <br/> Fleet is synchronized.
             </div>
           ) : null}
 
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px', marginBottom: '1.5rem' }}>
+            <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px' }}>
               Loading live dispatch suggestions...
             </div>
           ) : null}
 
-          {suggestions.map((suggestion, index) => {
+          {suggestions.map((suggestion: SuggestionRecord, index: number) => {
             const suggestionKey = getSuggestionKey(suggestion);
             const acceptingThis = activeTruckId === suggestion.truck_id;
 
             return (
-              <div key={suggestionKey} style={{ background: 'rgba(193,68,14,.06)', border: '1px solid rgba(193,68,14,.2)', borderRadius: '12px', padding: '1.25rem', marginBottom: '.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem' }}>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '15px', color: 'var(--text-heading)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                    <Truck size={16} /> SG-{1403 + index}: {suggestion.truck_name} → {suggestion.zone}
+              <motion.div 
+                key={suggestionKey} 
+                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(193,68,14,0.1)' }}
+                style={{ 
+                  background: 'var(--dark-surface)', 
+                  border: '1px solid rgba(193,68,14,.2)', 
+                  borderRadius: '12px', 
+                  padding: '1.5rem', 
+                  position: 'relative',
+                  overflow: 'hidden'
+                 }}
+              >
+                
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: '16px', color: 'var(--text-heading)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <Truck size={18} color="var(--primary)" /> SG-{1403 + index}
                   </div>
-                  <div className="mono" style={{ fontSize: '11px', color: 'var(--glow)' }}>Priority: {suggestion.priority_score}</div>
+                  <div className="mono" style={{ fontSize: '12px', color: 'var(--glow)', fontWeight: 800 }}>P:{suggestion.priority_score}</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '.45rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
-                  <span
-                    className="mono"
-                    style={{
-                      ...getTruckTypeBadgeStyle(suggestion.truck_type),
-                      fontSize: '10px',
-                      padding: '4px 8px',
-                      borderRadius: '999px',
-                    }}
-                  >
-                    {suggestion.truck_type_label}
-                  </span>
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: '10px',
-                      padding: '4px 8px',
-                      borderRadius: '999px',
-                      background: 'rgba(122,140,94,.10)',
-                      border: '1px solid rgba(122,140,94,.18)',
-                      color: 'var(--accent)',
-                    }}
-                  >
-                    Target match: {suggestion.preferred_truck_type_label}
-                  </span>
+                <div style={{ marginBottom: '1.25rem' }}>
+                   <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-heading)' }}>{suggestion.truck_name}</div>
+                   <div style={{ fontSize: '12px', color: 'var(--secondary)', marginTop: '2px' }}>Target Ward: <b style={{ color: 'var(--text-heading)' }}>{suggestion.zone}</b></div>
                 </div>
 
-                <div className="mono" style={{ fontSize: '10px', color: 'var(--text-body)', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border-subtle)', borderRadius: '6px', marginBottom: '.75rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  <span><b style={{ color: 'var(--primary)' }}>TRACKER:</b> {acceptingThis ? 'LOCKING ROUTE' : 'IDLE'}</span>
-                  <span><b style={{ color: 'var(--primary)' }}>TYPE:</b> {suggestion.truck_type_label}</span>
-                  <span><b style={{ color: 'var(--primary)' }}>ETA:</b> {suggestion.eta_mins}m</span>
-                  <span><b style={{ color: 'var(--primary)' }}>DIST:</b> {suggestion.distance_km}km</span>
+                <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  <span className="badge badge--dark" style={{ background: 'rgba(255,255,255,0.05)', fontSize: '9px' }}>{suggestion.truck_type_label}</span>
+                  <span className="badge badge--low" style={{ fontSize: '9px' }}>ETA: {suggestion.eta_mins}m</span>
+                  <span className="badge badge--low" style={{ fontSize: '9px' }}>DIST: {suggestion.distance_km}km</span>
                 </div>
 
-                <div style={{ fontSize: '13px', color: 'var(--secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
-                  <b>Context:</b> {suggestion.reason}
+                <div style={{ fontSize: '12px', color: 'var(--secondary)', lineHeight: 1.5, marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }}>
+                  {suggestion.reason}
                 </div>
 
-                <div style={{ display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '.75rem' }}>
                   <button
-                    className="btn btn--success btn--sm"
+                    className="btn btn--primary btn--sm"
                     onClick={() => handleAccept(suggestion)}
                     disabled={acceptingThis}
-                    style={{ opacity: acceptingThis ? 0.7 : 1 }}
+                    style={{ flex: 2, borderRadius: '8px', fontWeight: 700 }}
                   >
-                    <Check size={14} /> {acceptingThis ? 'Accepting...' : 'Accept Route'}
+                    {acceptingThis ? 'LOCKING...' : 'DISPATCH'}
                   </button>
                   <button
-                    className="btn btn--danger btn--sm"
+                    className="btn btn--outline btn--sm"
                     onClick={() => handleSkip(suggestion)}
                     disabled={acceptingThis}
-                    style={{ opacity: acceptingThis ? 0.7 : 1 }}
+                    style={{ flex: 1, borderRadius: '8px' }}
                   >
-                    <X size={14} /> Skip
+                    SKIP
                   </button>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-
-          <div className="card__title" style={{ margin: '1.5rem 0 .75rem' }}>Vehicles Stream</div>
-          <div className="table-wrap" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            <table>
-              <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                <tr>
-                  <th>ID</th>
-                  <th>Truck</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehicles.map((vehicle) => {
-                  const isEnRoute = vehicle.status.startsWith('en_route_to_');
-                  const badgeType = isEnRoute ? 'active' : vehicle.status === 'idle' ? 'info' : 'critical';
-
-                  return (
-                    <tr key={vehicle.id}>
-                      <td><span className="mono" style={{ fontSize: '11px' }}>{vehicle.id}</span></td>
-                      <td>{vehicle.name}</td>
-                      <td>
-                        <span
-                          className="mono"
-                          style={{
-                            ...getTruckTypeBadgeStyle(vehicle.truck_type),
-                            fontSize: '10px',
-                            padding: '4px 8px',
-                            borderRadius: '999px',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {vehicle.truck_type_label}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isEnRoute ? 'var(--accent)' : vehicle.status === 'idle' ? 'var(--secondary)' : 'var(--danger)' }}></div>
-                          <span className={`badge badge--${badgeType}`} style={{ whiteSpace: 'nowrap' }}>
-                            {vehicle.status.replace(/_/g, ' ').toUpperCase()}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </DashboardShell>
   );
 }

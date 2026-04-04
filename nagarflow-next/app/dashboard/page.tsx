@@ -9,8 +9,14 @@ const STAGGER_CONTAINER: Variants = {
 };
 
 const FADE_UP: Variants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  hidden: { opacity: 0, y: 30, filter: 'blur(10px)', scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    filter: 'blur(0px)', 
+    scale: 1,
+    transition: { type: 'spring', stiffness: 200, damping: 25 } 
+  }
 };
 
 function getColor(v: number) {
@@ -277,7 +283,7 @@ export default function DashboardPage() {
           { label: 'Equity Score', value: kpis.equity.toString(), sub: 'bias-corrected' },
           { label: 'Network State', value: trucksLive.length > 0 ? 'NOMINAL' : 'DISCONNECTED', sub: 'Polling Port 5000' },
         ].map((s, i) => (
-          <motion.div key={i} className="card" variants={FADE_UP}>
+          <motion.div key={i} className="card" variants={FADE_UP} whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }} transition={{ duration: 0.2 }}>
             <div className="card__label">{s.label}</div>
             <div className="card__value">{s.value}</div>
             <div className="card__sub">{s.sub}</div>

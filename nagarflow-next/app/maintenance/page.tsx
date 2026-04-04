@@ -154,9 +154,9 @@ export default function MaintenancePage() {
         ].map((s, i) => (
           <motion.div 
             key={i} 
-            initial={{ opacity: 0, y: 10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ delay: i * 0.1 }}
+            initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }} 
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} 
+            transition={{ delay: i * 0.1, type: 'spring', stiffness: 200, damping: 25 }}
             className="card" 
             style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '2rem' }}
           >
@@ -190,15 +190,16 @@ export default function MaintenancePage() {
                 <span className="badge badge--dark" style={{ opacity: 0.9, fontSize: '12px', padding: '4px 10px' }}>{tasks?.filter(t => t.status === status).length}</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <AnimatePresence>
+              <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <AnimatePresence mode="popLayout">
                   {tasks?.filter(t => t.status === status).map((task) => (
                     <motion.div 
                       key={task.id}
-                      layoutId={task.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
+                      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, scale: 0.8 / 1.1, filter: 'blur(10px)' }}
+                      transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                       className="card"
                       style={{ padding: '1.5rem', border: '1px solid var(--border-subtle)', position: 'relative', background: 'var(--dark-surface)', borderRadius: '12px' }}
                     >
@@ -246,7 +247,7 @@ export default function MaintenancePage() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
-              </div>
+              </motion.div>
             </div>
           ))}
         </div>

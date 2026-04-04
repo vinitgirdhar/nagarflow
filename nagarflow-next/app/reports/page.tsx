@@ -103,18 +103,35 @@ export default function ReportsPage() {
       ];
       const CW = cov.width, CH = cov.height, CP = 35;
       cCtx.clearRect(0, 0, CW, CH);
-      const barW = (CW - CP - 10) / zoneCov.length - 4;
+      
+      // Draw Axes & Grid
+      cCtx.strokeStyle = '#2e2318'; cCtx.lineWidth = 0.5;
+      for (let y = 0; y <= 4; y++) {
+        const yy = CP + (CH - CP * 2) * (y / 4);
+        cCtx.beginPath(); cCtx.moveTo(CP, yy); cCtx.lineTo(CW - 10, yy); cCtx.stroke();
+        cCtx.fillStyle = '#5a4a3a'; cCtx.font = '9px "Space Mono"';
+        cCtx.fillText((100 - y * 25) + '%', 2, yy + 3);
+      }
+      // Y-Axis line
+      cCtx.beginPath(); cCtx.moveTo(CP, CP); cCtx.lineTo(CP, CH - CP); cCtx.stroke();
+
+      const barW = (CW - CP - 10) / zoneCov.length - 6;
       zoneCov.forEach((z, i) => {
-        const x = CP + i * (barW + 4);
+        const x = CP + i * (barW + 6) + 3;
         const h = (CH - CP * 2) * (z.v / 100);
         const y = CP + (CH - CP * 2) - h;
         const color = z.v >= 80 ? '#7A8C5E' : z.v >= 60 ? '#D4A96A' : '#C1440E';
+        
         cCtx.fillStyle = color;
-        cCtx.beginPath();
-        if ((cCtx as any).roundRect) (cCtx as any).roundRect(x, y, barW, h, 3);
-        else cCtx.rect(x, y, barW, h);
-        cCtx.fill();
-        cCtx.fillStyle = '#5a4a3a'; cCtx.font = '9px "Space Mono"'; cCtx.fillText(z.name, x, CH - 5);
+        if ((cCtx as any).roundRect) {
+          cCtx.beginPath();
+          (cCtx as any).roundRect(x, y, barW, h, [4, 4, 0, 0]);
+          cCtx.fill();
+        } else {
+          cCtx.fillRect(x, y, barW, h);
+        }
+        
+        cCtx.fillStyle = '#5a4a3a'; cCtx.font = '9px "Space Mono"'; cCtx.fillText(z.name, x + (barW/4), CH - 5);
       });
     }
   };
@@ -190,9 +207,9 @@ export default function ReportsPage() {
       pdf.text('1. EXECUTIVE SUMMARY', margin, 130);
       
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(11);
+      pdf.setFontSize(10);
       pdf.setTextColor(74, 63, 52); // --text-body
-      const summary = `This document serves as the formal physical audit report for the NagarFlow Unified Command. It evaluates the current performance and integrity of the AiRLLM dispatch engine across 52 Mumbai wards. The current system status is ${data?.trigger_retrain ? 'CRITICAL (DRIFT DETECTED)' : 'OPTIMAL (MAINTAINING THRESHOLDS)'}.`;
+      const summary = `System performance audit for the NagarFlow engine across 52 Mumbai wards. Current status is ${data?.trigger_retrain ? 'CRITICAL (DRIFT DETECTED)' : 'OPTIMAL'}. High-fidelity validation feedback loop is ACTIVE.`;
       pdf.text(pdf.splitTextToSize(summary, pageWidth - margin * 2), margin, 150);
 
       // --- KEY METRICS TABLE ---
@@ -203,12 +220,12 @@ export default function ReportsPage() {
 
       const metricRows = kpis.map(k => [k.label, `${k.value}%`]);
       autoTable(pdf, {
-        startY: 225,
+        startY: 215,
         head: [['Metric', 'Value']],
         body: metricRows,
         margin: { left: margin },
         tableWidth: pageWidth - margin * 2,
-        styles: { font: 'helvetica', fontSize: 10, cellPadding: 8 },
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 6 },
         headStyles: { fillColor: [193, 68, 14], textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [248, 245, 240] } // --bg
       });
@@ -222,56 +239,54 @@ export default function ReportsPage() {
 
       // Capture Perf Graph
       if (perfRef.current) {
-        const perfCanvas = await html2canvas(perfRef.current, { scale: 2 });
+        const perfCanvas = await html2canvas(perfRef.current, { scale: 3 });
         const perfImg = perfCanvas.toDataURL('image/png');
         const imgW = pageWidth - margin * 2;
-        const imgH = 150; // CONSTRAINED HEIGHT for single-page
+        const imgH = 185; // INCREASED HEIGHT for better axes
         
         pdf.addImage(perfImg, 'PNG', margin, currentY, imgW, imgH);
-        currentY += imgH + 10;
-        pdf.setFontSize(9);
+        currentY += imgH + 8;
+        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'italic');
         pdf.text('Figure 3.1: Weekly Validation Drift Engine — Tracking AiRLLM vs. Physical Feedback', margin, currentY);
-        currentY += 25;
+        currentY += 22;
       }
 
       // Capture Coverage Graph
       if (covRef.current) {
-        const covCanvas = await html2canvas(covRef.current, { scale: 2 });
+        const covCanvas = await html2canvas(covRef.current, { scale: 3 });
         const covImg = covCanvas.toDataURL('image/png');
         const imgW = pageWidth - margin * 2;
-        const imgH = 150; // CONSTRAINED HEIGHT for single-page
+        const imgH = 185; // INCREASED HEIGHT for better axes
         
         pdf.addImage(covImg, 'PNG', margin, currentY, imgW, imgH);
-        currentY += imgH + 10;
-        pdf.setFontSize(9);
+        currentY += imgH + 8;
+        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'italic');
         pdf.text('Figure 3.2: Zone Disparity Layout — Ward-level geospatial service coverage analytics', margin, currentY);
-        currentY += 30;
+        currentY += 20;
       }
 
       // --- SYSTEM FINDINGS & ALERTS ---
       if (data?.trigger_retrain) {
-        const alertH = 60;
-        // Safety check to ensure alert fits before footer
-        if (currentY + alertH > pageHeight - 60) {
-          currentY = pageHeight - 60 - alertH - 10; 
-        }
+        const alertH = 40;
+        // Ensure alert fits or is placed strategically
+        if (currentY + alertH > pageHeight - 60) currentY = pageHeight - 110;
 
-        pdf.setFillColor(185, 45, 45, 0.1);
+        pdf.setFillColor(185, 45, 45, 0.05);
         pdf.setDrawColor(185, 45, 45);
         pdf.rect(margin, currentY, pageWidth - margin * 2, alertH, 'FD');
         
-        pdf.setFontSize(11);
+        pdf.setFontSize(10);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(185, 45, 45); // --danger
-        pdf.text('CRITICAL FINDING: SYSTEMIC MODEL DRIFT', margin + 15, currentY + 20);
+        pdf.setTextColor(185, 45, 45); 
+        pdf.text('ALERT: SYSTEMIC MODEL DRIFT DETECTED', margin + 15, currentY + 18);
         
-        pdf.setFontSize(9);
+        pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(28, 20, 16);
-        const alertMsg = `Emergency: Accuracy failure detected. The current error margin is ${Number(data.recent_error_margin).toFixed(1)}%. Immediate AiRLLM retraining is recommended.`;
-        pdf.text(pdf.splitTextToSize(alertMsg, pageWidth - margin * 2 - 30), margin + 15, currentY + 35);
+        const alertMsg = `Emergency: Accuracy failure. Recent 20 samples indicate a ${Number(data.recent_error_margin).toFixed(1)}% error. Retraining of AiRLLM is recommended.`;
+        pdf.text(pdf.splitTextToSize(alertMsg, pageWidth - margin * 2 - 30), margin + 15, currentY + 30);
       }
 
       // --- FOOTER ---
