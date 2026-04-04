@@ -345,6 +345,24 @@ export default function DashboardPage() {
                       <div style={{ display: 'flex', flexDirection: 'column'}}>
                         <span className="mono" style={{fontSize: '10px', color: 'var(--secondary)', textTransform: 'uppercase'}}>Fleet Asset</span>
                         <span style={{fontSize: '13px', fontWeight: 700, color: 'var(--text-heading)'}}>{s.truck_name}</span>
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: '10px',
+                            marginTop: '.25rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '.3rem',
+                            width: 'fit-content',
+                            padding: '3px 8px',
+                            borderRadius: '999px',
+                            background: s.truck_type === 'water' ? 'rgba(25,118,210,0.12)' : 'rgba(193,68,14,0.10)',
+                            border: s.truck_type === 'water' ? '1px solid rgba(25,118,210,0.25)' : '1px solid rgba(193,68,14,0.18)',
+                            color: s.truck_type === 'water' ? '#1f5fae' : 'var(--primary)',
+                          }}
+                        >
+                          {s.truck_type_label || 'Garbage Truck'}
+                        </span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <span className="mono" style={{fontSize: '10px', color: 'var(--accent)', display: 'block'}}>EST. REACH</span>
@@ -355,6 +373,9 @@ export default function DashboardPage() {
                     <div style={{ background: 'rgba(28, 20, 16, 0.03)', borderRadius: '4px', padding: '.5rem', marginBottom: '.75rem', borderLeft: '2px solid var(--primary)'}}>
                       <div className="mono" style={{fontSize: '9px', color: 'var(--secondary)'}}>TARGET SECTOR</div>
                       <div style={{fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)'}}>{s.zone}</div>
+                      <div className="mono" style={{ fontSize: '9px', color: 'var(--accent)', marginTop: '.35rem' }}>
+                        Preferred match: {s.preferred_truck_type_label || s.truck_type_label || 'Garbage Truck'}
+                      </div>
                     </div>
 
                     <div style={{display: 'flex', gap: '.5rem' }}>

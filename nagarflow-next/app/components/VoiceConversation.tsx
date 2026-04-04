@@ -576,6 +576,7 @@ export default function VoiceConversation({
         {phase === 'idle' || phase === 'completed' ? (
           <button
             onClick={startSession}
+            suppressHydrationWarning
             style={{
               width: '42px',
               height: '42px',
@@ -598,6 +599,7 @@ export default function VoiceConversation({
         ) : phase === 'processing' || phase === 'greeting' ? (
           <button
             onClick={resetSession}
+            suppressHydrationWarning
             style={{
               width: '42px',
               height: '42px',
@@ -617,6 +619,7 @@ export default function VoiceConversation({
         ) : (
           <button
             onClick={resetSession}
+            suppressHydrationWarning
             style={{
               width: '42px',
               height: '42px',
@@ -650,6 +653,7 @@ export default function VoiceConversation({
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
             <button
               onClick={phase === 'recording' ? stopRecording : startRecording}
+              suppressHydrationWarning
               style={{
                 width: '100%',
                 maxWidth: '200px',

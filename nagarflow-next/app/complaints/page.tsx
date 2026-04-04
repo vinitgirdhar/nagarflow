@@ -161,18 +161,19 @@ export default function ComplaintsPage() {
           type="text"
           placeholder="Search complaints or area..."
           style={{ maxWidth: '320px' }}
+          suppressHydrationWarning
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
-          <select className="input" style={{ maxWidth: '150px' }} value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+          <select className="input" style={{ maxWidth: '150px' }} suppressHydrationWarning value={urgency} onChange={(event) => setUrgency(event.target.value)}>
             <option value="all">All Urgency</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
-          <select className="input" style={{ maxWidth: '160px' }} value={cat} onChange={(event) => setCat(event.target.value)}>
+          <select className="input" style={{ maxWidth: '160px' }} suppressHydrationWarning value={cat} onChange={(event) => setCat(event.target.value)}>
             <option value="all">All Categories</option>
             <option value="waste">Waste</option>
             <option value="road">Road</option>

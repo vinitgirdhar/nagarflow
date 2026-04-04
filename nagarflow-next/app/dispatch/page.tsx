@@ -10,6 +10,8 @@ type TruckRecord = {
   lon: number;
   name: string;
   status: string;
+  truck_type: string;
+  truck_type_label: string;
 };
 
 type PredictionRecord = {
@@ -24,10 +26,14 @@ type SuggestionRecord = {
   action: string;
   distance_km: number;
   eta_mins: number;
+  preferred_truck_type: string;
+  preferred_truck_type_label: string;
   priority_score: number;
   reason: string;
   truck_id: number;
   truck_name: string;
+  truck_type: string;
+  truck_type_label: string;
   zone: string;
 };
 
@@ -64,6 +70,22 @@ type LeafletLike = {
 };
 
 const BACKEND_URL = 'http://127.0.0.1:5000';
+
+function getTruckTypeBadgeStyle(truckType: string) {
+  if (truckType === 'water') {
+    return {
+      background: 'rgba(25,118,210,0.12)',
+      border: '1px solid rgba(25,118,210,0.25)',
+      color: '#1f5fae',
+    };
+  }
+
+  return {
+    background: 'rgba(193,68,14,0.10)',
+    border: '1px solid rgba(193,68,14,0.18)',
+    color: 'var(--primary)',
+  };
+}
 
 export default function DispatchPage() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -124,7 +146,7 @@ export default function DispatchPage() {
 
       L.marker([truck.lat, truck.lon], { icon: truckIcon })
         .addTo(layerGroup)
-        .bindPopup(`<b>${truck.name}</b><br>Status: ${truck.status}`);
+        .bindPopup(`<b>${truck.name}</b><br>Type: ${truck.truck_type_label}<br>Status: ${truck.status}`);
 
       if (isEnRoute) {
         const targetZone = truck.status.replace('en_route_to_', '');
@@ -355,8 +377,36 @@ export default function DispatchPage() {
                   <div className="mono" style={{ fontSize: '11px', color: 'var(--glow)' }}>Priority: {suggestion.priority_score}</div>
                 </div>
 
+                <div style={{ display: 'flex', gap: '.45rem', flexWrap: 'wrap', marginBottom: '.75rem' }}>
+                  <span
+                    className="mono"
+                    style={{
+                      ...getTruckTypeBadgeStyle(suggestion.truck_type),
+                      fontSize: '10px',
+                      padding: '4px 8px',
+                      borderRadius: '999px',
+                    }}
+                  >
+                    {suggestion.truck_type_label}
+                  </span>
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: '10px',
+                      padding: '4px 8px',
+                      borderRadius: '999px',
+                      background: 'rgba(122,140,94,.10)',
+                      border: '1px solid rgba(122,140,94,.18)',
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    Target match: {suggestion.preferred_truck_type_label}
+                  </span>
+                </div>
+
                 <div className="mono" style={{ fontSize: '10px', color: 'var(--text-body)', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.5)', border: '1px solid var(--border-subtle)', borderRadius: '6px', marginBottom: '.75rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <span><b style={{ color: 'var(--primary)' }}>TRACKER:</b> {acceptingThis ? 'LOCKING ROUTE' : 'IDLE'}</span>
+                  <span><b style={{ color: 'var(--primary)' }}>TYPE:</b> {suggestion.truck_type_label}</span>
                   <span><b style={{ color: 'var(--primary)' }}>ETA:</b> {suggestion.eta_mins}m</span>
                   <span><b style={{ color: 'var(--primary)' }}>DIST:</b> {suggestion.distance_km}km</span>
                 </div>
@@ -394,6 +444,7 @@ export default function DispatchPage() {
                 <tr>
                   <th>ID</th>
                   <th>Truck</th>
+                  <th>Type</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -406,6 +457,20 @@ export default function DispatchPage() {
                     <tr key={vehicle.id}>
                       <td><span className="mono" style={{ fontSize: '11px' }}>{vehicle.id}</span></td>
                       <td>{vehicle.name}</td>
+                      <td>
+                        <span
+                          className="mono"
+                          style={{
+                            ...getTruckTypeBadgeStyle(vehicle.truck_type),
+                            fontSize: '10px',
+                            padding: '4px 8px',
+                            borderRadius: '999px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {vehicle.truck_type_label}
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isEnRoute ? 'var(--accent)' : vehicle.status === 'idle' ? 'var(--secondary)' : 'var(--danger)' }}></div>

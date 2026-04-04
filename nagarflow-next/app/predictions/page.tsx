@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
-import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon } from 'lucide-react';
+import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon, Trash2, Droplets, HardHat, ShieldAlert } from 'lucide-react';
 
 const STATS = [
   { label: 'Forecast Accuracy', value: '94.1%', sub: 'AiRLLM Live Engine' },
@@ -34,22 +34,109 @@ const BIAS = [
 ];
 
 function getColor(v: number) {
-  return v >= 80 ? '#C1440E' : v >= 60 ? '#E8933A' : v >= 40 ? '#D4A96A' : '#7A8C5E';
+  // v is expected to be 0-100
+  if (v >= 80) return '#C1440E';
+  if (v >= 60) return '#E8933A';
+  if (v >= 40) return '#D4A96A';
+  return '#7A8C5E';
+}
+
+function getCategoryData(cat: string) {
+  const c = (cat || "").toLowerCase();
+  if (c.includes('garbage')) return { icon: Trash2, label: 'GARBAGE', color: '#E8933A' };
+  if (c.includes('water')) return { icon: Droplets, label: 'WATER', color: '#D4A96A' };
+  if (c.includes('maintenance') || c.includes('inspect')) return { icon: HardHat, label: 'MAINTENANCE', color: '#7A8C5E' };
+  if (c.includes('emergency')) return { icon: ShieldAlert, label: 'EMERGENCY', color: '#C1440E' };
+  return { icon: CheckSquare, label: 'GENERAL', color: '#5a4a3a' };
 }
 
 export default function PredictionsPage() {
   const surgeRef = useRef<HTMLCanvasElement>(null);
   const accRef = useRef<HTMLCanvasElement>(null);
-  const [zonesPred, setZonesPred] = useState<{name: string, demand: number}[]>([]);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapObjRef = useRef<any>(null);
+  const layerGroupRef = useRef<any>(null);
+
+  const [zonesPred, setZonesPred] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   useEffect(() => {
     fetch('http://127.0.0.1:5000/api/predictions')
       .then(res => res.json())
       .then(data => {
-        setZonesPred(data.slice(0, 18));
+        setZonesPred(data);
       })
       .catch(err => console.error("Error fetching live predictions:", err));
   }, []);
+
+  // Map Initialization
+  useEffect(() => {
+    if (viewMode !== 'map') return;
+    
+    if (!document.querySelector('link[href*="leaflet@1.9.4"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L || !mapRef.current) return;
+
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+      }
+
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
+      mapObjRef.current = map;
+      layerGroupRef.current = L.layerGroup().addTo(map);
+      redrawMap();
+    };
+
+    if ((window as any).L) {
+      initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = initMap;
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      if (mapObjRef.current) {
+        mapObjRef.current.remove();
+        mapObjRef.current = null;
+        layerGroupRef.current = null;
+      }
+    };
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode === 'map' && zonesPred.length > 0) {
+      redrawMap();
+    }
+  }, [zonesPred, viewMode]);
+
+  const redrawMap = () => {
+    const L = (window as any).L;
+    if (!L || !layerGroupRef.current || zonesPred.length === 0) return;
+    
+    layerGroupRef.current.clearLayers();
+    zonesPred.forEach(z => {
+      if (!z.lat || !z.lon) return;
+      const val = z.demand;
+      L.circleMarker([z.lat, z.lon], {
+        radius: 12 + ((val / 100) * 20),
+        fillColor: getColor(val),
+        fillOpacity: 0.55,
+        color: getColor(val),
+        weight: 3,
+        opacity: 0.9
+      }).addTo(layerGroupRef.current).bindPopup(`<b>${z.name}</b><br>Type: ${getCategoryData(z.category).label}<br>Priority: ${z.demand}%`);
+    });
+  };
 
   useEffect(() => {
     const surge = surgeRef.current;
@@ -146,20 +233,57 @@ export default function PredictionsPage() {
         </div>
       </div>
 
-      {/* 4-Hour Zone Prediction */}
-      <div className="card__title" style={{ marginBottom: '.75rem' }}>AiRLLM Zone Predictions (Live DB)</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '.5rem', marginBottom: '2rem' }}>
-        {zonesPred.length === 0 ? <p className="mono" style={{color: 'var(--secondary)', gridColumn: 'span 6'}}>Loading live predictions from AiRLLM Pipeline...</p> : null}
-        {zonesPred.map(z => (
-          <div key={z.name} style={{ textAlign: 'center', padding: '.75rem .5rem', borderRadius: '8px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', transition: 'border-color .3s,transform .2s', cursor: 'default' }}>
-            <div className="mono" style={{ fontSize: '10px', color: 'var(--accent)' }}>{z.name}</div>
-            <div style={{ width: '100%', height: '60px', margin: '.5rem 0', position: 'relative', background: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${z.demand}%`, background: getColor(z.demand), borderRadius: '4px', transition: 'height .5s' }}></div>
-            </div>
-            <div className="mono" style={{ fontSize: '13px', fontWeight: 700, color: getColor(z.demand) }}>{z.demand}%</div>
+      {/* View Toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="card__title">AiRLLM Predictive Hotspots</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(52, 211, 153, 0.1)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', boxShadow: '0 0 8px #34d399' }}></div>
+            <span className="mono" style={{ fontSize: '9px', fontWeight: 700, color: '#34d399' }}>LIVE: {zonesPred.length} WARDS TRACKED</span>
           </div>
-        ))}
+        </div>
+        <div style={{ display: 'flex', background: 'var(--dark-surface)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+          <button 
+            onClick={() => setViewMode('grid')} 
+            className="mono" 
+            style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', border: 'none', background: viewMode === 'grid' ? 'var(--accent)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'var(--secondary)', cursor: 'pointer' }}
+          >GRID VIEW</button>
+          <button 
+            onClick={() => setViewMode('map')} 
+            className="mono" 
+            style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '11px', border: 'none', background: viewMode === 'map' ? 'var(--accent)' : 'transparent', color: viewMode === 'map' ? 'white' : 'var(--secondary)', cursor: 'pointer' }}
+          >MAP VIEW</button>
+        </div>
       </div>
+
+      {viewMode === 'grid' ? (
+        <div style={{ maxHeight: '640px', overflowY: 'auto', paddingRight: '12px', marginBottom: '2rem', scrollbarWidth: 'thin', scrollbarColor: 'var(--border-subtle) transparent' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '.75rem' }}>
+            {zonesPred.length === 0 ? <p className="mono" style={{color: 'var(--secondary)', gridColumn: 'span 6'}}>Loading live predictions from AiRLLM Pipeline...</p> : null}
+            {zonesPred.map(z => {
+              const cat = getCategoryData(z.category);
+              const CatIcon = cat.icon;
+              return (
+              <div key={z.name} style={{ textAlign: 'center', padding: '.75rem .5rem', borderRadius: '8px', background: 'var(--dark-surface)', border: `1px solid ${getColor(z.demand)}33`, transition: 'border-color .3s,transform .2s', cursor: 'default' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '.4rem' }}>
+                   <CatIcon size={10} color={cat.color} />
+                   <span className="mono" style={{ fontSize: '9px', fontWeight: 700, color: 'var(--secondary)' }}>{cat.label}</span>
+                </div>
+                <div className="mono" style={{ fontSize: '10px', color: getColor(z.demand) }}>{z.name}</div>
+                <div style={{ width: '100%', height: '60px', margin: '.5rem 0', position: 'relative', background: 'rgba(255,255,255,0.03)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${z.demand}%`, background: getColor(z.demand), borderRadius: '4px', transition: 'height .5s' }}></div>
+                </div>
+                <div className="mono" style={{ fontSize: '13px', fontWeight: 700, color: getColor(z.demand) }}>{z.demand}%</div>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{ width: '100%', height: '400px', borderRadius: '12px', border: '1px solid var(--border-subtle)', overflow: 'hidden', marginBottom: '2rem', background: 'var(--dark-surface)' }}>
+          <div ref={mapRef} style={{ width: '100%', height: '100%' }}></div>
+        </div>
+      )}
 
       <div className="grid-2">
         {/* Event Impact */}

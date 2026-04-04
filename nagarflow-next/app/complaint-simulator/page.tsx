@@ -252,6 +252,7 @@ export default function ComplaintSimulatorPage() {
                 <textarea
                   className="input"
                   value={chatInput}
+                  suppressHydrationWarning
                   onChange={(event) => setChatInput(event.target.value)}
                   placeholder="Example: Register a complaint for Kurla station road, there is a major pothole and waterlogging."
                   style={{
@@ -280,6 +281,7 @@ export default function ComplaintSimulatorPage() {
                   <button
                     type="submit"
                     className="btn btn--primary"
+                    suppressHydrationWarning
                     disabled={isSubmitting || !chatInput.trim()}
                     style={{
                       minWidth: '180px',
@@ -317,6 +319,7 @@ export default function ComplaintSimulatorPage() {
                   key={sample}
                   type="button"
                   className="btn btn--outline btn--sm"
+                  suppressHydrationWarning
                   onClick={() => setIncomingSms(sample)}
                   style={{ fontSize: '11px' }}
                 >
@@ -328,6 +331,7 @@ export default function ComplaintSimulatorPage() {
             <textarea
               className="input"
               value={incomingSms}
+              suppressHydrationWarning
               onChange={(event) => setIncomingSms(event.target.value)}
               placeholder="Paste the SMS complaint here..."
               style={{ minHeight: '180px', resize: 'vertical', width: '100%' }}
@@ -336,6 +340,7 @@ export default function ComplaintSimulatorPage() {
             <button
               type="button"
               className="btn btn--primary"
+              suppressHydrationWarning
               onClick={handleSmsInject}
               disabled={isSubmitting || !incomingSms.trim()}
               style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }}
