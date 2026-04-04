@@ -114,7 +114,7 @@ export default function ReportsPage() {
              <h3 style={{ color: 'rgba(211, 47, 47, 0.9)', margin: '0 0 .25rem 0', display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 600 }}>MODEL DRIFT DETECTED: RETRAINING RECOMMENDED</h3>
              <p style={{ color: 'var(--text-heading)', margin: 0, fontSize: '13px' }}>
                 The physical feedback loop registered a massive geometric accuracy failure.
-                Recent 20 dispatches averaged a <b>{data.recent_error_margin}% error margin</b> versus reality (Threshold: 25.0%). 
+                Recent 20 dispatches averaged a <b>{Number(data.recent_error_margin).toFixed(1)}% error margin</b> versus reality (Threshold: 25.0%).
                 The localized LLM weights are currently hallucinating localized demand spikes.
              </p>
            </div>

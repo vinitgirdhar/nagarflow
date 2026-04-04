@@ -1,210 +1,534 @@
-import { useState, useRef } from 'react';
-import { Mic, Square, Loader, Volume2, CheckCircle } from 'lucide-react';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import {
+  Bot,
+  CheckCircle2,
+  Mic,
+  Phone,
+  PhoneOff,
+  Square,
+} from 'lucide-react';
+
+type AgentPhase = 'idle' | 'greeting' | 'ready' | 'recording' | 'processing' | 'completed' | 'error';
+
+interface ExtractedComplaint {
+  zone: string;
+  issue_type: string;
+  severity: string;
+}
 
 interface ConversationTurn {
-  role: 'user' | 'ai';
+  speaker: 'agent' | 'user';
   text: string;
 }
 
-export default function VoiceConversation({ onTranscribed }: { onTranscribed?: (data: any) => void }) {
-  const [sessionActive, setSessionActive] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [playing, setPlaying] = useState(false);
+interface AgentResponse {
+  success: boolean;
+  audio?: string | null;
+  call_ended?: boolean;
+  complaint_logged?: boolean;
+  error?: string;
+  extracted?: ExtractedComplaint;
+  reply_text?: string;
+  transcript?: string;
+}
+
+const BACKEND_URL = 'http://127.0.0.1:5000';
+
+export default function VoiceConversation({
+  onTranscribed,
+}: {
+  onTranscribed?: (data: ExtractedComplaint) => void;
+}) {
+  const [phase, setPhase] = useState<AgentPhase>('idle');
   const [conversation, setConversation] = useState<ConversationTurn[]>([]);
-  const [lastExtracted, setLastExtracted] = useState<any>(null);
+  const [errorText, setErrorText] = useState('');
+  const [lastExtracted, setLastExtracted] = useState<ExtractedComplaint | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+  const cancelSubmitRef = useRef(false);
+
+  function cleanupAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }
+
+  function cleanupRecorder() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+  }
+
+  useEffect(() => {
+    return () => {
+      cancelSubmitRef.current = true;
+      cleanupAudio();
+      cleanupRecorder();
+    };
+  }, []);
+
+  const resetSession = () => {
+    cancelSubmitRef.current = true;
+    cleanupAudio();
+    cleanupRecorder();
+    setPhase('idle');
+    setConversation([]);
+    setErrorText('');
+    setLastExtracted(null);
+  };
+
+  const playAudio = async (base64Audio?: string | null, onEnded?: () => void) => {
+    cleanupAudio();
+
+    if (!base64Audio) {
+      onEnded?.();
+      return;
+    }
+
+    const binary = atob(base64Audio);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+
+    audioRef.current = audio;
+    audioUrlRef.current = url;
+
+    audio.onended = () => {
+      cleanupAudio();
+      onEnded?.();
+    };
+    audio.onerror = () => {
+      cleanupAudio();
+      onEnded?.();
+    };
+
+    try {
+      await audio.play();
+    } catch {
+      cleanupAudio();
+      onEnded?.();
+    }
+  };
+
+  const readAgentResponse = async (response: Response): Promise<AgentResponse> => {
+    try {
+      return (await response.json()) as AgentResponse;
+    } catch {
+      return { success: false, error: 'Unexpected response from the server.' };
+    }
+  };
 
   const startSession = async () => {
-    setProcessing(true);
+    cleanupAudio();
+    cleanupRecorder();
+    setConversation([]);
+    setLastExtracted(null);
+    setErrorText('');
+    setPhase('greeting');
+
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/voice-greet', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setSessionActive(true);
-          setConversation([{ role: 'ai', text: data.text }]);
-          playAudio(data.audio);
-        } else {
-          alert(`Sarvam Error: ${data.error}. Check app.py console.`);
-        }
+      const response = await fetch(`${BACKEND_URL}/api/agent/greet`);
+      const data = await readAgentResponse(response);
+
+      if (!response.ok || !data.success || !data.reply_text) {
+        setPhase('error');
+        setErrorText(data.error || 'Could not start the demo agent.');
+        return;
       }
-    } catch (e) {
-      alert("Connection Failed. Start app.py first.");
-    } finally {
-      setProcessing(false);
-    }
-  };
 
-  const playAudio = (base64: string) => {
-    setPlaying(true);
-    const audioBytes = atob(base64);
-    const byteArray = new Uint8Array(audioBytes.length);
-    for (let i = 0; i < audioBytes.length; i++) byteArray[i] = audioBytes.charCodeAt(i);
-    const audioBlob = new Blob([byteArray], { type: 'audio/wav' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-    audio.onended = () => { setPlaying(false); URL.revokeObjectURL(audioUrl); };
-    audio.play().catch(() => setPlaying(false));
-  };
-
-  const startRecording = async (e: any) => {
-    e.preventDefault();
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        if (audioBlob.size < 1000) {
-          setConversation(prev => [...prev, { role: 'ai', text: 'Recording too short. Hold the mic button longer while speaking.' }]);
-          setProcessing(false);
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
-        await handleConversation(audioBlob);
-        stream.getTracks().forEach(t => t.stop());
-      };
-      // Capture data every 200ms for reliable chunks
-      mediaRecorder.start(200);
-      setRecording(true);
+      setConversation([{ speaker: 'agent', text: data.reply_text }]);
+      await playAudio(data.audio, () => setPhase('ready'));
     } catch {
-      alert('Microphone access denied.');
+      setPhase('error');
+      setErrorText('Could not reach the backend. Start app.py and try again.');
     }
   };
 
-  const stopRecording = (e: any) => {
-    e.preventDefault();
-    if (mediaRecorderRef.current && recording) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-      setProcessing(true);
-    }
-  };
-
-  const handleConversation = async (blob: Blob) => {
+  const submitComplaint = async (blob: Blob) => {
     const formData = new FormData();
     formData.append('audio', blob, 'voice.webm');
-    // Send conversation history so Gemini has memory/context
-    formData.append('history', JSON.stringify(conversation));
+
+    setPhase('processing');
+    setErrorText('');
 
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/voice-conversation', {
+      const response = await fetch(`${BACKEND_URL}/api/agent/respond`, {
         method: 'POST',
         body: formData,
       });
+      const data = await readAgentResponse(response);
 
-      if (res.ok) {
-        const data = await res.json();
-
-        if (!data.success) {
-          setConversation(prev => [...prev, { role: 'ai', text: `Error: ${data.error || 'Check your API keys in .env and restart app.py.'}` }]);
-          setProcessing(false);
-          return;
-        }
-
-        // User's spoken words (transcribed by Gemini)
-        if (data.transcript) {
-          setConversation(prev => [...prev, { role: 'user', text: data.transcript }]);
-        }
-
-        // AI's conversational reply
-        if (data.reply_text) {
-          setConversation(prev => [...prev, { role: 'ai', text: data.reply_text }]);
-        }
-
-        // Only update extracted pill if a valid complaint was logged
-        if (data.complaint_logged && data.extracted && data.extracted.zone !== 'Unknown') {
-          setLastExtracted(data.extracted);
-          if (onTranscribed) onTranscribed(data.extracted);
-        }
-
-        if (data.confirmation_audio) {
-          playAudio(data.confirmation_audio);
-        }
-      } else {
-        setConversation(prev => [...prev, { role: 'ai', text: 'Connection failed. Check that app.py is running.' }]);
+      if (!response.ok || !data.success || !data.reply_text) {
+        setPhase('error');
+        setErrorText(data.error || 'The agent could not process that recording.');
+        return;
       }
-    } catch (e) {
-      setConversation(prev => [...prev, { role: 'ai', text: 'Could not reach back-end. Check app.py.' }]);
-    } finally {
-      setProcessing(false);
+
+      setConversation((current) => {
+        const next = [...current];
+        if (data.transcript) {
+          next.push({ speaker: 'user', text: data.transcript });
+        }
+        next.push({ speaker: 'agent', text: data.reply_text! });
+        return next;
+      });
+
+      if (data.complaint_logged && data.extracted) {
+        setLastExtracted(data.extracted);
+        onTranscribed?.(data.extracted);
+      }
+
+      await playAudio(data.audio, () => {
+        setPhase(data.call_ended ? 'completed' : 'ready');
+      });
+    } catch {
+      setPhase('error');
+      setErrorText('The backend could not process your audio. Please try again.');
     }
   };
 
-  const getStatusLabel = () => {
-    if (recording) return '🔴 Listening...';
-    if (processing) return '⚙️ Gemini listening + Sarvam replying...';
-    if (playing) return '🔊 Shubh is speaking...';
-    return 'Hold mic to report an incident';
+  const startRecording = async () => {
+    if (phase !== 'ready') {
+      return;
+    }
+
+    setErrorText('');
+    cleanupAudio();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      cancelSubmitRef.current = false;
+
+      const preferredMimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : '';
+
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
+        : new MediaRecorder(stream);
+
+      chunksRef.current = [];
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const mimeType = recorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const wasCancelled = cancelSubmitRef.current;
+        cancelSubmitRef.current = false;
+        cleanupRecorder();
+
+        if (wasCancelled) {
+          return;
+        }
+
+        if (blob.size < 1000) {
+          setPhase('ready');
+          setErrorText('Recording was too short. Please hold the mic a little longer.');
+          return;
+        }
+
+        await submitComplaint(blob);
+      };
+
+      recorder.start(200);
+      setPhase('recording');
+    } catch {
+      setPhase('error');
+      setErrorText('Microphone access was denied. Please allow access and try again.');
+    }
   };
 
-  return (
-    <div style={{ background: 'var(--dark-surface)', border: `1px solid ${recording ? 'var(--danger)' : 'var(--border-subtle)'}`, borderRadius: '12px', overflow: 'hidden', transition: 'border-color 0.3s' }}>
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && phase === 'recording') {
+      mediaRecorderRef.current.stop();
+      setPhase('processing');
+    }
+  };
 
-      {/* Header */}
-      <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)' }}>🎙️ Sarvam AI Voice Channel</div>
-          <div className="mono" style={{ fontSize: '10px', color: playing ? 'var(--primary)' : 'var(--secondary)' }}>{getStatusLabel()}</div>
+  const getStatusText = () => {
+    switch (phase) {
+      case 'greeting':
+        return 'Connecting...';
+      case 'ready':
+        return 'Connected · Agent listening';
+      case 'recording':
+        return 'Recording your voice...';
+      case 'processing':
+        return 'Agent is thinking...';
+      case 'completed':
+        return 'Call ended';
+      case 'error':
+        return errorText || 'Call failed.';
+      default:
+        return 'Ready to call';
+    }
+  };
+
+  const primaryButtonLabel = phase === 'recording' ? 'Stop Recording' : 'Speak Now';
+  const primaryButtonIcon = phase === 'recording' ? <Square size={16} /> : <Mic size={16} />;
+
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(242,237,229,0.96) 100%)',
+        border: `1px solid ${
+          phase === 'recording' ? 'rgba(185,45,45,0.45)' : 'rgba(207,195,178,0.95)'
+        }`,
+        borderRadius: '18px',
+        overflow: 'hidden',
+        boxShadow:
+          phase === 'recording'
+            ? '0 16px 40px rgba(185,45,45,0.16)'
+            : '0 16px 36px rgba(28,20,16,0.08)',
+      }}
+    >
+      <div
+        style={{
+          padding: '1rem 1.1rem',
+          borderBottom: '1px solid rgba(207,195,178,0.8)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'flex-start' }}>
+          <div
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, rgba(193,68,14,0.14), rgba(74,122,62,0.18))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--primary)',
+              flexShrink: 0,
+            }}
+          >
+            <Bot size={20} />
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}>
+                Sarvam AI Voice Agent
+              </div>
+            </div>
+            {(phase !== 'idle' && phase !== 'completed') && (
+              <div style={{ fontSize: '12px', color: phase === 'error' ? 'var(--danger)' : 'var(--accent)', marginTop: '0.2rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: phase === 'error' ? 'var(--danger)' : 'var(--accent)', display: 'inline-block', animation: (phase === 'recording' || phase === 'processing') ? 'pulse 1.5s infinite' : 'none' }}></span>
+                {getStatusText()}
+              </div>
+            )}
+            {phase === 'idle' && (
+            <div style={{ fontSize: '12px', color: 'var(--secondary)', marginTop: '0.2rem' }}>
+                Tap the phone icon to start call.
+              </div>
+            )}
+          </div>
         </div>
 
-        {processing ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px' }}>
-            <Loader size={20} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
-          </div>
-        ) : !sessionActive ? (
-          <button 
-             onClick={startSession}
-             style={{ background: 'var(--primary)', border: 'none', borderRadius: '20px', padding: '0.4rem 0.8rem', color: 'white', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
-             Start Chat
+        {phase === 'idle' || phase === 'completed' ? (
+          <button
+            onClick={startSession}
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'var(--success)',
+              color: 'white',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(74,122,62,0.3)',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            <Phone size={18} fill="currentColor" />
           </button>
-        ) : playing ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', background: 'rgba(122,140,94,0.2)', borderRadius: '50%' }}>
-            <Volume2 size={20} color="var(--primary)" />
-          </div>
+        ) : phase === 'processing' || phase === 'greeting' ? (
+          <button
+            onClick={resetSession}
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'var(--danger)',
+              color: 'white',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(185,45,45,0.3)'
+            }}
+          >
+            <PhoneOff size={18} />
+          </button>
         ) : (
           <button
-            onMouseDown={startRecording} onMouseUp={stopRecording} onMouseLeave={recording ? stopRecording : undefined}
-            onTouchStart={startRecording} onTouchEnd={stopRecording}
-            style={{ background: recording ? 'var(--danger)' : 'var(--primary)', border: 'none', width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transform: recording ? 'scale(1.15)' : 'scale(1)', transition: 'all 0.15s', boxShadow: recording ? '0 0 20px rgba(193,68,14,0.6)' : 'none' }}>
-            {recording ? <Square fill="white" color="white" size={14} /> : <Mic color="white" size={18} />}
+            onClick={resetSession}
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: 'var(--danger)',
+              color: 'white',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(185,45,45,0.3)',
+              transition: 'transform 0.15s ease',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            <PhoneOff size={18} />
           </button>
         )}
       </div>
 
-      {/* Conversation History */}
-      {conversation.length > 0 && (
-        <div style={{ maxHeight: '160px', overflowY: 'auto', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {conversation.map((turn, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: turn.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{
-                maxWidth: '80%', padding: '0.4rem 0.75rem', borderRadius: turn.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                background: turn.role === 'user' ? 'rgba(193,68,14,0.15)' : 'rgba(122,140,94,0.15)',
-                border: `1px solid ${turn.role === 'user' ? 'rgba(193,68,14,0.3)' : 'rgba(122,140,94,0.3)'}`,
-                fontSize: '11px', color: 'var(--text-heading)', lineHeight: 1.5
-              }}>
-                <span style={{ fontSize: '9px', color: 'var(--secondary)', display: 'block', marginBottom: '2px' }}>{turn.role === 'user' ? 'YOU' : '🤖 NAGAR AI'}</span>
-                {turn.text}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div style={{ padding: '1rem 1.1rem', display: 'grid', gap: '1rem' }}>
+        {phase === 'error' && (
+          <div style={{ fontSize: '13px', color: 'var(--danger)', padding: '0.5rem', background: 'rgba(185,45,45,0.08)', borderRadius: '8px', border: '1px solid rgba(185,45,45,0.2)' }}>
+            {errorText}
+          </div>
+        )}
 
-      {/* Pill showing extracted data */}
-      {lastExtracted && lastExtracted.zone && (
-        <div style={{ margin: '0 0.75rem 0.75rem', background: 'rgba(122,140,94,0.1)', border: '1px solid rgba(122,140,94,0.3)', borderRadius: '8px', padding: '0.4rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '11px' }}>
-          <CheckCircle size={14} color="var(--primary)" />
-          <span style={{ color: 'var(--text-heading)' }}>Logged: <b>{lastExtracted.zone}</b> · {lastExtracted.issue_type} · {lastExtracted.severity}</span>
-        </div>
-      )}
+        {(phase === 'ready' || phase === 'recording') && (
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
+            <button
+              onClick={phase === 'recording' ? stopRecording : startRecording}
+              style={{
+                width: '100%',
+                maxWidth: '200px',
+                padding: '0.75rem',
+                borderRadius: '24px',
+                background: phase === 'recording' ? 'var(--danger)' : 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: phase === 'recording' ? '0 8px 24px rgba(185,45,45,0.4)' : '0 4px 12px rgba(193,68,14,0.2)',
+                transition: 'all 0.2s',
+                transform: phase === 'recording' ? 'scale(1.05)' : 'scale(1)'
+              }}
+            >
+              {primaryButtonIcon}
+              {primaryButtonLabel}
+            </button>
+          </div>
+        )}
+
+        {conversation.length > 0 && (
+          <div
+            style={{
+              borderRadius: '14px',
+              border: '1px solid rgba(207,195,178,0.85)',
+              background: 'rgba(255,255,255,0.84)',
+              padding: '0.95rem',
+              display: 'grid',
+              gap: '0.7rem',
+            }}
+          >
+            {conversation.map((turn, index) => {
+              const isAgent = turn.speaker === 'agent';
+              return (
+                <div
+                  key={`${turn.speaker}-${index}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: isAgent ? 'flex-start' : 'flex-end',
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: '85%',
+                      borderRadius: isAgent ? '14px 14px 14px 4px' : '14px 14px 4px 14px',
+                      padding: '0.7rem 0.85rem',
+                      background: isAgent ? 'rgba(74,122,62,0.12)' : 'rgba(193,68,14,0.1)',
+                      border: `1px solid ${isAgent ? 'rgba(74,122,62,0.22)' : 'rgba(193,68,14,0.2)'}`,
+                    }}
+                  >
+                    <div
+                      className="mono"
+                      style={{
+                        fontSize: '10px',
+                        marginBottom: '0.2rem',
+                        color: isAgent ? 'var(--accent)' : 'var(--primary)',
+                      }}
+                    >
+                      {isAgent ? 'AGENT' : 'YOU SAID'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-heading)', lineHeight: 1.55 }}>
+                      {turn.text}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {lastExtracted && lastExtracted.zone !== 'Unknown' && lastExtracted.issue_type !== 'Unknown' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              borderRadius: '14px',
+              border: '1px solid rgba(74,122,62,0.24)',
+              background: 'rgba(74,122,62,0.08)',
+              padding: '0.8rem 0.95rem',
+            }}
+          >
+            <CheckCircle2 size={16} color="var(--success)" />
+            <div style={{ fontSize: '12px', color: 'var(--text-heading)' }}>
+              Complaint logged for <strong>{lastExtracted.zone}</strong> as <strong>{lastExtracted.issue_type}</strong>
+              {' '}with {lastExtracted.severity.toLowerCase()} severity. The agent will now ask if there is anything else to report.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

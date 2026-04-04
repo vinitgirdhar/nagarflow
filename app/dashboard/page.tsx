@@ -297,7 +297,7 @@ export default function DashboardPage() {
           <motion.div variants={FADE_UP} style={{ flexShrink: 0 }}>
              <VoiceConversation onTranscribed={(data) => {
                 if(data && data.zone) {
-                  setAlerts(prev => [`[VOICE LOGGED] ${data.zone}: ${data.issue_type} (Severity: ${data.severity}). Injecting into pipeline.`, ...prev].slice(0, 3));
+                  setAlerts(prev => [`[SARVAM AGENT] ${data.zone}: ${data.issue_type} logged with ${data.severity} severity.`, ...prev].slice(0, 3));
                 }
              }} />
           </motion.div>

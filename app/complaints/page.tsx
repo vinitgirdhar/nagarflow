@@ -1,130 +1,275 @@
 'use client';
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
-import { MessageSquareText, MessageCircle } from 'lucide-react';
+import { MessageCircle, MessageSquareText, PhoneCall } from 'lucide-react';
 
-const STATS = [
-  { label: 'Total Complaints', value: '247', sub: 'last 24 hours' },
-  { label: 'NLP Processed', value: '100%', sub: 'real-time classification' },
-  { label: 'Critical Flagged', value: '5', sub: 'auto-escalated' },
-  { label: 'Social Signals', value: '38', sub: 'Twitter + Reddit mined' },
-];
+type ComplaintRecord = {
+  id: string;
+  text: string;
+  urgency: string;
+  category: string;
+  emotion: string;
+  ward: string;
+  time: string;
+  source: string;
+  issue_type: string;
+  severity: string;
+  complaint_count: number;
+};
 
-const COMPLAINTS = [
-  { id: 'C-1047', text: 'Road collapsed near Dadar station, cars stuck', urgency: 'critical', category: 'road', emotion: 'angry', ward: 'Ward 5', time: '2m ago' },
-  { id: 'C-1046', text: 'Garbage overflowing at ward 7 junction since 3 days', urgency: 'critical', category: 'waste', emotion: 'frustrated', ward: 'Ward 7', time: '8m ago' },
-  { id: 'C-1045', text: 'Water supply stopped at Marol pipeline area', urgency: 'critical', category: 'water', emotion: 'distressed', ward: 'Ward 7', time: '15m ago' },
-  { id: 'C-1044', text: 'Streetlight not working near Andheri station', urgency: 'high', category: 'electrical', emotion: 'neutral', ward: 'Ward 7', time: '22m ago' },
-  { id: 'C-1043', text: 'Drainage overflowing causing flood in lane', urgency: 'critical', category: 'drainage', emotion: 'angry', ward: 'Ward 9', time: '35m ago' },
-  { id: 'C-1042', text: 'Large pothole on western express highway', urgency: 'high', category: 'road', emotion: 'concerned', ward: 'Ward 8', time: '45m ago' },
-  { id: 'C-1041', text: 'Garbage truck not visiting since Tuesday', urgency: 'high', category: 'waste', emotion: 'frustrated', ward: 'Ward 2', time: '1h ago' },
-  { id: 'C-1040', text: 'Water tanker needed urgently in slum area', urgency: 'critical', category: 'water', emotion: 'urgent', ward: 'Ward 11', time: '1h ago' },
-  { id: 'C-1039', text: 'Grass overgrown in park, needs trimming', urgency: 'low', category: 'waste', emotion: 'neutral', ward: 'Ward 4', time: '2h ago' },
-  { id: 'C-1038', text: 'Minor crack in sidewalk near school', urgency: 'low', category: 'road', emotion: 'calm', ward: 'Ward 3', time: '2h ago' },
-  { id: 'C-1037', text: 'Broken pipe leaking water on street', urgency: 'medium', category: 'water', emotion: 'concerned', ward: 'Ward 6', time: '3h ago' },
-  { id: 'C-1036', text: 'Construction debris not cleared from road', urgency: 'medium', category: 'waste', emotion: 'neutral', ward: 'Ward 1', time: '3h ago' },
-];
+type ComplaintStats = {
+  total_complaints: number;
+  high_priority_count: number;
+  voice_report_count: number;
+  latest_timestamp: string | null;
+};
 
 const SOCIAL = [
   { platform: 'twitter', handle: '@mumbai_citizen', text: 'Massive garbage pileup at Ward 7 crossing, been here for 4 days now! @BMCMumbai do something!', time: '5m ago', location: 'Ward 7, Andheri' },
   { platform: 'reddit', handle: 'r/mumbai', text: 'Anyone else having water supply issues in Ghatkopar? No water since morning.', time: '12m ago', location: 'Ward 11, Ghatkopar' },
-  { platform: 'twitter', handle: '@road_warrior_mum', text: 'AVOID Dadar station area — road completely collapsed, major traffic jam building up.', time: '18m ago', location: 'Ward 5, Dadar' },
+  { platform: 'twitter', handle: '@road_warrior_mum', text: 'AVOID Dadar station area - road completely collapsed, major traffic jam building up.', time: '18m ago', location: 'Ward 5, Dadar' },
   { platform: 'reddit', handle: 'r/mumbai', text: 'The new drainage near Kurla station is already overflowing after just light rain. Horrible planning.', time: '25m ago', location: 'Ward 9, Kurla' },
   { platform: 'twitter', handle: '@clean_mumbai', text: 'Great work by BMC cleaning Juhu Beach yesterday! But Ward 2 still neglected.', time: '40m ago', location: 'Ward 2, Sandhurst' },
   { platform: 'twitter', handle: '@flood_watch', text: "Water logging starting near Andheri subway. Rain hasn't even been heavy. Drainage blocked?", time: '55m ago', location: 'Ward 7, Andheri' },
   { platform: 'reddit', handle: 'r/IndiaInfra', text: 'Broken water pipe flooding entire lane in Mahim. Nobody from water dept responding.', time: '1h ago', location: 'Ward 6, Mahim' },
 ];
 
+function formatRelativeTime(timestamp: string | null) {
+  if (!timestamp) return 'waiting for sync';
+
+  const parsed = new Date(timestamp.replace(' ', 'T'));
+  if (Number.isNaN(parsed.getTime())) return timestamp;
+
+  const diffMs = Date.now() - parsed.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d ago`;
+}
+
 export default function ComplaintsPage() {
   const [search, setSearch] = useState('');
   const [urgency, setUrgency] = useState('all');
   const [cat, setCat] = useState('all');
+  const [complaints, setComplaints] = useState<ComplaintRecord[]>([]);
+  const [stats, setStats] = useState<ComplaintStats>({
+    total_complaints: 0,
+    high_priority_count: 0,
+    voice_report_count: 0,
+    latest_timestamp: null,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorText, setErrorText] = useState('');
 
-  const filtered = COMPLAINTS.filter(c => {
-    if (search && !c.text.toLowerCase().includes(search) && !c.id.toLowerCase().includes(search)) return false;
-    if (urgency !== 'all' && c.urgency !== urgency) return false;
-    if (cat !== 'all' && c.category !== cat) return false;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadComplaints = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:5000/api/complaints');
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Complaints feed unavailable');
+        }
+
+        if (!isMounted) return;
+        setComplaints(data.complaints || []);
+        setStats(data.stats || {
+          total_complaints: 0,
+          high_priority_count: 0,
+          voice_report_count: 0,
+          latest_timestamp: null,
+        });
+        setErrorText('');
+      } catch {
+        if (!isMounted) return;
+        setErrorText('Live complaints feed is unavailable right now.');
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    loadComplaints();
+    const intervalId = window.setInterval(loadComplaints, 10000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const filtered = complaints.filter((complaint) => {
+    const query = search.trim().toLowerCase();
+
+    if (query && !complaint.text.toLowerCase().includes(query) && !complaint.id.toLowerCase().includes(query) && !complaint.ward.toLowerCase().includes(query)) {
+      return false;
+    }
+    if (urgency !== 'all' && complaint.urgency !== urgency) {
+      return false;
+    }
+    if (cat !== 'all' && complaint.category !== cat) {
+      return false;
+    }
     return true;
   });
 
+  const cards = [
+    { label: 'Total Complaints', value: String(stats.total_complaints), sub: 'live backend dataset' },
+    { label: 'High Priority', value: String(stats.high_priority_count), sub: 'calls and urgent reports' },
+    { label: 'Voice Reports', value: String(stats.voice_report_count), sub: 'Sarvam agent logged' },
+    { label: 'Last Sync', value: formatRelativeTime(stats.latest_timestamp), sub: 'complaints feed refresh' },
+  ];
+
   return (
-    <DashboardShell title="Complaint Insights" badges={[{ type: 'live', text: 'NLP Active' }, { type: 'alert', text: '5 Critical' }]}>
+    <DashboardShell
+      title="Complaint Insights"
+      badges={[
+        { type: 'live', text: 'LIVE DATASET' },
+        { type: 'alert', text: `${stats.high_priority_count} High Priority` },
+      ]}
+    >
       <div className="page-header">
         <h1 className="page-header__title">Complaint Insights</h1>
-        <p className="page-header__sub">NLP-processed 311 complaints + social media signals</p>
+        <p className="page-header__sub">Live complaint dataset with Sarvam call reports flowing into the same response queue.</p>
       </div>
 
       <div className="stat-grid">
-        {STATS.map((s, i) => (
-          <div key={i} className="card"><div className="card__label">{s.label}</div><div className="card__value">{s.value}</div><div className="card__sub">{s.sub}</div></div>
+        {cards.map((card) => (
+          <div key={card.label} className="card">
+            <div className="card__label">{card.label}</div>
+            <div className="card__value">{card.value}</div>
+            <div className="card__sub">{card.sub}</div>
+          </div>
         ))}
       </div>
 
-      {/* Search & Filter */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <input className="input" type="text" placeholder="Search complaints..." style={{ maxWidth: '300px' }} value={search} onChange={e => setSearch(e.target.value.toLowerCase())} />
+        <input
+          className="input"
+          type="text"
+          placeholder="Search complaints or area..."
+          style={{ maxWidth: '320px' }}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
         <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
-          <select className="input" style={{ maxWidth: '150px' }} value={urgency} onChange={e => setUrgency(e.target.value)}>
+          <select className="input" style={{ maxWidth: '150px' }} value={urgency} onChange={(event) => setUrgency(event.target.value)}>
             <option value="all">All Urgency</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
             <option value="low">Low</option>
           </select>
-          <select className="input" style={{ maxWidth: '160px' }} value={cat} onChange={e => setCat(e.target.value)}>
+          <select className="input" style={{ maxWidth: '160px' }} value={cat} onChange={(event) => setCat(event.target.value)}>
             <option value="all">All Categories</option>
             <option value="waste">Waste</option>
             <option value="road">Road</option>
             <option value="water">Water</option>
             <option value="drainage">Drainage</option>
-            <option value="electrical">Electrical</option>
+            <option value="general">General</option>
           </select>
         </div>
       </div>
 
+      {errorText ? (
+        <div className="card" style={{ marginBottom: '1.5rem', borderColor: 'rgba(193,68,14,0.3)' }}>
+          <div className="card__title">Feed Status</div>
+          <p className="card__sub" style={{ marginTop: '.5rem' }}>{errorText}</p>
+        </div>
+      ) : null}
+
       <div className="grid-2-1">
-        {/* Complaints Table */}
         <div>
-          <div className="card__title" style={{ marginBottom: '.75rem' }}>311 Complaints — NLP Processed</div>
+          <div className="card__title" style={{ marginBottom: '.75rem' }}>Unified Complaint Feed</div>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>ID</th><th>Complaint</th><th>NLP Tags</th><th>Ward</th><th>Time</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Complaint</th>
+                  <th>Priority</th>
+                  <th>Area</th>
+                  <th>Source</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
               <tbody>
-                {filtered.map(c => (
-                  <tr key={c.id}>
-                    <td><span className="mono" style={{ fontSize: '11px', color: 'var(--accent)' }}>{c.id}</span></td>
-                    <td style={{ maxWidth: '280px' }}>{c.text}</td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', fontFamily: "'Space Mono',monospace", fontSize: '10px', padding: '2px 7px', borderRadius: '3px', marginRight: '.3rem', background: 'rgba(193,68,14,.12)', color: 'var(--glow)', border: '1px solid rgba(193,68,14,.2)' }}>{c.urgency}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', fontFamily: "'Space Mono',monospace", fontSize: '10px', padding: '2px 7px', borderRadius: '3px', marginRight: '.3rem', background: 'rgba(122,140,94,.12)', color: 'var(--accent)', border: '1px solid rgba(122,140,94,.2)' }}>{c.category}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', fontFamily: "'Space Mono',monospace", fontSize: '10px', padding: '2px 7px', borderRadius: '3px', background: 'rgba(90,140,160,.12)', color: 'var(--info)', border: '1px solid rgba(90,140,160,.2)' }}>{c.emotion}</span>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
+                      Loading complaint dataset...
                     </td>
-                    <td>{c.ward}</td>
-                    <td><span className="mono" style={{ fontSize: '11px' }}>{c.time}</span></td>
                   </tr>
-                ))}
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
+                      No complaints match the current filters.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((complaint) => (
+                    <tr key={complaint.id}>
+                      <td>
+                        <span className="mono" style={{ fontSize: '11px', color: 'var(--accent)' }}>{complaint.id}</span>
+                      </td>
+                      <td style={{ maxWidth: '300px' }}>
+                        <div style={{ color: 'var(--text-heading)' }}>{complaint.text}</div>
+                        <div className="mono" style={{ fontSize: '10px', color: 'var(--secondary)', marginTop: '.2rem' }}>
+                          {complaint.issue_type} • weight {complaint.complaint_count}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', fontFamily: "'Space Mono', monospace", fontSize: '10px', padding: '2px 7px', borderRadius: '3px', marginRight: '.3rem', background: 'rgba(193,68,14,.12)', color: 'var(--glow)', border: '1px solid rgba(193,68,14,.2)' }}>
+                          {complaint.urgency}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', fontFamily: "'Space Mono', monospace", fontSize: '10px', padding: '2px 7px', borderRadius: '3px', background: 'rgba(122,140,94,.12)', color: 'var(--accent)', border: '1px solid rgba(122,140,94,.2)' }}>
+                          {complaint.category}
+                        </span>
+                      </td>
+                      <td>{complaint.ward}</td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: complaint.source === 'voice_call' ? 'var(--text-heading)' : 'var(--secondary)' }}>
+                          {complaint.source === 'voice_call' ? <PhoneCall size={14} /> : <MessageSquareText size={14} />}
+                          <span className="mono" style={{ fontSize: '10px' }}>
+                            {complaint.source === 'voice_call' ? 'voice call' : 'dataset'}
+                          </span>
+                        </span>
+                      </td>
+                      <td>
+                        <span className="mono" style={{ fontSize: '11px' }}>{formatRelativeTime(complaint.time)}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Social Feed */}
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Social Media Feed</div>
           <div className="feed">
-            {SOCIAL.map((s, i) => (
-              <div key={i} className="feed-item">
+            {SOCIAL.map((socialItem, index) => (
+              <div key={index} className="feed-item">
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.75rem' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: s.platform === 'twitter' ? 'rgba(29,161,242,.15)' : 'rgba(255,69,0,.15)', color: s.platform === 'twitter' ? '#1da1f2' : '#ff4500' }}>
-                    {s.platform === 'twitter' ? <MessageSquareText size={16} /> : <MessageCircle size={16} />}
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: socialItem.platform === 'twitter' ? 'rgba(29,161,242,.15)' : 'rgba(255,69,0,.15)', color: socialItem.platform === 'twitter' ? '#1da1f2' : '#ff4500' }}>
+                    {socialItem.platform === 'twitter' ? <MessageSquareText size={16} /> : <MessageCircle size={16} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div className="feed-item__header">
-                      <span className="mono" style={{ fontSize: '10px', color: 'var(--accent)' }}>{s.handle}</span>
-                      <span className="feed-item__time">{s.time}</span>
+                      <span className="mono" style={{ fontSize: '10px', color: 'var(--accent)' }}>{socialItem.handle}</span>
+                      <span className="feed-item__time">{socialItem.time}</span>
                     </div>
-                    <div className="feed-item__text">{s.text}</div>
-                    <div className="mono" style={{ fontSize: '10px', color: '#5a4a3a', marginTop: '.35rem' }}>📍 {s.location}</div>
+                    <div className="feed-item__text">{socialItem.text}</div>
+                    <div className="mono" style={{ fontSize: '10px', color: '#5a4a3a', marginTop: '.35rem' }}>{socialItem.location}</div>
                   </div>
                 </div>
               </div>

@@ -89,6 +89,11 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
   from { background: var(--primary); }
   to { background: var(--accent); }
 }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin { animation: spin 1s linear infinite; }
 .sidebar__nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
 .sidebar__link {
   display: flex; align-items: center; gap: .75rem;
