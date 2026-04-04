@@ -14,6 +14,7 @@ import {
   Dna, 
   Network, 
   FileText,
+  MessagesSquare,
   Menu,
   ChevronLeft,
   ArrowLeftRight,
@@ -24,6 +25,7 @@ import {
 const ADMIN_LINKS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/complaints', icon: MapPin, label: 'Complaints' },
+  { href: '/complaint-simulator', icon: MessagesSquare, label: 'Complaint Simulator' },
   { href: '/predictions', icon: LineChart, label: 'Predictions' },
   { href: '/dispatch', icon: Truck, label: 'Dispatch' },
   { href: '/emergency', icon: AlertTriangle, label: 'Emergency' },

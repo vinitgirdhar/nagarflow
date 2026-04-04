@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
-import VoiceConversation from '../components/VoiceConversation';
 
 const STAGGER_CONTAINER: Variants = {
   hidden: { opacity: 0 },
@@ -313,15 +312,6 @@ export default function DashboardPage() {
 
         {/* Dynamic Action Array Sidebar */}
         <motion.div variants={STAGGER_CONTAINER} style={{ display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-          
-          <motion.div variants={FADE_UP} style={{ flexShrink: 0 }}>
-             <VoiceConversation onTranscribed={(data) => {
-                if(data && data.zone) {
-                  setAlerts(prev => [`[SARVAM AGENT] ${data.zone}: ${data.issue_type} logged with ${data.severity} severity.`, ...prev].slice(0, 10));
-                }
-             }} />
-          </motion.div>
-
           <motion.div variants={FADE_UP} className="card" style={{ flexShrink: 0 }}>
             <div className="card__title">Active Threat DB Log (Top 5)</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>

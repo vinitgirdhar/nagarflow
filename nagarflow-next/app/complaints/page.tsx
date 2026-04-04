@@ -22,6 +22,7 @@ type ComplaintStats = {
   total_complaints: number;
   high_priority_count: number;
   voice_report_count: number;
+  text_report_count: number;
   latest_timestamp: string | null;
 };
 
@@ -63,6 +64,7 @@ export default function ComplaintsPage() {
     total_complaints: 0,
     high_priority_count: 0,
     voice_report_count: 0,
+    text_report_count: 0,
     latest_timestamp: null,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +88,7 @@ export default function ComplaintsPage() {
           total_complaints: 0,
           high_priority_count: 0,
           voice_report_count: 0,
+          text_report_count: 0,
           latest_timestamp: null,
         });
         setErrorText('');
@@ -125,6 +128,7 @@ export default function ComplaintsPage() {
     { label: 'Total Complaints', value: String(stats.total_complaints), sub: 'live backend dataset' },
     { label: 'High Priority', value: String(stats.high_priority_count), sub: 'calls and urgent reports' },
     { label: 'Voice Reports', value: String(stats.voice_report_count), sub: 'Sarvam agent logged' },
+    { label: 'Text Reports', value: String(stats.text_report_count), sub: 'simulator chat logged' },
     { label: 'Last Sync', value: formatRelativeTime(stats.latest_timestamp), sub: 'complaints feed refresh' },
   ];
 
@@ -138,7 +142,7 @@ export default function ComplaintsPage() {
     >
       <div className="page-header">
         <h1 className="page-header__title">Complaint Insights</h1>
-        <p className="page-header__sub">Live complaint dataset with Sarvam call reports flowing into the same response queue.</p>
+        <p className="page-header__sub">Live complaint dataset with Sarvam call reports and complaint simulator text chats flowing into the same response queue.</p>
       </div>
 
       <div className="stat-grid">
@@ -239,7 +243,7 @@ export default function ComplaintsPage() {
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: complaint.source === 'voice_call' ? 'var(--text-heading)' : 'var(--secondary)' }}>
                           {complaint.source === 'voice_call' ? <PhoneCall size={14} /> : <MessageSquareText size={14} />}
                           <span className="mono" style={{ fontSize: '10px' }}>
-                            {complaint.source === 'voice_call' ? 'voice call' : 'dataset'}
+                            {complaint.source === 'voice_call' ? 'voice call' : complaint.source === 'text_chat' ? 'text complaint' : 'dataset'}
                           </span>
                         </span>
                       </td>

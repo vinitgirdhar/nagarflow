@@ -28,7 +28,7 @@ const STATS_DATA = [
 ];
 
 const FEATURES_DATA = [
-  { id: 'F01', icon: Scale, name: 'Equity-Corrected Demand Engine', value: 'Poor areas served even without complaints', desc: 'Calculates expected vs actual complaints per ward. When actual < expected, priority is amplified. Systemic under-reporting in low-income wards is corrected to guarantee proportional resource dispatch.', tech: ['XGBoost', 'GeoPandas', 'NetworkX'], wide: true },
+  { id: 'F01', icon: Scale, name: 'Equity-Corrected Demand Engine', value: 'Poor areas served even without complaints', desc: 'Calculates expected vs actual complaints per ward. When actual < expected, priority is amplified. Systemic under-reporting in low-income wards is corrected to guarantee proportional resource dispatch.', tech: ['XGBoost', 'GeoPandas', 'NetworkX'] },
   { id: 'F02', icon: SlidersHorizontal, name: 'Dual-Layer Map + Time Slider', value: 'Forecast vs reality time-scrub UI', desc: 'Side-by-side heatmap layers let operators toggle between prediction and live complaint data. Drag the time slider to scrub through 48-hour windows and verify AI accuracy.', tech: ['Leaflet.js', 'React', 'Prophet'] },
   { id: 'F03', icon: MessageSquare, name: 'NLP Complaint Intelligence', value: 'Urgency, emotion & category from 311 text', desc: 'Fine-tuned BERT model classifies incoming 311 service requests by urgency, location, and service type. "Road collapsed" is prioritised; "grass is long" is not.', tech: ['HuggingFace', 'spaCy', 'FastAPI'] },
   { id: 'F04', icon: Globe2, name: 'Social Media Demand Miner', value: 'Twitter & Reddit fill silent reporting gaps', desc: 'Mines geo-tagged posts on Twitter and Reddit using BERT classification. Detects "flood here", "garbage piled up" and other hidden problems where formal 311 reporting is absent.', tech: ['Tweepy', 'PRAW', 'BERT'] },
@@ -37,7 +37,7 @@ const FEATURES_DATA = [
   { id: 'F07', icon: MonitorPlay, name: 'Digital Twin Simulator', value: 'What-if sandbox before committing resources', desc: 'Full discrete-event simulation. Operators run scenarios — "What if demand +40%?", "What if trucks break?" — and see outcomes on a live map before making real-world decisions.', tech: ['SimPy', 'PostgreSQL', 'FastAPI'] },
   { id: 'F08', icon: Users, name: 'Multi-Agency Coordination Hub', value: 'Garbage + Water + Maintenance on one board', desc: 'Graph-based conflict detection identifies resource overlaps between sanitation, water, and maintenance departments. Automatically negotiates priority and prevents duplicate routing.', tech: ['NetworkX', 'GCN', 'OR-Tools'] },
   { id: 'F09', icon: BrainCircuit, name: 'RL Autonomous Dispatcher', value: 'PPO agent: max coverage, min fuel, min time', desc: 'Proximal Policy Optimization agent trained on historical dispatch scenarios. Suggests which truck goes where with full reasoning. Operators can accept or override every suggestion.', tech: ['Stable-Baselines3', 'PyTorch', 'Redis'] },
-  { id: 'F10', icon: FileBarChart, name: 'Auto Report Generator', value: 'End-of-day LLM-generated KPI PDF', desc: 'AI pipeline compiles zone coverage, missed deployments, equity scores, prediction accuracy, and operator decisions into a structured PDF daily report with charts and recommendations.', tech: ['Claude API', 'FastAPI', 'PostgreSQL'], full: true },
+  { id: 'F10', icon: FileBarChart, name: 'Auto Report Generator', value: 'End-of-day LLM-generated KPI PDF', desc: 'AI pipeline compiles zone coverage, missed deployments, equity scores, prediction accuracy, and operator decisions into a structured PDF daily report with charts and recommendations.', tech: ['Claude API', 'FastAPI', 'PostgreSQL'] },
 ];
 
 const PIPELINE_NODES = [
@@ -364,7 +364,7 @@ export default function LandingPage() {
         <div className="hero__noise" style={{ filter: 'url(#noise-filter)', background: 'var(--text-heading)' }}></div>
         <div className="hero__content reveal">
           <h1 className="hero__title">NagarFlow</h1>
-          <p className="hero__tagline">The city&apos;s brain. Predict. Dispatch. Learn.</p>
+          <p className="hero__tagline">NagarFlow is an AI-powered platform that predicts demand and optimizes allocation of public resources like water tankers, garbage trucks, and maintenance teams in real-time.</p>
           <p className="hero__sub">Zero hardware · 48-hr forecast · Equity-first dispatch</p>
           <Link href="/login" className="hero__cta" id="hero-cta">Enter Dashboard →</Link>
         </div>
@@ -393,7 +393,7 @@ export default function LandingPage() {
           {FEATURES_DATA.map(f => {
             const Icon = f.icon;
             return (
-            <div key={f.id} className={`feature-card reveal-card ${f.wide ? 'feature-card--wide' : ''} ${f.full ? 'feature-card--full' : ''}`} tabIndex={0} role="button" aria-label={f.name}>
+            <div key={f.id} className="feature-card reveal-card" tabIndex={0} role="button" aria-label={f.name}>
               <div className="feature-card__inner">
                 <div className="feature-card__front">
                   <div className="card__id mono">{f.id}</div>
@@ -484,12 +484,24 @@ export default function LandingPage() {
 
       {/* FOOTER */}
       <footer className="footer" id="footer">
-        <div className="footer__center reveal">
-          <div className="footer__name">NagarFlow</div>
-          <div className="footer__sub">Zero Hardware. Total Intelligence. 100% Software.</div>
+        <div className="footer__top reveal">
+          <div className="footer__left">
+            <div className="footer__name">NagarFlow</div>
+            <div className="footer__tagline">The city&apos;s brain. Predict. Dispatch. Learn.</div>
+            <div className="footer__team">
+              Made by <span style={{ color: '#F2E8D9', fontWeight: 600 }}>Vinit Girdhar, Kashmira Ghag, and Annie Dande</span>
+            </div>
+            <div className="footer__legal">
+              Licensed by us for the government. Terms and conditions are with us.
+            </div>
+          </div>
+          <div className="footer__right">
+            <div className="footer__hack">MADE FOR ITSAHACK</div>
+            <div className="footer__year" style={{ fontFamily: 'Space Mono, monospace', fontSize: '14px', color: 'var(--secondary)', marginTop: '0.4rem', textAlign: 'right' }}>@ 2026</div>
+          </div>
         </div>
         <div className="footer__bottom">
-          <span className="footer__copy">Smart City Platform · Hackathon MVP · 10 Features · 36-Hour Sprint</span>
+          <span className="footer__copy">Smart City Platform · Municipal Intelligence Unit</span>
           <div className="footer__status">
             <span className="footer__dot"></span>
             <span className="mono">System Online</span>
