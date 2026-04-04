@@ -1,5 +1,7 @@
-import sqlite3
 import json
+import math
+import random
+import hashlib
 from preprocess_transformer import build_llm_payloads
 
 import os
@@ -43,7 +45,6 @@ def simulate_llm_inference(prompt_data):
     #     pass
 
     # --- Heuristics extraction for realism fallback ---
-    import random
     try:
         complaints = int(prompt.split('Complaints: ')[1].split('.')[0])
         rain_val = prompt.split('Rain: ')[1].split('.')[0].strip().lower()
@@ -54,25 +55,23 @@ def simulate_llm_inference(prompt_data):
     # Check for explicit priority override (e.g. from call-based complaints)
     force_priority = "voice: yes" in prompt.lower()
     
-    # Dynamic demand logic: Normalize massive complaint numbers (max ~45k) to a 0-70 scale 
-    # so the UI isn't permanently red-zoned at 100%.
-    normalized_complaints_score = min(70, (complaints / 45000.0) * 70)
+    # 1. Logarithmic Complaint Scaling (Prevents clumping in heavy wards)
+    log_complaints = math.log10(max(1, complaints))
     
-    # Add dynamic volatility (noise) so the dashboard looks constantly active between predictions
-    volatility = random.uniform(-4, 4)
+    # 2. Zone Stability Seed (Unique but consistent personality per ward)
+    seed_hash = int(hashlib.md5(prompt_data['zone'].encode()).hexdigest(), 16)
+    random_gen = random.Random(seed_hash)
+    zone_volatility = random_gen.uniform(-5, 5)
     
-    # Weather and unvisited gaps pile on top of the base demand
-    raw_score = normalized_complaints_score + volatility + (20 if rain_val == 'yes' else 0) + min(15, (hours / 6.0))
+    # 3. Base Raw Score Calculation
+    # Factors: Complaints (Log), Rain, Gaps, and Stability Seed
+    raw_score = (log_complaints * 10) + zone_volatility + (20 if rain_val == 'yes' else 0) + min(15, (hours / 4.0))
     
-    if force_priority:
-        score = 100
-    else:
-        score = int(max(0, min(100, raw_score)))
-    
-    if score >= 75:
+    # Heuristic Assignment (Will be refined by global normalization later)
+    if raw_score >= 60 or force_priority:
         p_type = "high"
         action = "Immediate Dispatch Required"
-    elif score >= 50:
+    elif raw_score >= 40:
         p_type = "medium"
         action = "Schedule Next Available Truck"
     else:
@@ -87,44 +86,78 @@ def simulate_llm_inference(prompt_data):
     if hours > 48 and not force_priority:
         reason += f", Overdue by {hours}hrs silent gap"
 
+    # Categorization Heuristics
+    if force_priority:
+        category = "Emergency Response"
+    elif rain_val == 'yes':
+        category = "Drainage Maintenance"
+    elif complaints > 25000:
+        category = "Garbage Collection"
+    elif hours > 60:
+        category = "Utility Inspection"
+    else:
+        # Use deterministic random for stable category
+        category = random_gen.choice(["Garbage Collection", "Water Tanker Demand", "Road Maintenance"])
+
     return {
-        "priority_score": score,
+        "raw_score": raw_score,
+        "force_priority": force_priority,
         "type": p_type,
         "action": action,
-        "reason": reason
+        "reason": reason,
+        "category": category
     }
 
 def run_airllm_engine():
+    import sqlite3
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Clean old predictions to avoid clutter (for MVP)
     cursor.execute('DELETE FROM predictions')
-    
     prompts = build_llm_payloads()
-    print(f"\n[AiRLLM Engine] Simulating LLM JSON Inference for {len(prompts)} zones...")
+    print(f"\n[AiRLLM Engine] Calculating Logarithmic City Heartbeat for {len(prompts)} zones...")
     
+    results = []
     for p in prompts:
-        zone = p['zone']
-        # 1. Ask AiRLLM for priority, type, action, reason
-        prediction = simulate_llm_inference(p)
+        pred = simulate_llm_inference(p)
+        results.append({'zone': p['zone'], **pred})
         
-        # 2. Parse and save JSON to predictions table
+    # --- Global Normalization Pass (Professional 30-90% Range) ---
+    raws = [r['raw_score'] for r in results]
+    min_raw = min(raws)
+    max_raw = max(raws)
+    range_raw = max_raw - min_raw if max_raw != min_raw else 1
+    
+    for r in results:
+        # Scale base score between 30 and 82
+        scaled = 30 + ((r['raw_score'] - min_raw) / range_raw) * 52
+        
+        # If force priority, bump to emergency band (84-90)
+        if r['force_priority']:
+            r['priority_score'] = random.randint(84, 90)
+            r['type'] = "high"
+        else:
+            r['priority_score'] = int(scaled)
+            # Re-classify type based on normalized score for consistency
+            if r['priority_score'] >= 80: r['type'] = "high"
+            elif r['priority_score'] >= 55: r['type'] = "medium"
+            else: r['type'] = "low"
+            
         cursor.execute('''
-            INSERT INTO predictions (zone, priority_score, type, action, reason)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO predictions (zone, priority_score, type, action, reason, category)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
-            zone, 
-            prediction['priority_score'], 
-            prediction['type'], 
-            prediction['action'], 
-            prediction['reason']
+            r['zone'], 
+            r['priority_score'], 
+            r['type'], 
+            r['action'], 
+            r['reason'],
+            r['category']
         ))
         
     conn.commit()
     conn.close()
-    
-    print("[AiRLLM Engine] Inference complete. Predictions JSON saved to database.")
+    print("[AiRLLM Engine] Normalization complete. Diversified city state saved.")
 
 if __name__ == '__main__':
     run_airllm_engine()

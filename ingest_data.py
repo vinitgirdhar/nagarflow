@@ -29,7 +29,8 @@ def setup_database():
             name TEXT,
             status TEXT DEFAULT 'idle',
             lat REAL,
-            lon REAL
+            lon REAL,
+            truck_type TEXT DEFAULT 'garbage'
         )
     ''')
     

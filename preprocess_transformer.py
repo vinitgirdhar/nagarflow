@@ -38,13 +38,18 @@ def build_llm_payloads():
     coverage_data = get_zone_coverage(cursor)
     
     # Aggregate complaints (total count and unique keywords) for each zone
-    # Detect if any complaint ID starts with 'VOICE-' to prioritize call-based reports
+    # Detect if any complaint ID starts with 'VOICE-' in the last 2 hours
+    two_hours_ago = (datetime.now().replace(microsecond=0) - (datetime.now() - datetime.now())).strftime('%Y-%m-%d %H:%M:%S')
+    # Actually, simpler:
+    import datetime as dtbase
+    recent_threshold = (datetime.now() - dtbase.timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S')
+
     cursor.execute('''
         SELECT zone, SUM(complaint_count), GROUP_CONCAT(DISTINCT issue_type),
-               MAX(CASE WHEN id LIKE 'VOICE-%' THEN 1 ELSE 0 END) as carries_voice
+               MAX(CASE WHEN id LIKE 'VOICE-%' AND timestamp >= ? THEN 1 ELSE 0 END) as carries_voice
         FROM complaints
         GROUP BY zone
-    ''')
+    ''', (recent_threshold,))
     zones_data = cursor.fetchall()
     
     prompts = []

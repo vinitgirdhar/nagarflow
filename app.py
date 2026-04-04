@@ -4,6 +4,7 @@ import sqlite3
 import datetime
 import unicodedata
 import json
+import sys
 import uuid
 from typing import Optional, List, Dict, Any
 
@@ -35,6 +36,10 @@ SOURCE_ID_PREFIXES = {
     "voice_call": "VOICE",
     "text_chat": "TEXT",
 }
+TRUCK_TYPE_LABELS = {
+    "garbage": "Garbage Truck",
+    "water": "Water Tanker",
+}
 ALLOWED_AUDIO_MIME_TYPES = {
     "application/octet-stream",
     "audio/mpeg",
@@ -48,6 +53,19 @@ ALLOWED_AUDIO_MIME_TYPES = {
     "audio/x-wav",
     "video/webm",
 }
+
+_builtin_print = print
+
+
+def _safe_log(message: str) -> None:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    safe_text = str(message).encode(encoding, errors="replace").decode(encoding, errors="replace")
+    _builtin_print(safe_text)
+
+
+print = _safe_log
+
+
 ZONE_ALIAS_MAP = {
     "Airoli": ["ऐरोली", "airoli station"],
     "Andheri": ["अंधेरी", "andari", "andheri east", "andheri west"],
@@ -161,13 +179,53 @@ def ensure_tables_exist():
     # Trucks Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS trucks 
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, 
-                       status TEXT, lat REAL, lon REAL)''')
+                       status TEXT, lat REAL, lon REAL, truck_type TEXT DEFAULT 'garbage')''')
+    
+    # Simple migration for existing databases
+    try: cursor.execute("ALTER TABLE trucks ADD COLUMN truck_type TEXT DEFAULT 'garbage'")
+    except: pass
+    cursor.execute("SELECT id, name, truck_type FROM trucks ORDER BY id")
+    truck_rows = cursor.fetchall()
+    water_trucks_present = False
+    for truck_id, truck_name, truck_type in truck_rows:
+        normalized_type = _normalize_truck_type(truck_type)
+        if normalized_type == "water":
+            water_trucks_present = True
+        elif not truck_type:
+            normalized_type = _infer_default_truck_type(truck_id, truck_name)
+            if normalized_type == "water":
+                water_trucks_present = True
+            cursor.execute(
+                "UPDATE trucks SET truck_type = ? WHERE id = ?",
+                (normalized_type, truck_id),
+            )
+
+        if normalized_type == "water" and not (truck_name or "").lower().startswith("tanker-"):
+            cursor.execute(
+                "UPDATE trucks SET name = ? WHERE id = ?",
+                (f"Tanker-{truck_id:02d}", truck_id),
+            )
+
+    # If an older fleet snapshot has no water tankers yet, rebalance it so the
+    # hackathon demo shows both truck classes immediately.
+    if truck_rows and not water_trucks_present:
+        for index, (truck_id, _truck_name, _truck_type) in enumerate(truck_rows):
+            rebalance_type = "water" if index % 3 == 2 else "garbage"
+            rebalance_name = f"Tanker-{truck_id:02d}" if rebalance_type == "water" else f"Truck-{truck_id:02d}"
+            cursor.execute(
+                "UPDATE trucks SET truck_type = ?, name = ? WHERE id = ?",
+                (rebalance_type, rebalance_name, truck_id),
+            )
     
     # Predictions Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS predictions 
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, zone TEXT, 
                        priority_score REAL, type TEXT, action TEXT, 
-                       reason TEXT, lat REAL, lon REAL)''')
+                       reason TEXT, lat REAL, lon REAL, category TEXT DEFAULT 'General')''')
+    
+    # Simple migration for existing databases
+    try: cursor.execute("ALTER TABLE predictions ADD COLUMN category TEXT DEFAULT 'General'")
+    except: pass
     
     # Prediction Outcomes Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS prediction_outcomes 
@@ -284,12 +342,35 @@ CALL_END_CONTAINS_PHRASES = [
     "और कुछ नहीं",
 ]
 
+def _normalize_truck_type(truck_type: Optional[str]) -> str:
+    normalized = (truck_type or "").strip().lower()
+    if normalized in TRUCK_TYPE_LABELS:
+        return normalized
+    return "garbage"
+
+
+def _truck_type_label(truck_type: Optional[str]) -> str:
+    return TRUCK_TYPE_LABELS[_normalize_truck_type(truck_type)]
+
+
+def _infer_default_truck_type(seed_value: Any, name: Optional[str] = None) -> str:
+    seed_text = f"{seed_value} {name or ''}".lower()
+    if any(token in seed_text for token in ("water", "tanker", "hydrant")):
+        return "water"
+    if any(token in seed_text for token in ("garbage", "waste")):
+        return "garbage"
+
+    digits = "".join(ch for ch in str(seed_value) if ch.isdigit())
+    seed_number = int(digits) if digits else 0
+    return "water" if seed_number % 3 == 0 else "garbage"
+
+
 # Simple CORS setup to completely allow the frontend Next.js queries
 @app.after_request
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
 @app.route('/api/predictions', methods=['GET'])
@@ -302,22 +383,27 @@ def get_predictions():
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT zone, priority_score as demand, type, action, reason 
+        SELECT zone, priority_score as demand, type, action, reason, category
         FROM predictions 
         ORDER BY priority_score DESC
     ''')
     
+    from fleet_manager import get_zone_coordinates
     predictions = [dict(row) for row in cursor.fetchall()]
     
     # Formatting for Next.js expectations
     formatted = []
     for p in predictions:
+        lat, lon = get_zone_coordinates(p['zone'])
         formatted.append({
             'name': p['zone'],
             'demand': p['demand'],
             'type': p['type'],
             'action': p['action'],
-            'reason': p['reason']
+            'reason': p['reason'],
+            'lat': lat,
+            'lon': lon,
+            'category': p['category']
         })
         
     conn.close()
@@ -336,8 +422,13 @@ def get_dashboard():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, status, lat, lon FROM trucks")
-    trucks = [dict(t) for t in cursor.fetchall()]
+    cursor.execute("SELECT id, name, status, lat, lon, truck_type FROM trucks")
+    trucks = []
+    for truck in cursor.fetchall():
+        truck_data = dict(truck)
+        truck_data["truck_type"] = _normalize_truck_type(truck_data.get("truck_type"))
+        truck_data["truck_type_label"] = _truck_type_label(truck_data["truck_type"])
+        trucks.append(truck_data)
     cursor.execute("SELECT zone, priority_score, action FROM predictions ORDER BY priority_score DESC")
     predictions = [dict(p) for p in cursor.fetchall()]
     from fleet_manager import get_zone_coordinates
@@ -939,7 +1030,11 @@ def agent_respond():
     except SarvamError:
         return jsonify({"success": False, "error": "Audio could not be processed. Please try again."}), 502
 
-    result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
+    try:
+        result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
+    except Exception as exc:
+        _safe_log(f"Agent voice response failed: {exc}")
+        return jsonify({"success": False, "error": "The complaint agent could not process this voice input."}), 500
 
     try:
         audio = text_to_speech(result["reply_text"])
@@ -962,7 +1057,11 @@ def agent_respond_text():
     if len(transcript) > MAX_TRANSCRIPT_LENGTH:
         return jsonify({"success": False, "error": "Transcript is too long."}), 400
 
-    result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
+    try:
+        result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
+    except Exception as exc:
+        _safe_log(f"Agent text response failed: {exc}")
+        return jsonify({"success": False, "error": "The complaint agent could not process this text input."}), 500
 
     try:
         audio = text_to_speech(result["reply_text"])
@@ -985,7 +1084,11 @@ def agent_respond_chat():
     if len(transcript) > MAX_TRANSCRIPT_LENGTH:
         return jsonify({"success": False, "error": "Message is too long."}), 400
 
-    result = _build_agent_response_from_transcript(transcript, complaint_source='text_chat')
+    try:
+        result = _build_agent_response_from_transcript(transcript, complaint_source='text_chat')
+    except Exception as exc:
+        _safe_log(f"Agent chat response failed: {exc}")
+        return jsonify({"success": False, "error": "The complaint chatbot could not process this message."}), 500
 
     return jsonify({
         "success": True,

@@ -3,6 +3,7 @@ import random
 import hashlib
 
 DB_PATH = 'nagarflow.db'
+TRUCK_TYPE_SEQUENCE = ['garbage', 'garbage', 'water']
 
 # Hard boundary constraints to ensure nothing leaks into Arabian Sea
 # Using distinct land clusters to avoid the Thane Creek / Mumbai Harbour water bodies.
@@ -46,11 +47,13 @@ def initialize_fleet(num_trucks=15):
         
         lat = min_lat + random.random() * (max_lat - min_lat)
         lon = min_lon + random.random() * (max_lon - min_lon)
-        trucks.append((f"Truck-{i:02d}", 'idle', lat, lon))
+        truck_type = TRUCK_TYPE_SEQUENCE[(i - 1) % len(TRUCK_TYPE_SEQUENCE)]
+        truck_name = f"Tanker-{i:02d}" if truck_type == 'water' else f"Truck-{i:02d}"
+        trucks.append((truck_name, 'idle', lat, lon, truck_type))
         
     cursor.executemany('''
-        INSERT INTO trucks (name, status, lat, lon)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO trucks (name, status, lat, lon, truck_type)
+        VALUES (?, ?, ?, ?, ?)
     ''', trucks)
     
     conn.commit()

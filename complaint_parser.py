@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -20,6 +21,12 @@ VALID_ZONES = [
 ]
 
 VALID_ISSUES = ["Garbage", "Drainage", "Roads", "Water"]
+
+
+def _safe_log(message: str) -> None:
+    encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+    safe_text = str(message).encode(encoding, errors="replace").decode(encoding, errors="replace")
+    print(safe_text)
 
 def extract_complaint_details(transcript: str) -> dict:
     """
@@ -80,12 +87,14 @@ def extract_complaint_details(transcript: str) -> dict:
             
         data = json.loads(text)
         
-        # Logging for debugging
-        print(f"🌐 Multilingual Engine: {data.get('input_language')} -> {data.get('translated_input_en')}")
+        # Logging for debugging without crashing Windows terminals on Unicode output
+        _safe_log(
+            f"Multilingual Engine: {data.get('input_language')} -> {data.get('translated_input_en')}"
+        )
         
         return data
     except Exception as e:
-        print(f"⚠️ Gemini Multilingual Extraction Failed: {e}")
+        _safe_log(f"Gemini Multilingual Extraction Failed: {e}")
         return {"error": str(e)}
 
 if __name__ == "__main__":
