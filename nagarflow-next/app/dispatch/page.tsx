@@ -36,6 +36,7 @@ type PredictionRecord = {
   lat: number;
   lon: number;
   priority_score: number;
+  reason: string;
   zone: string;
 };
 
@@ -83,6 +84,9 @@ type LeafletLike = {
     coords: [number, number][],
     options: { color: string; weight: number; dashArray: string; opacity: number },
   ) => { addTo: (target: LeafletLayerGroupLike) => void };
+  circleMarker: (coords: [number, number], options: any) => {
+    addTo: (target: LeafletLayerGroupLike) => { bindPopup: (content: string) => void };
+  };
   divIcon: (options: { className: string; html: string; iconSize: number[]; iconAnchor: number[] }) => unknown;
 };
 
@@ -115,6 +119,7 @@ export default function DispatchPage() {
   const [errorText, setErrorText] = useState('');
   const [activeTruckId, setActiveTruckId] = useState<number | null>(null);
   const [dismissedSuggestionKeys, setDismissedSuggestionKeys] = useState<string[]>([]);
+  const [hotspots, setHotspots] = useState<any[]>([]);
 
   const getSuggestionKey = (suggestion: SuggestionRecord) =>
     `${suggestion.truck_id}-${suggestion.zone}`;
@@ -130,6 +135,19 @@ export default function DispatchPage() {
     const layerGroup = layerGroupRef.current;
     layerGroup.clearLayers();
 
+    // Locality Hotspots
+    hotspots.forEach(h => {
+      const radius = 5 + Math.min(15, h.count / 2000.0);
+      L.circleMarker([h.lat, h.lon], {
+        radius: radius,
+        fillColor: '#C1440E',
+        fillOpacity: 0.2,
+        color: '#C1440E',
+        weight: 1,
+        opacity: 0.4
+      }).addTo(layerGroup).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
+    });
+
     const zoneIcon = L.divIcon({
       className: '',
       html: '<div style="width:24px;height:24px;border-radius:50%;background:rgba(193,68,14,.18);border:2px solid #C1440E;display:flex;align-items:center;justify-content:center;font-size:10px;color:#C1440E;font-weight:bold">!</div>',
@@ -141,7 +159,7 @@ export default function DispatchPage() {
       if (prediction.lat && prediction.lon) {
         L.marker([prediction.lat, prediction.lon], { icon: zoneIcon })
           .addTo(layerGroup)
-          .bindPopup(`<b>${prediction.zone}</b><br>${prediction.action}<br>Priority: ${prediction.priority_score}`);
+          .bindPopup(`<b>${prediction.zone}</b><br>${prediction.action}<br>Priority: ${prediction.priority_score}<br><small>${prediction.reason || ''}</small>`);
       }
     });
 
@@ -247,6 +265,12 @@ export default function DispatchPage() {
         script.async = true;
         script.onload = () => ensureMap(nextVehicles, nextPredictions);
         document.head.appendChild(script);
+      }
+
+      // Fetch Hotspots separately
+      const hotspotsRes = await fetch(`${BACKEND_URL}/api/hotspots`);
+      if (hotspotsRes.ok) {
+        setHotspots(await hotspotsRes.json());
       }
     } catch {
       setErrorText('Live dispatch data is unavailable right now.');

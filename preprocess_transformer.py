@@ -46,7 +46,8 @@ def build_llm_payloads():
 
     cursor.execute('''
         SELECT zone, SUM(complaint_count), GROUP_CONCAT(DISTINCT issue_type),
-               MAX(CASE WHEN id LIKE 'VOICE-%' AND timestamp >= ? THEN 1 ELSE 0 END) as carries_voice
+               MAX(CASE WHEN id LIKE 'VOICE-%' AND timestamp >= ? THEN 1 ELSE 0 END) as carries_voice,
+               GROUP_CONCAT(DISTINCT locality), AVG(population)
         FROM complaints
         GROUP BY zone
     ''', (recent_threshold,))
@@ -65,6 +66,22 @@ def build_llm_payloads():
         issue_raw = row[2]
         keywords = issue_raw.lower().replace(",", ", ") if issue_raw else "none"
         
+        # New: Localities list with density context
+        # Group by locality to find top 3 hotspots
+        cursor.execute('''
+            SELECT locality, SUM(complaint_count) as loc_count
+            FROM complaints
+            WHERE zone = ?
+            GROUP BY locality
+            ORDER BY loc_count DESC
+            LIMIT 3
+        ''', (zone_name,))
+        top_locs = cursor.fetchall()
+        locality_context = ", ".join([f"{l[0]} ({l[1]})" for l in top_locs]) if top_locs else "various"
+        
+        # New: Population
+        avg_pop = int(row[5]) if row[5] else 0
+        
         # Fetch calculated hours
         hours_since = coverage_data.get(zone_name, 0)
         
@@ -72,7 +89,7 @@ def build_llm_payloads():
         has_voice = "yes" if row[3] == 1 else "no"
         
         # Construct the final prompt string matching the spec perfectly:
-        prompt_text = f"Zone: {zone_name}. Complaints: {total_complaints}. Keywords: {keywords}. Rain: {rain_status}. Last visited: {hours_since} hours ago. Voice: {has_voice}."
+        prompt_text = f"Zone: {zone_name}. Hotspots: {locality_context}. Total Complaints: {total_complaints}. Pop: {avg_pop}. Keywords: {keywords}. Rain: {rain_status}. Last visited: {hours_since} hours ago. Voice: {has_voice}."
         
         prompts.append({
             "zone": zone_name,

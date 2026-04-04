@@ -31,6 +31,20 @@ def get_zone_coordinates(zone_name):
     lon = min_lon + (((h // 1000) % 1000) / 1000.0) * (max_lon - min_lon)
     return lat, lon
 
+def get_locality_coordinates(zone_name, locality_name):
+    """
+    Generates a deterministic offset from the parent zone's center.
+    This creates a 'Hotspot' effect around the main ward marker.
+    """
+    base_lat, base_lon = get_zone_coordinates(zone_name)
+    h = int(hashlib.md5(locality_name.encode('utf-8')).hexdigest(), 16)
+    
+    # Small jitter (±0.003 degrees, ~300 meters) to scatter hotspots
+    offset_lat = ((h % 100) - 50) / 15000.0
+    offset_lon = (((h // 100) % 100) - 50) / 15000.0
+    
+    return base_lat + offset_lat, base_lon + offset_lon
+
 def initialize_fleet(num_trucks=15):
     """Generates the idle truck fleet scattered across the operation grid."""
     conn = sqlite3.connect(DB_PATH)

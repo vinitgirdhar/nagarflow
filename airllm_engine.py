@@ -46,16 +46,19 @@ def simulate_llm_inference(prompt_data):
 
     # --- Heuristics extraction for realism fallback ---
     try:
-        complaints = int(prompt.split('Complaints: ')[1].split('.')[0])
+        localities = prompt.split('Hotspots: ')[1].split('. Total Complaints:')[0]
+        complaints = int(prompt.split('Total Complaints: ')[1].split('.')[0])
+        pop = int(prompt.split('Pop: ')[1].split('.')[0])
         rain_val = prompt.split('Rain: ')[1].split('.')[0].strip().lower()
         hours = int(prompt.split('Last visited: ')[1].split(' ')[0])
     except Exception:
-        complaints, rain_val, hours = 10, 'no', 10 # fail-safe
+        complaints, rain_val, hours, localities, pop = 10, 'no', 10, 'various', 200000 # fail-safe
     
     # Check for explicit priority override (e.g. from call-based complaints)
     force_priority = "voice: yes" in prompt.lower()
     
     # 1. Logarithmic Complaint Scaling (Prevents clumping in heavy wards)
+    # Scale complaints by population for a "per capita" feel if needed, but keeping it simple
     log_complaints = math.log10(max(1, complaints))
     
     # 2. Zone Stability Seed (Unique but consistent personality per ward)
@@ -78,7 +81,10 @@ def simulate_llm_inference(prompt_data):
         p_type = "low"
         action = "Monitor Zone"
 
-    reason = f"{complaints} complaints"
+    # Specific Locality formatting for UI
+    loc_display = localities if len(localities) < 40 else localities[:37] + "..."
+    reason = f"{complaints} reports in {loc_display}"
+    
     if force_priority:
         reason = "Emergency Voice Report"
     elif rain_val == 'yes':

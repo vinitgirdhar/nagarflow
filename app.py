@@ -22,14 +22,15 @@ from agencies_scraper import get_agency_registry
 from greedy_dispatcher import generate_dispatch_suggestions
 from sarvam import SarvamError, speech_to_text, text_to_speech
 from complaint_parser import extract_complaint_details
+from localities import find_zone_and_locality
 
 app = Flask(__name__)
 DB_PATH = 'nagarflow.db'
-# Optimized Conversational Voice Scripts (Human Persona)
-AGENT_GREETING_TEXT = "Namaste, NagarFlow mein aapka swagat hai. Main aapki kaise madad kar sakta hoon? Bas apna area aur jo bhi samasya hai woh batayeee— main  note kar lunga."
-AGENT_CONFIRMATION_TEXT = "Ji, maine aapki complaint note kar li hai aur dispatcher ko inform kar diya hai. Kya aur koi zaroori baat hai, ya hum call yahan khatam karein?"
-AGENT_RETRY_TEXT = "Maaf kijiyega, main area ya samasya theek se samajh nahi paaya. Kya aap apna ward aur problem phir se bata sakte hain?"
-AGENT_CLOSING_TEXT = "Theek hai, dhanyavad. NagarFlow par call karne ke liye shukriya. Aapka din shubh ho!"
+# Optimized Professional Voice Scripts (Pure Hindi/English - Rahul Persona)
+AGENT_GREETING_TEXT = "Namaste! mein NagarFlow Mumbai mein aapka swagat hai. Main Nagarflow agent hoon, aapki madad ke liye yahan. Kripya apna area/ward batayein aur kya problem face kar rahe hain, Main turant aapki complaint register karne mein help karunga."
+AGENT_CONFIRMATION_TEXT = "Ji, maine aapki complaint darj kar li hai. Hamari team jald hi karravayi karegi. Kya main aapki kisi aur cheez mein madad kar sakta hoon?"
+AGENT_RETRY_TEXT = "Kshama kijiye, main aapka ward ya samasya samajh nahi paaya. Kripya phir se vistaar se batayein."
+AGENT_CLOSING_TEXT = "Dhanyavad. NagarFlow se judne ke liye shukriya. Aapka din shubh ho."
 MAX_AUDIO_BYTES = 10 * 1024 * 1014
 MAX_TRANSCRIPT_LENGTH = 500
 SOURCE_ID_PREFIXES = {
@@ -168,12 +169,16 @@ def ensure_tables_exist():
     
     # Complaints Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS complaints 
-                      (id TEXT PRIMARY KEY, zone TEXT, issue_type TEXT, 
-                       complaint_count INTEGER, weather TEXT, timestamp TEXT, 
-                       severity TEXT, text TEXT)''')
+                      (id TEXT PRIMARY KEY, zone TEXT, locality TEXT, issue_type TEXT, 
+                       complaint_count INTEGER, population INTEGER, weather TEXT, timestamp TEXT, 
+                       severity TEXT, description TEXT)''')
     
     # Simple migration for existing databases
-    try: cursor.execute("ALTER TABLE complaints ADD COLUMN text TEXT")
+    try: cursor.execute("ALTER TABLE complaints ADD COLUMN locality TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE complaints ADD COLUMN population INTEGER")
+    except: pass
+    try: cursor.execute("ALTER TABLE complaints ADD COLUMN description TEXT")
     except: pass
     
     # Trucks Table
@@ -497,7 +502,7 @@ def get_dashboard():
         truck_data["truck_type"] = _normalize_truck_type(truck_data.get("truck_type"))
         truck_data["truck_type_label"] = _truck_type_label(truck_data["truck_type"])
         trucks.append(truck_data)
-    cursor.execute("SELECT zone, priority_score, action FROM predictions ORDER BY priority_score DESC")
+    cursor.execute("SELECT zone, priority_score, action, reason FROM predictions ORDER BY priority_score DESC")
     predictions = [dict(p) for p in cursor.fetchall()]
     from fleet_manager import get_zone_coordinates
     for p in predictions:
@@ -970,19 +975,20 @@ def _normalize_complaint_source(source: str) -> str:
     return "text_chat"
 
 
-def _insert_complaint(zone, issue_type, severity='High', summary=None, source='voice_call'):
+def _insert_complaint(zone, issue_type, severity='High', summary=None, source='text_chat', locality=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     normalized_source = _normalize_complaint_source(source)
     c_id = f"{SOURCE_ID_PREFIXES[normalized_source]}-" + str(uuid.uuid4())[:8]
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    complaint_text = summary or f"Complaint reported in {zone} for {issue_type}."
+    final_locality = locality or zone
+    complaint_text = summary or f"Complaint reported in {final_locality} for {issue_type}."
 
     cursor.execute('''
-        INSERT INTO complaints (id, zone, issue_type, complaint_count, weather, timestamp, severity, text)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (c_id, zone, issue_type, 60000, 'no', now_str, severity, complaint_text))
+        INSERT INTO complaints (id, zone, locality, issue_type, complaint_count, weather, timestamp, severity, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (c_id, zone, final_locality, issue_type, 1, 'no', now_str, severity, complaint_text))
     conn.commit()
     conn.close()
 
@@ -1004,6 +1010,7 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
         call_ended = gemini_data.get('is_closing', False)
         zone = gemini_data.get('zone') if gemini_data.get('zone') != 'Unknown' else None
         issue_type = gemini_data.get('issue_type') if gemini_data.get('issue_type') != 'General' else None
+        locality = gemini_data.get('specific_location')
         severity = gemini_data.get('severity', 'Medium')
         
         # New Multilingual fields
@@ -1014,11 +1021,13 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
         # Static Fallback Logic (Legacy Keyword Matching)
         call_ended = _is_call_end_response(transcript)
         zone = _extract_zone(transcript)
+        locality = None
         issue_type = _extract_issue_type(transcript)
         severity = "High" if _extract_severity(transcript) == "High" else "Medium"
         reply_text_native = None
 
-    complaint_logged = bool(zone and issue_type)
+    # Smart Filing: Log if we have EITHER a recognized zone OR a specific locality, as long as issue exists
+    complaint_logged = bool((zone or locality) and issue_type)
 
     if call_ended:
         reply_text = reply_text_native or AGENT_CLOSING_TEXT
@@ -1027,11 +1036,12 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
             reply_text = reply_text_native or AGENT_CONFIRMATION_TEXT
             # We log the English summary for the dispatcher's system logic
             _insert_complaint(
-                zone,
-                issue_type,
+                zone=zone or "Unknown",
+                issue_type=issue_type,
                 severity=severity,
                 summary=translated_transcript,
                 source=complaint_source,
+                locality=locality
             )
         else:
             reply_text = reply_text_native or AGENT_RETRY_TEXT
@@ -1092,24 +1102,146 @@ def _format_complaint_text(zone: str, issue_type: str, source: str, stored_text:
     return f"{issue_type} issue reported in {zone}."
 
 
+def extract_issue_from_text(text):
+    text = (text or "").lower()
+    if any(w in text for w in ["garbage", "kachra", "waste", "dustbin", "cleaning", "safai", "sweeping"]):
+        return "Garbage"
+    if any(w in text for w in ["water", "paani", "pani", "shortage", "supply", "leakage", "pressure", "nahi aata"]):
+        return "Water"
+    if any(w in text for w in ["road", "pothole", "sadak", "repair", "crack", "broken road", "accident"]):
+        return "Roads"
+    if any(w in text for w in ["drain", "gutter", "naali", "flood", "nullah", "stagnant", "blocked"]):
+        return "Drainage"
+    return "General"
+
+
+def get_severity(complaint_count):
+    if not complaint_count: return "Low"
+    if complaint_count >= 30:
+        return "High"
+    elif complaint_count >= 10:
+        return "Medium"
+    return "Low"
+
+
+@app.route("/api/whatsapp-complaint", methods=["POST"])
+def whatsapp_complaint():
+    # Accept both JSON body and form data (Twilio sends form, N8n may send JSON)
+    if request.is_json:
+        data = request.json or {}
+    else:
+        data = request.form.to_dict() or {}
+
+    # Log exactly what N8n/Twilio sends for debugging
+    print(f"[WHATSAPP] Incoming payload keys: {list(data.keys())}")
+    print(f"[WHATSAPP] Raw body: {str(data)[:300]}")
+
+    # Support multiple field name conventions from N8n / Twilio
+    user_msg = (
+        data.get("user_message")
+        or data.get("message")
+        or data.get("Body")        # Twilio sends "Body"
+        or data.get("body")
+        or data.get("text")
+        or ""
+    )
+    phone = data.get("phone") or data.get("From") or data.get("from") or ""
+    source = data.get("source", "whatsapp")
+
+    # Extract zone and locality
+    zone, locality = find_zone_and_locality(user_msg)
+
+    # Extract complaint type
+    complaint_type = extract_issue_from_text(user_msg)
+
+    # GATE: reject greetings, acks, and messages without a real zone + issue
+    # A valid complaint must have both a known zone and a specific issue type
+    is_valid_zone = zone != "Unknown"
+    is_valid_issue = complaint_type not in ("General", None, "")
+    if not is_valid_zone or not is_valid_issue:
+        print(f"[WHATSAPP] SKIPPED (not a valid complaint) zone={zone!r} issue={complaint_type!r} msg={user_msg[:80]!r}")
+        return jsonify({
+            "status": "skipped",
+            "reason": "Message does not contain a identifiable zone and issue type. Not saved.",
+            "zone": zone,
+            "issue_type": complaint_type
+        }), 200
+
+    # Generate complaint ID matching MMR-XXXXX
+    complaint_id = f"MMR-{uuid.uuid4().hex[:8].upper()}"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Get existing count for severity logic
+    existing = cursor.execute("SELECT COUNT(*) FROM complaints WHERE zone = ?", (zone,)).fetchone()
+    previous_complaints = existing[0] if existing else 0
+    severity = get_severity(previous_complaints)
+
+    # Insert using existing schema (lowercase columns)
+    cursor.execute("""
+        INSERT INTO complaints (id, zone, locality, issue_type, complaint_count, weather, timestamp, severity, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (complaint_id, zone, locality, complaint_type, 1, 'no', timestamp, severity, user_msg))
+
+    # Update zone_coverage
+    cursor.execute("""
+        UPDATE zone_coverage 
+        SET complaint_count = COALESCE(complaint_count, 0) + 1 
+        WHERE zone = ?
+    """, (zone,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "ok",
+        "complaint_id": complaint_id,
+        "area": zone,
+        "locality": locality,
+        "type": complaint_type,
+        "severity": severity,
+        "timestamp": timestamp
+    })
+
+
 @app.route('/api/complaints', methods=['GET'])
 def get_complaints():
     if not os.path.exists(DB_PATH):
         return jsonify({"success": False, "error": "Database not initialized"}), 500
+
+    area = request.args.get("area", None)
+    c_type = request.args.get("type", None)
+    severity = request.args.get("severity", None)
+    limit = request.args.get("limit", 100)
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     try:
-        complaint_rows = cursor.execute(
-            '''
-            SELECT id, zone, issue_type, complaint_count, timestamp, severity, text
-            FROM complaints
-            ORDER BY datetime(timestamp) DESC, rowid DESC
-            LIMIT 100
-            '''
-        ).fetchall()
+        query = "SELECT id, zone, locality, issue_type, complaint_count, timestamp, severity, description FROM complaints WHERE 1=1"
+        params = []
+
+        if area:
+            query += " AND (LOWER(zone) LIKE LOWER(?) OR LOWER(locality) LIKE LOWER(?))"
+            params.append(f"%{area}%")
+            params.append(f"%{area}%")
+
+        if c_type and c_type != 'all':
+            query += " AND LOWER(issue_type) = LOWER(?)"
+            params.append(c_type)
+
+        if severity and severity != 'all':
+            query += " AND LOWER(severity) = LOWER(?)"
+            params.append(severity)
+
+        query += " ORDER BY datetime(timestamp) DESC, rowid DESC LIMIT ?"
+        params.append(int(limit))
+
+        complaint_rows = cursor.execute(query, params).fetchall()
+
         stats_row = cursor.execute(
             '''
             SELECT
@@ -1121,20 +1253,21 @@ def get_complaints():
             FROM complaints
             '''
         ).fetchone()
-    except sqlite3.Error:
+    except sqlite3.Error as e:
         conn.close()
-        return jsonify({"success": False, "error": "Complaints data is unavailable right now."}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
     complaints = []
     for row in complaint_rows:
         source = _infer_complaint_source(row["id"])
         complaints.append({
             "id": row["id"],
-            "text": _format_complaint_text(row["zone"], row["issue_type"], source, row["text"]),
+            "text": row["description"] or f"{row['issue_type']} in {row['locality'] or row['zone']}",
             "urgency": _severity_to_urgency(row["severity"]),
             "category": _issue_type_to_category(row["issue_type"]),
             "emotion": "voice-reported" if source == "voice_call" else "text-reported" if source == "text_chat" else "citizen-reported",
             "ward": row["zone"],
+            "locality": row["locality"] or "Unknown",
             "time": row["timestamp"],
             "source": source,
             "issue_type": row["issue_type"],
@@ -1157,6 +1290,37 @@ def get_complaints():
         "complaints": complaints,
     })
 
+@app.route('/api/hotspots', methods=['GET'])
+def get_hotspots():
+    """Returns locality-level density clusters with generated coordinates."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT zone, locality, SUM(complaint_count) as count
+        FROM complaints
+        GROUP BY zone, locality
+        HAVING count > 0
+    ''')
+    
+    rows = cursor.fetchall()
+    from fleet_manager import get_locality_coordinates
+    
+    hotspots = []
+    for row in rows:
+        lat, lon = get_locality_coordinates(row['zone'], row['locality'])
+        hotspots.append({
+            "zone": row['zone'],
+            "locality": row['locality'],
+            "count": row['count'],
+            "lat": lat,
+            "lon": lon
+        })
+    
+    conn.close()
+    return jsonify(hotspots)
+
 @app.route('/api/webhooks/vapi', methods=['POST'])
 def vapi_webhook():
     req_data = request.json
@@ -1165,7 +1329,10 @@ def vapi_webhook():
         calls = message.get('toolCalls', [])
         for call in calls:
             args = call.get('function', {}).get('arguments', {})
-            _insert_voice_complaint(args.get('zone', 'Unknown'), args.get('issue', 'Voice Report'))
+            _insert_voice_complaint(
+                zone=args.get('zone', 'Unknown'),
+                issue_type=args.get('issue', 'Voice Report')
+            )
         return jsonify({"results": [{"toolCallId": calls[0]['id'], "result": "Success"}]})
     return jsonify({"success": True})
 

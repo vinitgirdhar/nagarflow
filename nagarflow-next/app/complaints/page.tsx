@@ -11,6 +11,7 @@ type ComplaintRecord = {
   category: string;
   emotion: string;
   ward: string;
+  locality: string;
   time: string;
   source: string;
   issue_type: string;
@@ -202,6 +203,7 @@ export default function ComplaintsPage() {
                   <th>Complaint</th>
                   <th>Priority</th>
                   <th>Area</th>
+                  <th>Locality</th>
                   <th>Source</th>
                   <th>Time</th>
                 </tr>
@@ -209,13 +211,13 @@ export default function ComplaintsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
+                    <td colSpan={7} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
                       Loading complaint dataset...
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
+                    <td colSpan={7} className="mono" style={{ padding: '1rem', color: 'var(--secondary)' }}>
                       No complaints match the current filters.
                     </td>
                   </tr>
@@ -240,6 +242,9 @@ export default function ComplaintsPage() {
                         </span>
                       </td>
                       <td>{complaint.ward}</td>
+                      <td>
+                        <span style={{ color: 'var(--text-heading)', fontWeight: 500 }}>{complaint.locality}</span>
+                      </td>
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: complaint.source === 'voice_call' ? 'var(--text-heading)' : 'var(--secondary)' }}>
                           {complaint.source === 'voice_call' ? <PhoneCall size={14} /> : <MessageSquareText size={14} />}

@@ -38,8 +38,8 @@ def extract_complaint_details(transcript: str) -> dict:
         return {"error": "API Key not configured"}
 
     prompt = f"""
-    You are an AI Urban Dispatcher for Mumbai City (NagarFlow).
-    Your task is to analyze a user's voice transcript or message.
+    You are professional AI Urban Dispatcher for NagarFlow, Mumbai.
+    Your personality is helpful, polite, and efficient. You represent the city's commitment to excellence.
 
     ### Standard Zones:
     {', '.join(VALID_ZONES)}
@@ -47,36 +47,43 @@ def extract_complaint_details(transcript: str) -> dict:
     ### Standard Issues:
     {', '.join(VALID_ISSUES)}
 
-    ### Instruction Details:
-    1. **Detect Language**: Identify the input language (Hindi, Marathi, English, Hinglish, etc.).
-    2. **English Translation**: Translate the core complaint into a clean 1-sentence English summary.
-    3. **Data Extraction**: Extract the target Zone and Issue Type based on standard lists.
-    4. **Response Generation**: 
-       - Generate a polite, short confirmation in English.
-       - Translate that exact confirmation back to the User's Original Language.
+    ### Your Core Mission:
+    0. **High-Quality English Summary**: ALWAYS provide a clean, professional, 1-sentence English summary of the user's request. This will be the official city record.
+    1. **Conversational Intelligence**: If the user asks general questions (e.g., "What is NagarFlow?", "Who are you?", "How does this help?"), answer them briefly and politely, then steer back to taking their complaint if they haven't finished.
+    2. **Language Strictness**:
+       - You MUST respond in either **Pure Hindi** (using Devnagari script if possible, or clean transliteration) or **Pure English**.
+       - **Strictly FORBID Hinglish** (mixing languages) in your native response (`reply_text_native`). If the user speaks Hinglish, respond in the primary language they seem more comfortable with, but keep it pure.
+    3. **Granular Extraction**:
+       - **Zone**: Match the best Ward from the list.
+       - **Specific Location**: Extract the most detailed landmark, street name, or sector mentioned (e.g., "Ghansoli Station Gate 2", "Sector 3 near hospital").
+    4. **Smart Filing**: 
+       - If a user mentions a specific area that is NOT in the Standard Zones list, capture it in `specific_location` and set `zone` to "Unknown".
+       - **CRITICAL**: If a user mentions BOTH a ward (e.g., Andheri) and a specific locality (e.g., Chakala), the `specific_location` MUST be the detailed one (Chakala), while `zone` matches the ward.
+       - As long as an `issue_type` is detected, we will file the complaint!
 
     ### Voice Transcript:
     "{transcript}"
 
     ### Output JSON Schema:
     {{
-      "input_language": "string",
+      "input_language": "Hindi" | "English",
       "is_english": boolean,
       "translated_input_en": "Standardized English version of the user request",
       "zone": "Match to one string from the Standard Zones list or 'Unknown'",
+      "specific_location": "The MOST SPECIFIC neighborhood, street, or landmark name mentioned (e.g., 'Chakala', 'Gully No 4'). DO NOT just repeat the Ward name if a better sub-locality exists.",
       "issue_type": "Match to one string from the Standard Issues list or 'General'",
       "severity": "High" | "Medium" | "Low",
-      "is_closing": boolean (true if user says goodbye, no more issues, or bas/that's it/shukriya/dhanyavad. Also true for Hindi commands like 'कॉल खत्म करो', 'बस इतना ही', or 'आप यहाँ कॉल खत्म कर सकते हो'),
+      "is_closing": boolean,
       "reply_text_en": "Response in English",
-      "reply_text_native": "Response translated back to the user's detected language"
+      "reply_text_native": "Response in Pure Hindi or Pure English (Match detected comfort level, NO Hinglish)"
     }}
 
-    Return ONLY the valid JSON object. No markdown, no filler.
+    Return ONLY the valid JSON object.
     """
 
     try:
-        # Use 'gemini-2.5-flash' for latest high-performance/low-latency
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        # Use 'gemini-1.5-flash' for stable high-performance/low-latency
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(prompt)
         
         text = response.text.strip()

@@ -14,11 +14,14 @@ def setup_database():
         CREATE TABLE IF NOT EXISTS complaints (
             id TEXT PRIMARY KEY,
             zone TEXT,
+            locality TEXT,
             issue_type TEXT,
             complaint_count INTEGER,
+            population INTEGER,
             weather TEXT,
             timestamp TEXT,
-            severity TEXT
+            severity TEXT,
+            description TEXT
         )
     ''')
     
@@ -69,30 +72,45 @@ def ingest_all_csvs(conn):
         return
         
     total_count = 0
+    # Clear existing data for fresh start as requested
+    cursor.execute("DELETE FROM complaints")
+    
     for file_path in csv_files:
-        print(f"Reading data from {file_path}...")
+        print(f"Ingesting 50k records from {file_path}...")
         with open(file_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
-            count = 0
+            batch = []
             for row in reader:
                 try:
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO complaints 
-                        (id, zone, issue_type, complaint_count, weather, timestamp, severity)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ''', (
-                        row['Complaint_ID'],
-                        row['Area'],
-                        row['Complaint_Type'],
-                        int(row['Complaint_Count']),
-                        row['Weather'],
-                        row['Timestamp'],
-                        row['Severity']
+                    batch.append((
+                        row.get('Complaint_ID'),
+                        row.get('Area'),
+                        row.get('Locality'),
+                        row.get('Complaint_Type'),
+                        int(row.get('Complaint_Count', 0)),
+                        int(row.get('Population', 0)),
+                        row.get('Weather'),
+                        row.get('Timestamp'),
+                        row.get('Severity'),
+                        row.get('Complaint_Description')
                     ))
-                    count += 1
+                    if len(batch) >= 1000:
+                        cursor.executemany('''
+                            INSERT OR REPLACE INTO complaints 
+                            (id, zone, locality, issue_type, complaint_count, population, weather, timestamp, severity, description)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', batch)
+                        total_count += len(batch)
+                        batch = []
                 except Exception as e:
                     pass
-            total_count += count
+            if batch:
+                cursor.executemany('''
+                    INSERT OR REPLACE INTO complaints 
+                    (id, zone, locality, issue_type, complaint_count, population, weather, timestamp, severity, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', batch)
+                total_count += len(batch)
                 
     conn.commit()
     print(f"Successfully ingested {total_count} total complaints into the database.")

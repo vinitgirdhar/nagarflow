@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [zonesLive, setZonesLive] = useState<any[]>([]);
   const [trucksLive, setTrucksLive] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [hotspots, setHotspots] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<string[]>(['[NOMINAL] System initialized. Routing logic operational.']);
   const [mounted, setMounted] = useState(false);
   const [kpis, setKpis] = useState<any>({ accuracy: 94.1, coverage: 87, equity: 0.91, efficiency: 84.5 });
@@ -74,6 +75,7 @@ export default function DashboardPage() {
       // Force instant fetch on map load completion
       fetchDashboardData();
       fetchDispatchSuggestions();
+      fetchHotspots();
     };
 
     // If Leaflet is already loaded (returning via client-side navigation), init immediately.
@@ -131,12 +133,36 @@ export default function DashboardPage() {
     } catch (e) {}
   };
 
+  const fetchHotspots = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/hotspots');
+      if (res.ok) {
+        const data = await res.json();
+        setHotspots(data || []);
+      }
+    } catch (e) {}
+  };
+
   const redrawMap = (zones: any[], trucks: any[]) => {
     const L = (window as any).L;
     if (!L || !mapObjRef.current || !layerGroupRef.current) return;
     
     // Clear old drawings cleanly
     layerGroupRef.current.clearLayers();
+    
+    // 0. Draw Locality Hotspots (Clustered Heat)
+    hotspots.forEach(h => {
+      const radius = 5 + Math.min(15, h.count / 2000.0);
+      L.circleMarker([h.lat, h.lon], {
+        radius: radius,
+        fillColor: '#C1440E',
+        fillOpacity: 0.25,
+        color: '#C1440E',
+        weight: 1,
+        opacity: 0.5,
+        className: 'hotspot-pulse'
+      }).addTo(layerGroupRef.current).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
+    });
     
     // 1. Draw Heatmap Zones (Size + Color controlled by LLM Output)
     zones.forEach(z => {
@@ -148,7 +174,7 @@ export default function DashboardPage() {
         color: getColor(val),
         weight: 2,
         opacity: 0.8
-      }).addTo(layerGroupRef.current).bindPopup(`<b>${z.zone}</b><br>Priority Score: ${z.priority_score}%`);
+      }).addTo(layerGroupRef.current).bindPopup(`<b>${z.zone}</b><br>Priority Score: ${z.priority_score}%<br><small>${z.reason || ''}</small>`);
     });
 
     // 2. Draw Active Trucks and Dynamic Route Lines
