@@ -1,0 +1,308 @@
+[
+  {
+    "aqi": 108,
+    "condition": "Humid",
+    "lat": 18.969559999999998,
+    "lon": 72.81956,
+    "name": "Airoli",
+    "temperature": 31,
+    "wind": 23
+  },
+  {
+    "aqi": 135,
+    "condition": "Clear",
+    "lat": 19.0155,
+    "lon": 73.04705,
+    "name": "Andheri",
+    "temperature": 32,
+    "wind": 10
+  },
+  {
+    "aqi": 129,
+    "condition": "Clear",
+    "lat": 19.192349999999998,
+    "lon": 72.84948,
+    "name": "Bandra",
+    "temperature": 36,
+    "wind": 29
+  },
+  {
+    "aqi": 94,
+    "condition": "Clear",
+    "lat": 19.06606,
+    "lon": 72.8524,
+    "name": "Belapur",
+    "temperature": 36,
+    "wind": 14
+  },
+  {
+    "aqi": 195,
+    "condition": "Clear",
+    "lat": 19.0415,
+    "lon": 73.01635,
+    "name": "Bhayander",
+    "temperature": 32,
+    "wind": 20
+  },
+  {
+    "aqi": 117,
+    "condition": "Clear",
+    "lat": 19.06155,
+    "lon": 72.85679999999999,
+    "name": "Borivali",
+    "temperature": 34,
+    "wind": 7
+  },
+  {
+    "aqi": 126,
+    "condition": "Clear",
+    "lat": 19.08514,
+    "lon": 72.87483999999999,
+    "name": "CST",
+    "temperature": 33,
+    "wind": 26
+  },
+  {
+    "aqi": 221,
+    "condition": "Humid",
+    "lat": 19.09815,
+    "lon": 72.83344,
+    "name": "Chembur",
+    "temperature": 29,
+    "wind": 36
+  },
+  {
+    "aqi": 72,
+    "condition": "Humid",
+    "lat": 18.986639999999998,
+    "lon": 72.8068,
+    "name": "Churchgate",
+    "temperature": 30,
+    "wind": 17
+  },
+  {
+    "aqi": 178,
+    "condition": "Clear",
+    "lat": 19.02862,
+    "lon": 72.8516,
+    "name": "Colaba",
+    "temperature": 35,
+    "wind": 23
+  },
+  {
+    "aqi": 135,
+    "condition": "Clear",
+    "lat": 19.0015,
+    "lon": 73.00845,
+    "name": "Dadar",
+    "temperature": 32,
+    "wind": 20
+  },
+  {
+    "aqi": 203,
+    "condition": "Clear",
+    "lat": 19.0503,
+    "lon": 73.023,
+    "name": "Dharavi",
+    "temperature": 35,
+    "wind": 8
+  },
+  {
+    "aqi": 178,
+    "condition": "Clear",
+    "lat": 19.01962,
+    "lon": 72.84424,
+    "name": "Fort",
+    "temperature": 35,
+    "wind": 23
+  },
+  {
+    "aqi": 86,
+    "condition": "Clear",
+    "lat": 19.01854,
+    "lon": 72.84844,
+    "name": "Ghatkopar",
+    "temperature": 33,
+    "wind": 11
+  },
+  {
+    "aqi": 69,
+    "condition": "Humid",
+    "lat": 19.195349999999998,
+    "lon": 72.83059999999999,
+    "name": "Goregaon",
+    "temperature": 32,
+    "wind": 34
+  },
+  {
+    "aqi": 80,
+    "condition": "Humid",
+    "lat": 18.924200000000003,
+    "lon": 72.81604,
+    "name": "Hiranandani",
+    "temperature": 28,
+    "wind": 25
+  },
+  {
+    "aqi": 139,
+    "condition": "Clear",
+    "lat": 19.0879,
+    "lon": 73.0388,
+    "name": "Jogeshwari",
+    "temperature": 36,
+    "wind": 9
+  },
+  {
+    "aqi": 194,
+    "condition": "Clear",
+    "lat": 19.04266,
+    "lon": 72.85156,
+    "name": "Juhu",
+    "temperature": 36,
+    "wind": 29
+  },
+  {
+    "aqi": 70,
+    "condition": "Clear",
+    "lat": 19.0423,
+    "lon": 72.86764,
+    "name": "Kandivali",
+    "temperature": 32,
+    "wind": 25
+  },
+  {
+    "aqi": 299,
+    "condition": "Clear",
+    "lat": 19.0239,
+    "lon": 73.02175,
+    "name": "Kurla",
+    "temperature": 36,
+    "wind": 19
+  },
+  {
+    "aqi": 316,
+    "condition": "Humid",
+    "lat": 18.92812,
+    "lon": 72.81068,
+    "name": "Lower Parel",
+    "temperature": 29,
+    "wind": 31
+  },
+  {
+    "aqi": 160,
+    "condition": "Humid",
+    "lat": 18.9284,
+    "lon": 72.80512,
+    "name": "Malad",
+    "temperature": 28,
+    "wind": 35
+  },
+  {
+    "aqi": 89,
+    "condition": "Clear",
+    "lat": 19.09635,
+    "lon": 72.85944,
+    "name": "Matunga",
+    "temperature": 36,
+    "wind": 14
+  },
+  {
+    "aqi": 183,
+    "condition": "Clear",
+    "lat": 19.0943,
+    "lon": 73.0442,
+    "name": "Mulund",
+    "temperature": 35,
+    "wind": 23
+  },
+  {
+    "aqi": 241,
+    "condition": "Humid",
+    "lat": 19.17015,
+    "lon": 72.82235999999999,
+    "name": "Parel",
+    "temperature": 29,
+    "wind": 16
+  },
+  {
+    "aqi": 90,
+    "condition": "Clear",
+    "lat": 19.0153,
+    "lon": 72.86728,
+    "name": "Powai",
+    "temperature": 32,
+    "wind": 25
+  },
+  {
+    "aqi": 104,
+    "condition": "Humid",
+    "lat": 18.93148,
+    "lon": 72.80264,
+    "name": "Santacruz",
+    "temperature": 32,
+    "wind": 29
+  },
+  {
+    "aqi": 109,
+    "condition": "Humid",
+    "lat": 19.09335,
+    "lon": 72.82768,
+    "name": "Sion",
+    "temperature": 32,
+    "wind": 29
+  },
+  {
+    "aqi": 173,
+    "condition": "Humid",
+    "lat": 19.07595,
+    "lon": 72.83203999999999,
+    "name": "Thane",
+    "temperature": 31,
+    "wind": 38
+  },
+  {
+    "aqi": 193,
+    "condition": "Humid",
+    "lat": 19.07895,
+    "lon": 72.82808,
+    "name": "Versova",
+    "temperature": 31,
+    "wind": 33
+  },
+  {
+    "aqi": 281,
+    "condition": "Humid",
+    "lat": 19.14915,
+    "lon": 72.83152,
+    "name": "Vikhroli",
+    "temperature": 29,
+    "wind": 26
+  },
+  {
+    "aqi": 129,
+    "condition": "Humid",
+    "lat": 19.13235,
+    "lon": 72.82656,
+    "name": "Vile Parle",
+    "temperature": 32,
+    "wind": 39
+  },
+  {
+    "aqi": 109,
+    "condition": "Clear",
+    "lat": 19.16535,
+    "lon": 72.85216,
+    "name": "Wadala",
+    "temperature": 36,
+    "wind": 24
+  },
+  {
+    "aqi": 128,
+    "condition": "Humid",
+    "lat": 18.93596,
+    "lon": 72.82908,
+    "name": "Worli",
+    "temperature": 31,
+    "wind": 18
+  }
+]

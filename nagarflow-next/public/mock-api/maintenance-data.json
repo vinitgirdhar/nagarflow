@@ -1,0 +1,192 @@
+{
+  "stats": {
+    "active": 4,
+    "idle": 6,
+    "pending": 3,
+    "total_teams": 10
+  },
+  "tasks": [
+    {
+      "assigned_team_id": null,
+      "completed_time": null,
+      "id": "T-1003",
+      "priority": "MEDIUM",
+      "reported_time": "2026-04-04 19:04:30",
+      "status": "PENDING",
+      "type": "Road",
+      "zone": "Chembur"
+    },
+    {
+      "assigned_team_id": null,
+      "completed_time": null,
+      "id": "T-1001",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 18:39:30",
+      "status": "PENDING",
+      "type": "Garbage",
+      "zone": "Dharavi"
+    },
+    {
+      "assigned_team_id": null,
+      "completed_time": null,
+      "id": "T-1002",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 18:24:30",
+      "status": "PENDING",
+      "type": "Water",
+      "zone": "Bandra"
+    },
+    {
+      "assigned_team_id": "A1",
+      "completed_time": null,
+      "id": "T-2004",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 18:24:30",
+      "status": "ON GROUND",
+      "type": "Garbage",
+      "zone": "Versova"
+    },
+    {
+      "assigned_team_id": "C1",
+      "completed_time": null,
+      "id": "T-2002",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 17:24:30",
+      "status": "ON GROUND",
+      "type": "Road",
+      "zone": "Andheri"
+    },
+    {
+      "assigned_team_id": "B2",
+      "completed_time": null,
+      "id": "T-2001",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 16:24:30",
+      "status": "ON GROUND",
+      "type": "Water",
+      "zone": "Kurla"
+    },
+    {
+      "assigned_team_id": "F2",
+      "completed_time": null,
+      "id": "T-2003",
+      "priority": "MEDIUM",
+      "reported_time": "2026-04-04 15:24:30",
+      "status": "ON GROUND",
+      "type": "Drain",
+      "zone": "Juhu"
+    },
+    {
+      "assigned_team_id": "G1",
+      "completed_time": "2026-04-04 15:24:30",
+      "id": "T-3003",
+      "priority": "MEDIUM",
+      "reported_time": "2026-04-04 11:24:30",
+      "status": "COMPLETED",
+      "type": "Road",
+      "zone": "Worli"
+    },
+    {
+      "assigned_team_id": "D3",
+      "completed_time": "2026-04-04 13:24:30",
+      "id": "T-3002",
+      "priority": "LOW",
+      "reported_time": "2026-04-04 09:24:30",
+      "status": "COMPLETED",
+      "type": "General",
+      "zone": "Sion"
+    },
+    {
+      "assigned_team_id": "I3",
+      "completed_time": "2026-04-04 17:24:30",
+      "id": "T-3001",
+      "priority": "HIGH",
+      "reported_time": "2026-04-04 07:24:30",
+      "status": "COMPLETED",
+      "type": "Drain",
+      "zone": "Colaba"
+    }
+  ],
+  "teams": [
+    {
+      "current_zone": "Versova",
+      "id": "A1",
+      "member_count": 4,
+      "name": "Alpha 1",
+      "status": "On Field",
+      "type": "Garbage"
+    },
+    {
+      "current_zone": "Kurla",
+      "id": "B2",
+      "member_count": 3,
+      "name": "Bravo 2",
+      "status": "On Field",
+      "type": "Water"
+    },
+    {
+      "current_zone": "Andheri",
+      "id": "C1",
+      "member_count": 5,
+      "name": "Charlie 1",
+      "status": "On Field",
+      "type": "Road"
+    },
+    {
+      "current_zone": null,
+      "id": "D3",
+      "member_count": 3,
+      "name": "Delta 3",
+      "status": "Idle",
+      "type": "General"
+    },
+    {
+      "current_zone": null,
+      "id": "E1",
+      "member_count": 4,
+      "name": "Echo 1",
+      "status": "Idle",
+      "type": "Garbage"
+    },
+    {
+      "current_zone": "Juhu",
+      "id": "F2",
+      "member_count": 3,
+      "name": "Foxtrot 2",
+      "status": "On Field",
+      "type": "Drain"
+    },
+    {
+      "current_zone": null,
+      "id": "G1",
+      "member_count": 4,
+      "name": "Gamma 1",
+      "status": "Idle",
+      "type": "Road"
+    },
+    {
+      "current_zone": null,
+      "id": "H1",
+      "member_count": 3,
+      "name": "Hotel 1",
+      "status": "Idle",
+      "type": "Water"
+    },
+    {
+      "current_zone": null,
+      "id": "I3",
+      "member_count": 4,
+      "name": "India 3",
+      "status": "Idle",
+      "type": "Drain"
+    },
+    {
+      "current_zone": null,
+      "id": "J2",
+      "member_count": 5,
+      "name": "Juliet 2",
+      "status": "Idle",
+      "type": "General"
+    }
+  ]
+}

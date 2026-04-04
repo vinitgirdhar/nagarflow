@@ -649,7 +649,7 @@ def get_simulation_baseline():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT zone, priority_score FROM predictions")
+    cursor.execute("SELECT zone, priority_score, category FROM predictions")
     rows = cursor.fetchall()
     conn.close()
     return jsonify([dict(row) for row in rows])
@@ -664,7 +664,7 @@ def run_simulation():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT zone, priority_score FROM predictions")
+    cursor.execute("SELECT zone, priority_score, category FROM predictions")
     baseline = [dict(row) for row in cursor.fetchall()]
     
     # Simulation Logic
@@ -679,7 +679,7 @@ def run_simulation():
         increase = (base * (demand_inc / 100.0)) + (weather * 8) + random.uniform(-2, 5)
         new_score = min(100, max(0, int(base + increase)))
         if new_score >= 80: overloaded_count += 1
-        simulated.append({"zone": b['zone'], "priority_score": new_score})
+        simulated.append({"zone": b['zone'], "priority_score": new_score, "category": b.get('category', 'General')})
         
     # KPI Math
     # Coverage drops as failures increase and demand rises

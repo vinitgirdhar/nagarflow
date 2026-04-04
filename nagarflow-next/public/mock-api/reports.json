@@ -1,0 +1,30 @@
+{
+  "chart_data": {
+    "accuracy_trend": [
+      90.3,
+      88.7,
+      91.0,
+      90.1,
+      91.5,
+      49.9,
+      50.3
+    ],
+    "coverage_trend": [
+      80,
+      82,
+      85,
+      84,
+      87,
+      85,
+      84.6
+    ]
+  },
+  "kpis": {
+    "accuracy": 78.8,
+    "coverage": 84.6,
+    "efficiency": 84.5,
+    "equity": 91.0
+  },
+  "recent_error_margin": 49.89155510719227,
+  "trigger_retrain": true
+}

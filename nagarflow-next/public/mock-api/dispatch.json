@@ -1,0 +1,72 @@
+[
+  {
+    "action": "Immediate Dispatch Required",
+    "distance_km": 0.0,
+    "eta_mins": 1,
+    "preferred_truck_type": "garbage",
+    "preferred_truck_type_label": "Garbage Truck",
+    "priority_score": 90,
+    "reason": "Emergency Voice Report",
+    "truck_id": 47,
+    "truck_name": "Truck-47",
+    "truck_type": "garbage",
+    "truck_type_label": "Garbage Truck",
+    "zone": "Andheri"
+  },
+  {
+    "action": "Immediate Dispatch Required",
+    "distance_km": 0.0,
+    "eta_mins": 1,
+    "preferred_truck_type": "water",
+    "preferred_truck_type_label": "Water Tanker",
+    "priority_score": 90,
+    "reason": "Emergency Voice Report",
+    "truck_id": 57,
+    "truck_name": "Tanker-57",
+    "truck_type": "water",
+    "truck_type_label": "Water Tanker",
+    "zone": "Kurla"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "distance_km": 0.0,
+    "eta_mins": 1,
+    "preferred_truck_type": "water",
+    "preferred_truck_type_label": "Water Tanker",
+    "priority_score": 79,
+    "reason": "9684 complaints, Overdue by 70hrs silent gap",
+    "truck_id": 48,
+    "truck_name": "Tanker-48",
+    "truck_type": "water",
+    "truck_type_label": "Water Tanker",
+    "zone": "Sanpada"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "distance_km": 3.67,
+    "eta_mins": 7,
+    "preferred_truck_type": "garbage",
+    "preferred_truck_type_label": "Garbage Truck",
+    "priority_score": 76,
+    "reason": "22570 complaints, Overdue by 70hrs silent gap",
+    "truck_id": 49,
+    "truck_name": "Truck-49",
+    "truck_type": "garbage",
+    "truck_type_label": "Garbage Truck",
+    "zone": "Matunga"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "distance_km": 6.01,
+    "eta_mins": 12,
+    "preferred_truck_type": "water",
+    "preferred_truck_type_label": "Water Tanker",
+    "priority_score": 76,
+    "reason": "9495 complaints, Overdue by 70hrs silent gap",
+    "truck_id": 51,
+    "truck_name": "Tanker-51",
+    "truck_type": "water",
+    "truck_type_label": "Water Tanker",
+    "zone": "Ulwe"
+  }
+]

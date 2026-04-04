@@ -13,7 +13,18 @@ function getColor(v: number) {
 }
 
 interface ResultCard { label: string; value: string; delta: string; color?: string; deltaColor?: string; }
-interface ZoneData { zone: string; priority_score: number; }
+interface ZoneData { zone: string; priority_score: number; category?: string; }
+
+const CATEGORIES = [
+  { id: 'all', label: 'All Sectors' },
+  { id: 'water', label: 'Water', icon: <Waves size={14} />, db: 'Water Tanker Demand' },
+  { id: 'garbage', label: 'Garbage', icon: <Trash2 size={14} />, db: 'Garbage Collection' },
+  { id: 'road', label: 'Road', icon: <Construction size={14} />, db: 'Road Maintenance' },
+  { id: 'emergency', label: 'Emergency', icon: <AlertTriangle size={14} />, db: 'Emergency Response' },
+  { id: 'utility', label: 'Utility', icon: <Zap size={14} />, db: 'Utility Inspection' },
+];
+
+import { Waves, Trash2, Construction, AlertTriangle, Zap } from 'lucide-react';
 
 export default function SimulationPage() {
   const [demand, setDemand] = useState(0);
@@ -21,6 +32,7 @@ export default function SimulationPage() {
   const [weather, setWeather] = useState(0);
   const [duration, setDuration] = useState(24);
   const [zone, setZone] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [running, setRunning] = useState(false);
   
@@ -127,9 +139,25 @@ export default function SimulationPage() {
   };
 
   const renderGrid = (data: ZoneData[]) => {
-    const filtered = data.filter(d => 
-      d.zone.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = data.filter(d => {
+      const matchSearch = d.zone.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (selectedCategory === 'all') return matchSearch;
+      
+      const catMapping = CATEGORIES.find(c => c.id === selectedCategory);
+      const matchCat = d.category === catMapping?.db;
+      
+      return matchSearch && matchCat;
+    });
+
+    const getCatIcon = (cat?: string) => {
+      if (cat === 'Water Tanker Demand') return <Waves size={10} />;
+      if (cat === 'Garbage Collection') return <Trash2 size={10} />;
+      if (cat === 'Road Maintenance') return <Construction size={10} />;
+      if (cat === 'Emergency Response') return <AlertTriangle size={10} />;
+      if (cat === 'Utility Inspection') return <Zap size={10} />;
+      return null;
+    };
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
@@ -151,8 +179,22 @@ export default function SimulationPage() {
               padding: '12px', 
               textAlign: 'center', 
               boxShadow: 'inset 0 0 15px rgba(0,0,0,0.2)',
-              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+              position: 'relative'
             }}>
+              {d.category && (
+                <div style={{ 
+                  position: 'absolute', 
+                  top: '6px', 
+                  right: '6px', 
+                  opacity: 0.6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  {getCatIcon(d.category)}
+                </div>
+              )}
               <span style={{fontWeight: 900, textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.02em'}}>{d.zone}</span>
               <span style={{opacity: 0.9, fontWeight: 700}}>{val}%</span>
             </div>
@@ -195,6 +237,34 @@ export default function SimulationPage() {
             <Search size={18} strokeWidth={2.5} />
           </div>
         </div>
+      </div>
+
+      {/* Category Chips */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setSelectedCategory(cat.id)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: '1px solid var(--border-subtle)',
+              background: selectedCategory === cat.id ? 'var(--accent)' : 'var(--dark-surface)',
+              color: selectedCategory === cat.id ? '#FFF' : 'var(--secondary)',
+              fontSize: '12px',
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease',
+              boxShadow: selectedCategory === cat.id ? '0 0 15px rgba(122,140,94,.4)' : 'none'
+            }}
+          >
+            {cat.icon} {cat.label}
+          </button>
+        ))}
       </div>
 
       {/* Controls */}

@@ -1,0 +1,522 @@
+[
+  {
+    "action": "Immediate Dispatch Required",
+    "category": "Emergency Response",
+    "demand": 90,
+    "lat": 19.0155,
+    "lon": 73.04705,
+    "name": "Andheri",
+    "reason": "Emergency Voice Report",
+    "type": "high"
+  },
+  {
+    "action": "Immediate Dispatch Required",
+    "category": "Emergency Response",
+    "demand": 90,
+    "lat": 19.0239,
+    "lon": 73.02175,
+    "name": "Kurla",
+    "reason": "Emergency Voice Report",
+    "type": "high"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 79,
+    "lat": 18.97544,
+    "lon": 72.80875999999999,
+    "name": "Sanpada",
+    "reason": "9684 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 76,
+    "lat": 19.09635,
+    "lon": 72.85944,
+    "name": "Matunga",
+    "reason": "22570 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 76,
+    "lat": 18.922240000000002,
+    "lon": 72.81884,
+    "name": "Ulwe",
+    "reason": "9495 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 71,
+    "lat": 18.94408,
+    "lon": 72.83436,
+    "name": "Nerul",
+    "reason": "11338 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 71,
+    "lat": 19.09335,
+    "lon": 72.82768,
+    "name": "Sion",
+    "reason": "22976 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 70,
+    "lat": 18.92812,
+    "lon": 72.81068,
+    "name": "Lower Parel",
+    "reason": "19219 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 69,
+    "lat": 19.06606,
+    "lon": 72.8524,
+    "name": "Belapur",
+    "reason": "11646 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 68,
+    "lat": 19.0503,
+    "lon": 73.023,
+    "name": "Dharavi",
+    "reason": "161518 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 68,
+    "lat": 18.95136,
+    "lon": 72.81612,
+    "name": "Ghansoli",
+    "reason": "9768 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 68,
+    "lat": 19.01854,
+    "lon": 72.84844,
+    "name": "Ghatkopar",
+    "reason": "32445 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 67,
+    "lat": 19.13235,
+    "lon": 72.82656,
+    "name": "Vile Parle",
+    "reason": "23056 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 66,
+    "lat": 19.01962,
+    "lon": 72.84424,
+    "name": "Fort",
+    "reason": "75241 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 64,
+    "lat": 19.192349999999998,
+    "lon": 72.84948,
+    "name": "Bandra",
+    "reason": "84003 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 64,
+    "lat": 19.00126,
+    "lon": 72.86504,
+    "name": "Kopar Khairane",
+    "reason": "10775 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 63,
+    "lat": 18.924200000000003,
+    "lon": 72.81604,
+    "name": "Hiranandani",
+    "reason": "17995 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 63,
+    "lat": 18.93596,
+    "lon": 72.82908,
+    "name": "Worli",
+    "reason": "17865 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 62,
+    "lat": 19.07614,
+    "lon": 72.85848,
+    "name": "Seawoods",
+    "reason": "10505 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 60,
+    "lat": 19.0003,
+    "lon": 73.02455,
+    "name": "Roadpali",
+    "reason": "9884 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Utility Inspection",
+    "demand": 59,
+    "lat": 19.0119,
+    "lon": 73.0298,
+    "name": "New Panvel",
+    "reason": "11662 complaints, Overdue by 70hrs silent gap",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 59,
+    "lat": 18.95444,
+    "lon": 72.80348,
+    "name": "Taloja",
+    "reason": "10160 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 59,
+    "lat": 18.95808,
+    "lon": 72.82772,
+    "name": "Vashi",
+    "reason": "12813 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 58,
+    "lat": 19.0153,
+    "lon": 72.86728,
+    "name": "Powai",
+    "reason": "23490 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 57,
+    "lat": 18.9284,
+    "lon": 72.80512,
+    "name": "Malad",
+    "reason": "31944 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 56,
+    "lat": 19.0459,
+    "lon": 72.84824,
+    "name": "Kalamboli",
+    "reason": "10193 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 55,
+    "lat": 19.07295,
+    "lon": 72.84616,
+    "name": "Kharghar",
+    "reason": "11695 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 55,
+    "lat": 19.07595,
+    "lon": 72.83203999999999,
+    "name": "Thane",
+    "reason": "98396 complaints",
+    "type": "medium"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 53,
+    "lat": 19.16535,
+    "lon": 72.85216,
+    "name": "Wadala",
+    "reason": "22707 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 52,
+    "lat": 19.0415,
+    "lon": 73.01635,
+    "name": "Bhayander",
+    "reason": "94523 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 52,
+    "lat": 19.0003,
+    "lon": 73.03275,
+    "name": "Juinagar",
+    "reason": "9662 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 52,
+    "lat": 19.0943,
+    "lon": 73.0442,
+    "name": "Mulund",
+    "reason": "25032 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 50,
+    "lat": 19.0255,
+    "lon": 73.0393,
+    "name": "Dronagiri",
+    "reason": "8080 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 50,
+    "lat": 19.07895,
+    "lon": 72.82808,
+    "name": "Versova",
+    "reason": "19518 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 49,
+    "lat": 19.08514,
+    "lon": 72.87483999999999,
+    "name": "CST",
+    "reason": "15916 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 49,
+    "lat": 18.93148,
+    "lon": 72.80264,
+    "name": "Santacruz",
+    "reason": "22111 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 48,
+    "lat": 18.969559999999998,
+    "lon": 72.81956,
+    "name": "Airoli",
+    "reason": "12681 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 48,
+    "lat": 19.09815,
+    "lon": 72.83344,
+    "name": "Chembur",
+    "reason": "25698 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 48,
+    "lat": 19.195349999999998,
+    "lon": 72.83059999999999,
+    "name": "Goregaon",
+    "reason": "30549 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 47,
+    "lat": 19.14915,
+    "lon": 72.83152,
+    "name": "Vikhroli",
+    "reason": "24490 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 46,
+    "lat": 19.0791,
+    "lon": 73.02544999999999,
+    "name": "Pushpak Nagar",
+    "reason": "9809 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 46,
+    "lat": 19.13835,
+    "lon": 72.85988,
+    "name": "Turbhe",
+    "reason": "11229 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 45,
+    "lat": 18.95444,
+    "lon": 72.82872,
+    "name": "Panvel",
+    "reason": "14667 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 44,
+    "lat": 19.17015,
+    "lon": 72.82235999999999,
+    "name": "Parel",
+    "reason": "20577 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 43,
+    "lat": 19.02862,
+    "lon": 72.8516,
+    "name": "Colaba",
+    "reason": "17205 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Water Tanker Demand",
+    "demand": 43,
+    "lat": 19.073900000000002,
+    "lon": 73.02875,
+    "name": "Kamothe",
+    "reason": "9961 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Road Maintenance",
+    "demand": 41,
+    "lat": 18.986639999999998,
+    "lon": 72.8068,
+    "name": "Churchgate",
+    "reason": "14599 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 40,
+    "lat": 19.0015,
+    "lon": 73.00845,
+    "name": "Dadar",
+    "reason": "31595 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 38,
+    "lat": 19.0879,
+    "lon": 73.0388,
+    "name": "Jogeshwari",
+    "reason": "28299 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 37,
+    "lat": 19.06155,
+    "lon": 72.85679999999999,
+    "name": "Borivali",
+    "reason": "37541 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Schedule Next Available Truck",
+    "category": "Garbage Collection",
+    "demand": 37,
+    "lat": 19.0423,
+    "lon": 72.86764,
+    "name": "Kandivali",
+    "reason": "35751 complaints",
+    "type": "low"
+  },
+  {
+    "action": "Monitor Zone",
+    "category": "Water Tanker Demand",
+    "demand": 30,
+    "lat": 19.04266,
+    "lon": 72.85156,
+    "name": "Juhu",
+    "reason": "18063 complaints",
+    "type": "low"
+  }
+]

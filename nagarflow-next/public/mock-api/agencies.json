@@ -1,0 +1,246 @@
+{
+  "agencies": [
+    {
+      "agency_name": "Sewerage Operations",
+      "category": "Drainage & Sewerage",
+      "city": "Mumbai",
+      "contact": {
+        "email": "che.so@mcgm.gov.in",
+        "helpline": "1916",
+        "phone": "24911819"
+      },
+      "dashboard_url": "https://mcgm.gov.in/",
+      "description": "Operational agency for sewerage complaints, overflow response, and sewerage network planning.",
+      "id": "bmc-sewerage",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "BMC",
+      "services": [
+        "Sewerage operations",
+        "Overflow and blockage response",
+        "Sewerage planning and construction escalation"
+      ],
+      "source_description": "Binary or large document source.",
+      "source_label": "BMC department contact directory",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "02091530_PublicationPRODepartment2015_E.pdf",
+      "source_url": "https://portal.mcgm.gov.in/irj/go/km/docs/documents/HomePage%20Data/Contact%20us/02091530_PublicationPRODepartment2015_E.pdf"
+    },
+    {
+      "agency_name": "Storm Water Drains Department",
+      "category": "Flooding & Drains",
+      "city": "Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1916",
+        "phone": "1916"
+      },
+      "dashboard_url": "https://mcgm.gov.in/",
+      "description": "BMC monsoon and storm-water department for desilting and flooding-related civic operations.",
+      "id": "bmc-stormwater",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "BMC",
+      "services": [
+        "Storm-water drain maintenance",
+        "Desilting escalation",
+        "Monsoon flood-response coordination"
+      ],
+      "source_description": "BMC monsoon and storm-water department for desilting and flooding-related civic operations.",
+      "source_label": "BMC storm-water page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "MyBMC - Welcome to BMC's Website",
+      "source_url": "https://portal.mcgm.gov.in/irj/portal/anonymous/qlwrdfs"
+    },
+    {
+      "agency_name": "Solid Waste Management Department",
+      "category": "Garbage Pickup",
+      "city": "Mumbai",
+      "contact": {
+        "email": "mcgm.swmproject@gmail.com",
+        "helpline": "1916",
+        "phone": "022-24962125"
+      },
+      "dashboard_url": "https://mcgm.gov.in/",
+      "description": "Primary municipal waste collection and solid-waste operations contact point for Mumbai.",
+      "id": "bmc-swm",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "BMC",
+      "services": [
+        "Garbage lifting and transport",
+        "Bulk waste coordination",
+        "Transfer stations and processing escalation"
+      ],
+      "source_description": "Primary municipal waste collection and solid-waste operations contact point for Mumbai.",
+      "source_label": "BMC SWM contact page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "MyBMC - Welcome to BMC's Website",
+      "source_url": "https://portal.mcgm.gov.in/irj/portal/anonymous/qlcleancontactdetails?guest_user=english"
+    },
+    {
+      "agency_name": "Hydraulic Engineer / Water Supply",
+      "category": "Water Supply",
+      "city": "Mumbai",
+      "contact": {
+        "email": "hemcgm1@gmail.com",
+        "helpline": "1916",
+        "phone": "24955294"
+      },
+      "dashboard_url": "https://mcgm.gov.in/",
+      "description": "BMC water-supply operations and hydraulic engineering contacts used for supply and tanker escalations.",
+      "id": "bmc-water",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "BMC",
+      "services": [
+        "Water network supply",
+        "Water tanker escalation",
+        "Hydraulic operations and outages"
+      ],
+      "source_description": "Binary or large document source.",
+      "source_label": "BMC department contact directory",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "02091530_PublicationPRODepartment2015_E.pdf",
+      "source_url": "https://portal.mcgm.gov.in/irj/go/km/docs/documents/HomePage%20Data/Contact%20us/02091530_PublicationPRODepartment2015_E.pdf"
+    },
+    {
+      "agency_name": "Central Departments Directory",
+      "category": "Citizen Services",
+      "city": "Navi Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1800 222 310",
+        "phone": "1800 222 309"
+      },
+      "dashboard_url": "https://app.nmmconline.in/grievance-management",
+      "description": "Official directory entry point for Navi Mumbai municipal departments and citizen services.",
+      "id": "nmmc-departments",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "NMMC",
+      "services": [
+        "Department directory",
+        "Citizen service navigation",
+        "Cross-department grievance routing"
+      ],
+      "source_description": "Navi Mumbai Municipal Corporation (NMMC) official website. Access citizen services, online applications, property tax, water bills, birth/death certificates, and municipal information for Navi Mumbai residents. Helpline: 1800 222 309, 1800 222 310.",
+      "source_label": "NMMC departments index",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "Navi Mumbai Municipal Corporation - NMMC Official Website",
+      "source_url": "https://www.nmmc.gov.in/departments"
+    },
+    {
+      "agency_name": "Sewerage Services",
+      "category": "Drainage & Sewerage",
+      "city": "Navi Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1800 222 310",
+        "phone": "1800 222 309"
+      },
+      "dashboard_url": "https://app.nmmconline.in/grievance-management",
+      "description": "Official Navi Mumbai sewerage-services page for underground drainage and complaint routing.",
+      "id": "nmmc-sewerage",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "NMMC",
+      "services": [
+        "Sewerage service information",
+        "Drain and blockage complaints",
+        "Network maintenance coordination"
+      ],
+      "source_description": "Navi Mumbai Municipal Corporation (NMMC) official website. Access citizen services, online applications, property tax, water bills, birth/death certificates, and municipal information for Navi Mumbai residents. Helpline: 1800 222 309, 1800 222 310.",
+      "source_label": "NMMC sewerage services page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "Navi Mumbai Municipal Corporation - NMMC Official Website",
+      "source_url": "https://www.nmmc.gov.in/sewerage-services"
+    },
+    {
+      "agency_name": "Solid Waste Management",
+      "category": "Garbage Pickup",
+      "city": "Navi Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1800 222 310",
+        "phone": "1800 222 309"
+      },
+      "dashboard_url": "https://app.nmmconline.in/module-details-dashboard?moduleName=solidWasteManagement",
+      "description": "Official Navi Mumbai solid-waste service page and operations dashboard reference.",
+      "id": "nmmc-swm",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "NMMC",
+      "services": [
+        "Ward-level waste collection",
+        "Transport and disposal coordination",
+        "Solid-waste service information"
+      ],
+      "source_description": "Navi Mumbai Municipal Corporation (NMMC) official website. Access citizen services, online applications, property tax, water bills, birth/death certificates, and municipal information for Navi Mumbai residents. Helpline: 1800 222 309, 1800 222 310.",
+      "source_label": "NMMC solid waste page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "Navi Mumbai Municipal Corporation - NMMC Official Website",
+      "source_url": "https://www.nmmc.gov.in/solid-waste-manegement"
+    },
+    {
+      "agency_name": "City Engineering Department",
+      "category": "Roads & Engineering",
+      "city": "Navi Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1800 222 310",
+        "phone": "1800 222 309"
+      },
+      "dashboard_url": "https://app.nmmconline.in/module-details-dashboard?moduleName=Works-Management",
+      "description": "Official Navi Mumbai engineering department for roads, civil works, and municipal infrastructure projects.",
+      "id": "nmmc-engineering",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "NMMC",
+      "services": [
+        "Road and civil works",
+        "City engineering projects",
+        "Works-management dashboards"
+      ],
+      "source_description": "Navi Mumbai Municipal Corporation (NMMC) official website. Access citizen services, online applications, property tax, water bills, birth/death certificates, and municipal information for Navi Mumbai residents. Helpline: 1800 222 309, 1800 222 310.",
+      "source_label": "NMMC city engineering page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "Navi Mumbai Municipal Corporation - NMMC Official Website",
+      "source_url": "https://www.nmmc.gov.in/city-engineering-department"
+    },
+    {
+      "agency_name": "Water Supply Department",
+      "category": "Water Supply",
+      "city": "Navi Mumbai",
+      "contact": {
+        "email": "",
+        "helpline": "1800 222 310",
+        "phone": "1800 222 309"
+      },
+      "dashboard_url": "https://app.nmmconline.in/water-tax/WaterTaxDashboardNewComponent",
+      "description": "Official Navi Mumbai water-supply service directory and related service dashboard.",
+      "id": "nmmc-water",
+      "last_checked": "2026-04-04T06:16:55Z",
+      "municipal_body": "NMMC",
+      "services": [
+        "Water distribution information",
+        "Supply complaint escalation",
+        "Water-bill and service navigation"
+      ],
+      "source_description": "Navi Mumbai Municipal Corporation (NMMC) official website. Access citizen services, online applications, property tax, water bills, birth/death certificates, and municipal information for Navi Mumbai residents. Helpline: 1800 222 309, 1800 222 310.",
+      "source_label": "NMMC water supply page",
+      "source_status": "online",
+      "source_status_code": 200,
+      "source_title": "Navi Mumbai Municipal Corporation - NMMC Official Website",
+      "source_url": "https://www.nmmc.gov.in/navimumbai/water-supply-department"
+    }
+  ],
+  "generated_at": "2026-04-04T19:44:32.004903Z",
+  "stats": {
+    "agency_count": 9,
+    "category_count": 6,
+    "city_count": 2,
+    "online_sources": 9
+  },
+  "success": true
+}
