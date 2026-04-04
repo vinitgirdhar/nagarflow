@@ -31,6 +31,10 @@ AGENT_RETRY_TEXT = "Maaf kijiyega, main area ya samasya theek se samajh nahi paa
 AGENT_CLOSING_TEXT = "Theek hai, dhanyavad. NagarFlow par call karne ke liye shukriya. Aapka din shubh ho!"
 MAX_AUDIO_BYTES = 10 * 1024 * 1014
 MAX_TRANSCRIPT_LENGTH = 500
+SOURCE_ID_PREFIXES = {
+    "voice_call": "VOICE",
+    "text_chat": "TEXT",
+}
 ALLOWED_AUDIO_MIME_TYPES = {
     "application/octet-stream",
     "audio/mpeg",
@@ -146,9 +150,13 @@ def ensure_tables_exist():
     
     # Complaints Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS complaints 
-                      (id TEXT PRIMARY KEY, text TEXT, category TEXT, urgency TEXT, 
-                       ward TEXT, time TEXT, source TEXT, issue_type TEXT, 
-                       emotion TEXT, severity TEXT, complaint_count INTEGER)''')
+                      (id TEXT PRIMARY KEY, zone TEXT, issue_type TEXT, 
+                       complaint_count INTEGER, weather TEXT, timestamp TEXT, 
+                       severity TEXT, text TEXT)''')
+    
+    # Simple migration for existing databases
+    try: cursor.execute("ALTER TABLE complaints ADD COLUMN text TEXT")
+    except: pass
     
     # Trucks Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS trucks 
@@ -693,24 +701,35 @@ def _read_uploaded_audio():
     }, None, None
 
 
-def _insert_voice_complaint(zone, issue_type, severity='High', summary=None):
+def _normalize_complaint_source(source: str) -> str:
+    normalized = (source or "").strip().lower()
+    if normalized in SOURCE_ID_PREFIXES:
+        return normalized
+    return "text_chat"
+
+
+def _insert_complaint(zone, issue_type, severity='High', summary=None, source='voice_call'):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    c_id = "VOICE-" + str(uuid.uuid4())[:8]
+    normalized_source = _normalize_complaint_source(source)
+    c_id = f"{SOURCE_ID_PREFIXES[normalized_source]}-" + str(uuid.uuid4())[:8]
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    # Use provided summary or form a default text
-    voice_text = summary or f"Voice complaint reported in {zone} for {issue_type}."
+
+    complaint_text = summary or f"Complaint reported in {zone} for {issue_type}."
 
     cursor.execute('''
         INSERT INTO complaints (id, zone, issue_type, complaint_count, weather, timestamp, severity, text)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (c_id, zone, issue_type, 60000, 'no', now_str, severity, voice_text))
+    ''', (c_id, zone, issue_type, 60000, 'no', now_str, severity, complaint_text))
     conn.commit()
     conn.close()
 
 
-def _build_agent_response_from_transcript(transcript: str) -> dict:
+def _insert_voice_complaint(zone, issue_type, severity='High', summary=None):
+    _insert_complaint(zone, issue_type, severity=severity, summary=summary, source='voice_call')
+
+
+def _build_agent_response_from_transcript(transcript: str, complaint_source: str = 'voice_call') -> dict:
     # 1. Use Gemini for smart NLU extraction (Multi-step: Detect, Translate, Extract, Respond)
     gemini_data = extract_complaint_details(transcript)
     
@@ -745,7 +764,13 @@ def _build_agent_response_from_transcript(transcript: str) -> dict:
         if complaint_logged:
             reply_text = reply_text_native or AGENT_CONFIRMATION_TEXT
             # We log the English summary for the dispatcher's system logic
-            _insert_voice_complaint(zone, issue_type, severity, summary=translated_transcript)
+            _insert_complaint(
+                zone,
+                issue_type,
+                severity=severity,
+                summary=translated_transcript,
+                source=complaint_source,
+            )
         else:
             reply_text = reply_text_native or AGENT_RETRY_TEXT
 
@@ -785,10 +810,23 @@ def _issue_type_to_category(issue_type: str) -> str:
     return mapping.get(issue_type, "general")
 
 
-def _format_complaint_text(zone: str, issue_type: str, source: str) -> str:
+def _infer_complaint_source(complaint_id: str) -> str:
+    complaint_id = str(complaint_id or "")
+    if complaint_id.startswith("VOICE-"):
+        return "voice_call"
+    if complaint_id.startswith("TEXT-"):
+        return "text_chat"
+    return "dataset"
+
+
+def _format_complaint_text(zone: str, issue_type: str, source: str, stored_text: Optional[str] = None) -> str:
     issue_label = (issue_type or "General").lower()
+    if stored_text:
+        return stored_text
     if source == "voice_call":
         return f"Voice complaint reported in {zone} for {issue_label} issue."
+    if source == "text_chat":
+        return f"Text complaint reported in {zone} for {issue_label} issue."
     return f"{issue_type} issue reported in {zone}."
 
 
@@ -804,7 +842,7 @@ def get_complaints():
     try:
         complaint_rows = cursor.execute(
             '''
-            SELECT id, zone, issue_type, complaint_count, timestamp, severity
+            SELECT id, zone, issue_type, complaint_count, timestamp, severity, text
             FROM complaints
             ORDER BY datetime(timestamp) DESC, rowid DESC
             LIMIT 100
@@ -816,6 +854,7 @@ def get_complaints():
                 COUNT(*) AS total_complaints,
                 SUM(CASE WHEN LOWER(COALESCE(severity, '')) IN ('high', 'critical') THEN 1 ELSE 0 END) AS high_priority_count,
                 SUM(CASE WHEN id LIKE 'VOICE-%' THEN 1 ELSE 0 END) AS voice_report_count,
+                SUM(CASE WHEN id LIKE 'TEXT-%' THEN 1 ELSE 0 END) AS text_report_count,
                 MAX(timestamp) AS latest_timestamp
             FROM complaints
             '''
@@ -826,13 +865,13 @@ def get_complaints():
 
     complaints = []
     for row in complaint_rows:
-        source = "voice_call" if str(row["id"]).startswith("VOICE-") else "dataset"
+        source = _infer_complaint_source(row["id"])
         complaints.append({
             "id": row["id"],
-            "text": _format_complaint_text(row["zone"], row["issue_type"], source),
+            "text": _format_complaint_text(row["zone"], row["issue_type"], source, row["text"]),
             "urgency": _severity_to_urgency(row["severity"]),
             "category": _issue_type_to_category(row["issue_type"]),
-            "emotion": "voice-reported" if source == "voice_call" else "citizen-reported",
+            "emotion": "voice-reported" if source == "voice_call" else "text-reported" if source == "text_chat" else "citizen-reported",
             "ward": row["zone"],
             "time": row["timestamp"],
             "source": source,
@@ -845,6 +884,7 @@ def get_complaints():
         "total_complaints": stats_row["total_complaints"] if stats_row else 0,
         "high_priority_count": stats_row["high_priority_count"] if stats_row else 0,
         "voice_report_count": stats_row["voice_report_count"] if stats_row else 0,
+        "text_report_count": stats_row["text_report_count"] if stats_row else 0,
         "latest_timestamp": stats_row["latest_timestamp"] if stats_row else None,
     }
 
@@ -899,7 +939,7 @@ def agent_respond():
     except SarvamError:
         return jsonify({"success": False, "error": "Audio could not be processed. Please try again."}), 502
 
-    result = _build_agent_response_from_transcript(transcript)
+    result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
 
     try:
         audio = text_to_speech(result["reply_text"])
@@ -922,7 +962,7 @@ def agent_respond_text():
     if len(transcript) > MAX_TRANSCRIPT_LENGTH:
         return jsonify({"success": False, "error": "Transcript is too long."}), 400
 
-    result = _build_agent_response_from_transcript(transcript)
+    result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
 
     try:
         audio = text_to_speech(result["reply_text"])
@@ -933,6 +973,23 @@ def agent_respond_text():
         "success": True,
         **result,
         "audio": audio,
+    })
+
+
+@app.route('/api/agent/respond-chat', methods=['POST'])
+def agent_respond_chat():
+    payload = request.get_json(silent=True) or {}
+    transcript = str(payload.get("message", "")).strip()
+    if not transcript:
+        return jsonify({"success": False, "error": "Message is required."}), 400
+    if len(transcript) > MAX_TRANSCRIPT_LENGTH:
+        return jsonify({"success": False, "error": "Message is too long."}), 400
+
+    result = _build_agent_response_from_transcript(transcript, complaint_source='text_chat')
+
+    return jsonify({
+        "success": True,
+        **result,
     })
 
 
