@@ -21,13 +21,7 @@ function getColor(v: number) {
   return '#7A8C5E';
 }
 
-const STATS = [
-  { label: 'Trucks Active', value: '15', sub: 'of 15 deployed' },
-  { label: 'Zones Covered', value: '87%', sub: 'MMR Grid Matrix' },
-  { label: 'Prediction Acc.', value: '94.1%', sub: 'AiRLLM Core Active' },
-  { label: 'Equity Score', value: '0.91', sub: 'bias-corrected' },
-  { label: 'Network State', value: 'NOMINAL', sub: 'Polling Port 5000' },
-];
+// Note: STATS moved inside component for dynamic calculation from live polling.
 
 export default function DashboardPage() {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -37,12 +31,15 @@ export default function DashboardPage() {
   const [trucksLive, setTrucksLive] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<string[]>(['[NOMINAL] System initialized. Routing logic operational.']);
+  const [mounted, setMounted] = useState(false);
+  const [kpis, setKpis] = useState<any>({ accuracy: 94.1, coverage: 87, equity: 0.91, efficiency: 84.5 });
 
   const mapObjRef = useRef<any>(null);
   const layerGroupRef = useRef<any>(null);
 
   // 1. Setup Leaflet Map Geometry
   useEffect(() => {
+    setMounted(true);
     let destroyed = false;
 
     // Ensure CSS is loaded (idempotent — won't duplicate)
@@ -85,10 +82,10 @@ export default function DashboardPage() {
       document.head.appendChild(script);
     }
 
-    // Dynamic 10-Second Polling Interval
+    // Dynamic 4-Second Polling Interval (Matches Dispatch Page sync)
     const pollId = setInterval(() => {
       fetchDashboardData();
-    }, 10000);
+    }, 4000);
 
     // Cleanup: destroy map instance & stop polling on unmount
     return () => {
@@ -110,6 +107,12 @@ export default function DashboardPage() {
         setZonesLive(data.predictions || []);
         setTrucksLive(data.trucks || []);
         redrawMap(data.predictions || [], data.trucks || []);
+      }
+      
+      const reportRes = await fetch('http://127.0.0.1:5000/api/reports');
+      if (reportRes.ok) {
+        const reportData = await reportRes.json();
+        if (reportData.kpis) setKpis(reportData.kpis);
       }
     } catch (e) {
         console.warn('Backend disconnected. Check app.py polling.');
@@ -268,7 +271,13 @@ export default function DashboardPage() {
       </motion.div>
 
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {STATS.map((s, i) => (
+        {[
+          { label: 'Trucks Active', value: trucksLive.filter(t => t.status !== 'idle').length.toString(), sub: `of ${trucksLive.length} deployed` },
+          { label: 'Zones Covered', value: `${kpis.coverage}%`, sub: 'MMR Grid Matrix' },
+          { label: 'Prediction Acc.', value: `${kpis.accuracy}%`, sub: 'AiRLLM Core Active' },
+          { label: 'Equity Score', value: kpis.equity.toString(), sub: 'bias-corrected' },
+          { label: 'Network State', value: trucksLive.length > 0 ? 'NOMINAL' : 'DISCONNECTED', sub: 'Polling Port 5000' },
+        ].map((s, i) => (
           <motion.div key={i} className="card" variants={FADE_UP}>
             <div className="card__label">{s.label}</div>
             <div className="card__value">{s.value}</div>
@@ -291,7 +300,9 @@ export default function DashboardPage() {
                 {alerts.map((msg, i) => (
                   <div key={i} className="feed-item" style={{ border: 'none', background: 'transparent', padding: '2px 0', boxShadow: 'none', marginBottom: 0 }}>
                     <div className="feed-item__text mono" style={{fontSize: '11px', color: i === 0 ? 'var(--text-heading)' : 'var(--secondary)'}}>
-                      <span style={{ color: 'var(--primary)', marginRight: '.5rem'}}>[{new Date().toLocaleTimeString([], {hour12: false})}]</span>
+                      <span style={{ color: 'var(--primary)', marginRight: '.5rem'}}>
+                        {mounted ? `[${new Date().toLocaleTimeString([], {hour12: false})}]` : '[--:--:--]'}
+                      </span>
                       {msg}
                     </div>
                   </div>
