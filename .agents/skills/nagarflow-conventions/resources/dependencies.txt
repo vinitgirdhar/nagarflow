@@ -1,0 +1,6 @@
+# Dependency Guidelines
+
+1. You are actively utilizing Next.js (App Router), Tailwind CSS, and Lucide React.
+2. The python backend relies on Flask and standard library extensions to process API requests.
+
+Ensure that new frontend dependencies support Next.js SSR logic, and new backend modules are properly pip installed where applicable.
