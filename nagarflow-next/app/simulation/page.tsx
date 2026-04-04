@@ -132,12 +132,29 @@ export default function SimulationPage() {
     );
 
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '4px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px', padding: '1rem', height: '100%', overflowY: 'auto' }}>
         {filtered.length > 0 ? filtered.map((d, i) => {
           const val = d.priority_score;
           return (
-            <div key={i} style={{ borderRadius: '4px', background: getColor(val), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Space Mono',monospace", fontSize: '10px', color: 'rgba(255,255,255,.9)', transition: 'background .5s', flexDirection: 'column', gap: '2px', padding: '10px', textAlign: 'center', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)' }}>
-              <span style={{fontWeight: 800, textTransform: 'uppercase'}}>{d.zone}</span><span>{val}%</span>
+            <div key={i} style={{ 
+              borderRadius: '6px', 
+              background: getColor(val), 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontFamily: "'Space Mono',monospace", 
+              fontSize: '12px', 
+              color: 'white', 
+              transition: 'background .5s', 
+              flexDirection: 'column', 
+              gap: '4px', 
+              padding: '12px', 
+              textAlign: 'center', 
+              boxShadow: 'inset 0 0 15px rgba(0,0,0,0.2)',
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+            }}>
+              <span style={{fontWeight: 900, textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.02em'}}>{d.zone}</span>
+              <span style={{opacity: 0.9, fontWeight: 700}}>{val}%</span>
             </div>
           );
         }) : (
