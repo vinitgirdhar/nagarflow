@@ -263,6 +263,35 @@ def ensure_tables_exist():
                        source_title TEXT, source_description TEXT, 
                        last_checked TEXT, services_json TEXT, contact_json TEXT)''')
     
+    # Teams Table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS teams 
+                      (id TEXT PRIMARY KEY, name TEXT, member_count INTEGER, 
+                       type TEXT, status TEXT, current_zone TEXT)''')
+    
+    # Maintenance Tasks Table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS maintenance_tasks 
+                      (id TEXT PRIMARY KEY, zone TEXT, type TEXT, 
+                       priority TEXT, status TEXT, assigned_team_id TEXT, 
+                       reported_time TEXT, completed_time TEXT)''')
+
+    # Seed Teams if empty
+    cursor.execute("SELECT count(*) FROM teams")
+    if cursor.fetchone()[0] == 0:
+        teams = [
+            ('A1', 'Alpha 1', 4, 'Garbage', 'Idle', None),
+            ('B2', 'Bravo 2', 3, 'Water', 'Idle', None),
+            ('C1', 'Charlie 1', 5, 'Road', 'Idle', None),
+            ('D3', 'Delta 3', 3, 'General', 'Idle', None),
+            ('E1', 'Echo 1', 4, 'Garbage', 'Idle', None),
+            ('F2', 'Foxtrot 2', 3, 'Drain', 'Idle', None),
+            ('G1', 'Gamma 1', 4, 'Road', 'Idle', None),
+            ('H1', 'Hotel 1', 3, 'Water', 'Idle', None),
+            ('I3', 'India 3', 4, 'Drain', 'Idle', None),
+            ('J2', 'Juliet 2', 5, 'General', 'Idle', None)
+        ]
+        cursor.executemany("INSERT INTO teams (id, name, member_count, type, status, current_zone) VALUES (?, ?, ?, ?, ?, ?)", teams)
+        print(f"👷  BMC Workforce Initialized: {len(teams)} teams registered.")
+
     # Check if agencies are seeded, if not, do initial sync
     cursor.execute("SELECT count(*) FROM agencies")
     if cursor.fetchone()[0] == 0:
@@ -676,6 +705,109 @@ def simulate_surge():
     cursor = conn.cursor()
     cursor.execute("UPDATE predictions SET priority_score = priority_score + 35 WHERE id IN (SELECT id FROM predictions ORDER BY RANDOM() LIMIT 1)")
     cursor.execute("UPDATE predictions SET priority_score = 100 WHERE priority_score > 100")
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+# --- MAINTENANCE API ---
+
+@app.route('/api/maintenance/data', methods=['GET'])
+def get_maintenance_data():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Auto-generate tasks for high-priority zones if they don't exist
+    cursor.execute("SELECT zone, priority_score, type, category FROM predictions WHERE priority_score > 80")
+    high_zones = cursor.fetchall()
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    for row in high_zones:
+        # Check if task already exists for this zone that is not completed
+        cursor.execute("SELECT count(*) FROM maintenance_tasks WHERE zone = ? AND status != 'COMPLETED'", (row['zone'],))
+        if cursor.fetchone()[0] == 0:
+            task_id = f"T-{uuid.uuid4().hex[:4].upper()}"
+            cursor.execute('''INSERT INTO maintenance_tasks 
+                             (id, zone, type, priority, status, reported_time) 
+                             VALUES (?, ?, ?, ?, ?, ?)''', 
+                             (task_id, row['zone'], row['category'], 'HIGH', 'PENDING', now_str))
+
+    cursor.execute("SELECT * FROM teams")
+    teams = [dict(r) for r in cursor.fetchall()]
+    
+    cursor.execute("SELECT * FROM maintenance_tasks ORDER BY reported_time DESC")
+    tasks = [dict(r) for r in cursor.fetchall()]
+    
+    conn.commit()
+    conn.close()
+    
+    # Stats
+    active_teams = len([t for t in teams if t['status'] == 'On Field'])
+    idle_teams = len([t for t in teams if t['status'] == 'Idle'])
+    pending_tasks = len([t for t in tasks if t['status'] == 'PENDING'])
+    
+    return jsonify({
+        "stats": {
+            "total_teams": len(teams),
+            "active": active_teams,
+            "idle": idle_teams,
+            "pending": pending_tasks
+        },
+        "teams": teams,
+        "tasks": tasks
+    })
+
+@app.route('/api/maintenance/assign', methods=['POST'])
+def assign_maintenance():
+    data = request.json
+    task_id = data.get('task_id')
+    team_id = data.get('team_id')
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Update task
+    cursor.execute("UPDATE maintenance_tasks SET status = 'ON GROUND', assigned_team_id = ? WHERE id = ?", (team_id, task_id))
+    
+    # Get zone name for team update
+    cursor.execute("SELECT zone FROM maintenance_tasks WHERE id = ?", (task_id,))
+    zone_row = cursor.fetchone()
+    zone = zone_row[0] if zone_row else None
+    
+    # Update team
+    cursor.execute("UPDATE teams SET status = 'On Field', current_zone = ? WHERE id = ?", (zone, team_id))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+@app.route('/api/maintenance/complete', methods=['POST'])
+def complete_maintenance():
+    data = request.json
+    task_id = data.get('task_id')
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Get task details
+    cursor.execute("SELECT zone, assigned_team_id FROM maintenance_tasks WHERE id = ?", (task_id,))
+    task_row = cursor.fetchone()
+    if not task_row:
+        return jsonify({"error": "Task not found"}), 404
+        
+    zone, team_id = task_row
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Update task
+    cursor.execute("UPDATE maintenance_tasks SET status = 'COMPLETED', completed_time = ? WHERE id = ?", (now_str, task_id))
+    
+    # Reset team
+    if team_id:
+        cursor.execute("UPDATE teams SET status = 'Idle', current_zone = NULL WHERE id = ?", (team_id,))
+    
+    # Update zone coverage
+    cursor.execute("UPDATE zone_coverage SET last_visited = ?, status = 'Recently Visited' WHERE zone = ?", (now_str, zone))
+    
     conn.commit()
     conn.close()
     return jsonify({"success": True})
