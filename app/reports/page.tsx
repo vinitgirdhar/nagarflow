@@ -24,6 +24,7 @@ export default function ReportsPage() {
   const covRef = useRef<HTMLCanvasElement>(null);
   
   const [data, setData] = useState<any>(null);
+  const [tooltip, setTooltip] = useState<{ x: number, y: number, show: boolean, content: string } | null>(null);
 
   useEffect(() => {
     // Single robust poll
@@ -54,14 +55,31 @@ export default function ReportsPage() {
       
       const W = perf.width, H = perf.height, pad = 35;
       pCtx.strokeStyle = '#2e2318'; pCtx.lineWidth = 0.5;
-      for (let y = 0; y <= 4; y++) { const yy = pad + (H - pad * 2) * (y / 4); pCtx.beginPath(); pCtx.moveTo(pad, yy); pCtx.lineTo(W - 10, yy); pCtx.stroke(); pCtx.fillStyle = '#5a4a3a'; pCtx.font = '10px "Space Mono"'; pCtx.fillText((100 - y * 5) + '%', 2, yy + 3); }
+      // Remapping Axis to 50%-100% range
+      for (let y = 0; y <= 5; y++) { 
+        const yy = pad + (H - pad * 2) * (y / 5); 
+        pCtx.beginPath(); pCtx.moveTo(pad, yy); pCtx.lineTo(W - 10, yy); pCtx.stroke(); 
+        pCtx.fillStyle = '#5a4a3a'; pCtx.font = '10px "Space Mono"'; 
+        pCtx.fillText((100 - y * 10) + '%', 2, yy + 3); 
+      }
       days.forEach((d, i) => { const x = pad + (W - pad - 10) * (i / 6); pCtx.fillStyle = '#5a4a3a'; pCtx.font = '10px "Space Mono"'; pCtx.fillText(d, x - 10, H - 5); });
       
       const drawLine = (dArray: number[], color: string) => {
         pCtx.beginPath();
-        dArray.forEach((v, i) => { const x = pad + (W - pad - 10) * (i / 6); const y = pad + (H - pad * 2) * (1 - (v - 80) / 20); i === 0 ? pCtx.moveTo(x, y) : pCtx.lineTo(x, y); });
+        dArray.forEach((v, i) => { 
+          const x = pad + (W - pad - 10) * (i / 6); 
+          // Re-mapped to 50%-100% to avoid clipping low values
+          const val = Math.max(50, v);
+          const y = pad + (H - pad * 2) * (1 - (val - 50) / 50); 
+          i === 0 ? pCtx.moveTo(x, y) : pCtx.lineTo(x, y); 
+        });
         pCtx.strokeStyle = color; pCtx.lineWidth = 2.5; pCtx.stroke();
-        dArray.forEach((v, i) => { const x = pad + (W - pad - 10) * (i / 6); const y = pad + (H - pad * 2) * (1 - (v - 80) / 20); pCtx.beginPath(); pCtx.arc(x, y, 3, 0, Math.PI * 2); pCtx.fillStyle = color; pCtx.fill(); });
+        dArray.forEach((v, i) => { 
+          const val = Math.max(50, v);
+          const x = pad + (W - pad - 10) * (i / 6); 
+          const y = pad + (H - pad * 2) * (1 - (val - 50) / 50); 
+          pCtx.beginPath(); pCtx.arc(x, y, 3, 0, Math.PI * 2); pCtx.fillStyle = color; pCtx.fill(); 
+        });
       }
       drawLine(accuracy, '#C1440E');
       drawLine(coverage, '#7A8C5E');
@@ -72,8 +90,12 @@ export default function ReportsPage() {
       cov.width = cov.parentElement.offsetWidth - 40;
       cov.height = 220;
       const cCtx = cov.getContext('2d')!;
-      // Simplified mock rendering for layout
-      const zoneCov = [{ name: 'W1', v: 75 }, { name: 'W2', v: 68 }, { name: 'W3', v: liveData.kpis.coverage }, { name: 'W4', v: 90 }, { name: 'W5', v: 88 }, { name: 'W6', v: 70 }, { name: 'W7', v: 95 }, { name: 'W8', v: 55 }, { name: 'W9', v: 92 }, { name: 'W10', v: 50 }, { name: 'W11', v: 72 }, { name: 'W12', v: 60 }];
+      const zoneCov = [
+        { name: 'W1', v: 75 }, { name: 'W2', v: 68 }, { name: 'W3', v: liveData.kpis.coverage }, 
+        { name: 'W4', v: 90 }, { name: 'W5', v: 88 }, { name: 'W6', v: 70 }, 
+        { name: 'W7', v: 95 }, { name: 'W8', v: 55 }, { name: 'W9', v: 92 }, 
+        { name: 'W10', v: 50 }, { name: 'W11', v: 72 }, { name: 'W12', v: 60 }
+      ];
       const CW = cov.width, CH = cov.height, CP = 35;
       cCtx.clearRect(0, 0, CW, CH);
       const barW = (CW - CP - 10) / zoneCov.length - 4;
@@ -88,6 +110,32 @@ export default function ReportsPage() {
         else cCtx.rect(x, y, barW, h);
         cCtx.fill();
         cCtx.fillStyle = '#5a4a3a'; cCtx.font = '9px "Space Mono"'; cCtx.fillText(z.name, x, CH - 5);
+      });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>, type: 'perf' | 'cov') => {
+    if (!data) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    
+    if (type === 'perf') {
+      const W = e.currentTarget.width, pad = 35;
+      const i = Math.round((mx - pad) / ((W - pad - 10) / 6));
+      if (i >= 0 && i < 7) {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const acc = data.chart_data.accuracy_trend[i];
+        const cov = data.chart_data.coverage_trend[i];
+        setTooltip({
+          x: e.clientX, y: e.clientY, show: true,
+          content: `${days[i]}: Accuracy ${acc}% | Coverage ${cov}%`
+        });
+      }
+    } else {
+      setTooltip({
+        x: e.clientX, y: e.clientY, show: true,
+        content: `Zone Disparity: Represents coverage levels per specific municipal ward.`
       });
     }
   };
@@ -142,15 +190,56 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid-2" style={{ marginBottom: '2rem' }}>
-        <div className="chart-box">
-           <div className="card__title" style={{display: 'flex', justifyContent: 'space-between'}}><span>Weekly Validation Drift</span> <span style={{fontSize: '11px', color: '#C1440E'}}>● Target Acc</span></div>
-          <canvas ref={perfRef} style={{ marginTop: '.5rem' }}></canvas>
+        <div className="chart-box" style={{ position: 'relative' }}>
+           <div className="card__title" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                Weekly Validation Drift 
+                <Eye size={12} color="var(--secondary)" style={{ cursor: 'help' }} />
+              </span> 
+              <span style={{fontSize: '11px', color: '#C1440E'}}>● Target Acc</span>
+           </div>
+           <p style={{ fontSize: '10px', color: 'var(--secondary)', marginBottom: '0.2rem', marginLeft: '2.2rem' }}>Y-Axis: Match % | X-Axis: Past 7 Operating Days</p>
+          <canvas 
+            ref={perfRef} 
+            style={{ marginTop: '.5rem', cursor: 'crosshair' }}
+            onMouseMove={(e) => handleMouseMove(e, 'perf')}
+            onMouseLeave={() => setTooltip(null)}
+          ></canvas>
         </div>
-        <div className="chart-box">
-          <div className="card__title">Zone Disparity Layout</div>
-          <canvas ref={covRef} style={{ marginTop: '.5rem' }}></canvas>
+        <div className="chart-box" style={{ position: 'relative' }}>
+          <div className="card__title">
+            Zone Disparity Layout
+            <TrendingUp size={12} color="var(--secondary)" style={{ marginLeft: '.4rem', opacity: 0.6 }} />
+          </div>
+          <p style={{ fontSize: '10px', color: 'var(--secondary)', marginBottom: '0.2rem', marginLeft: '.4rem' }}>X-Axis: MMR Municipal Wards | Y-Axis: Live Service Coverage %</p>
+          <canvas 
+            ref={covRef} 
+            style={{ marginTop: '.5rem', cursor: 'crosshair' }}
+            onMouseMove={(e) => handleMouseMove(e, 'cov')}
+            onMouseLeave={() => setTooltip(null)}
+          ></canvas>
         </div>
       </div>
+
+      {tooltip && tooltip.show && (
+        <div style={{
+          position: 'fixed',
+          top: tooltip.y + 15,
+          left: tooltip.x + 15,
+          background: 'rgba(28, 20, 16, 0.95)',
+          color: 'white',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          fontSize: '11px',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          border: '1px solid rgba(207,195,178,0.3)',
+          fontFamily: 'Space Mono'
+        }}>
+          {tooltip.content}
+        </div>
+      )}
 
       <div className="card__title" style={{ marginBottom: '.75rem' }}>Automated Core Operations PDFs</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem'}}>
