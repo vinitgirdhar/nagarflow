@@ -195,7 +195,7 @@ export default function SimulationPage() {
         {[{ label: 'BEFORE (Real-Time City State)', data: baselineData }, { label: 'AFTER (Simulated Response)', data: afterDemand }].map((g, i) => (
           <div key={i} style={{ flex: 1 }}>
             <div className="mono" style={{ fontSize: '11px', color: 'var(--accent)', textAlign: 'center', marginBottom: '.5rem' }}>{g.label}</div>
-            <div style={{ width: '100%', height: '320px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>{renderGrid(g.data)}</div>
+            <div style={{ width: '100%', height: '500px', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '12px', overflow: 'hidden' }}>{renderGrid(g.data)}</div>
           </div>
         ))}
       </div>
@@ -212,7 +212,7 @@ export default function SimulationPage() {
         </div>
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Simulation Log</div>
-          <div className="log" style={{ height: '240px', overflowY: 'auto' }}>
+          <div className="log" style={{ height: '360px', overflowY: 'auto' }}>
             {simLog.map((l, i) => <div key={i} className="log-entry"><span>[SIM]</span> {l}</div>)}
           </div>
         </div>
