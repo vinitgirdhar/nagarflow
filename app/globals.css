@@ -22,9 +22,9 @@
   --success: #4A7A3E;
   --info: #3A7A8C;
   --sidebar-w: clamp(240px, 16vw, 320px);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.08);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,.1);
+  --shadow-sm: 0 2px 8px rgba(28, 20, 16, 0.04);
+  --shadow-md: 0 8px 24px rgba(28, 20, 16, 0.08);
+  --shadow-lg: 0 16px 40px rgba(193, 68, 14, 0.12);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -126,13 +126,15 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
 
 /* ── TOP BAR ───────────────────────────── */
 .topbar {
-  height: 56px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border-subtle);
+  height: 64px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(221, 210, 196, 0.6);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 2rem;
   position: sticky; top: 0; z-index: 50;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 20px rgba(28, 20, 16, 0.03);
 }
 .topbar__title {
   font-family: 'Playfair Display', serif;
@@ -191,18 +193,18 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
 /* ── CARDS ─────────────────────────────── */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: all .4s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid rgba(221, 210, 196, 0.6);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all .4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: var(--shadow-sm);
   position: relative;
   z-index: 1;
 }
 .card:hover { 
-  border-color: rgba(193,68,14,.4); 
-  box-shadow: 0 12px 32px rgba(0,0,0,.08); 
-  transform: translateY(-4px); 
+  border-color: rgba(193,68,14,.3); 
+  box-shadow: var(--shadow-md); 
+  transform: translateY(-4px) scale(1.01); 
   z-index: 2;
 }
 .card--surface { background: var(--surface); color: var(--text-dark); border-color: var(--border-card); }

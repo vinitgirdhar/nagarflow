@@ -512,9 +512,24 @@ export default function VoiceConversation({
               justifyContent: 'center',
               color: 'var(--primary)',
               flexShrink: 0,
+              position: 'relative'
             }}
           >
-            <Bot size={20} />
+            {(phase === 'processing' || phase === 'greeting' || phase === 'recording') ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '16px' }}>
+                <div style={{ width: '4px', background: 'var(--primary)', borderRadius: '2px', animation: 'wave 1s ease-in-out infinite' }}></div>
+                <div style={{ width: '4px', background: 'var(--accent)', borderRadius: '2px', animation: 'wave 1.2s ease-in-out infinite 0.2s' }}></div>
+                <div style={{ width: '4px', background: 'var(--primary)', borderRadius: '2px', animation: 'wave 0.8s ease-in-out infinite 0.4s' }}></div>
+              </div>
+            ) : (
+              <Bot size={20} />
+            )}
+            <style jsx>{`
+              @keyframes wave {
+                0%, 100% { height: 6px; }
+                50% { height: 16px; }
+              }
+            `}</style>
           </div>
 
           <div>
