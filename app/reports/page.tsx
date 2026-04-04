@@ -224,18 +224,20 @@ export default function ReportsPage() {
       {tooltip && tooltip.show && (
         <div style={{
           position: 'fixed',
-          top: tooltip.y + 15,
-          left: tooltip.x + 15,
+          top: tooltip.y - 45,
+          left: tooltip.x + 12,
+          transform: 'translateY(-100%)',
           background: 'rgba(28, 20, 16, 0.95)',
           color: 'white',
-          padding: '6px 12px',
-          borderRadius: '6px',
+          padding: '8px 14px',
+          borderRadius: '8px',
           fontSize: '11px',
           zIndex: 9999,
           pointerEvents: 'none',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          border: '1px solid rgba(207,195,178,0.3)',
-          fontFamily: 'Space Mono'
+          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+          border: '1px solid var(--accent)',
+          fontFamily: 'Space Mono',
+          whiteSpace: 'nowrap'
         }}>
           {tooltip.content}
         </div>
