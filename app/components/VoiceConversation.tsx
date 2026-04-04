@@ -209,6 +209,22 @@ export default function VoiceConversation({
     onEnded?.();
   };
 
+  const handleAgentReplyEnded = (callEnded?: boolean) => {
+    if (callEnded) {
+      setPhase('completed');
+    } else {
+      setPhase('ready');
+      // Natural delay before opening the mic again to ensure user is ready
+      setTimeout(() => {
+        if (useBrowserVoice) {
+          startBrowserRecognition();
+        } else {
+          startRecording();
+        }
+      }, 700);
+    }
+  };
+
   const startSession = async () => {
     cleanupAudio();
     cleanupRecorder();
@@ -230,7 +246,7 @@ export default function VoiceConversation({
 
       setUseBrowserVoice(data.voice_mode === 'browser' || !data.audio);
       setConversation([{ speaker: 'agent', text: data.reply_text }]);
-      await playAgentReply(data.reply_text, data.audio, () => setPhase('ready'));
+      await playAgentReply(data.reply_text, data.audio, () => handleAgentReplyEnded(data.call_ended));
     } catch {
       setPhase('error');
       setErrorText('Could not reach the backend. Start app.py and try again.');
@@ -272,7 +288,7 @@ export default function VoiceConversation({
       }
 
       await playAgentReply(data.reply_text, data.audio, () => {
-        setPhase(data.call_ended ? 'completed' : 'ready');
+        handleAgentReplyEnded(data.call_ended);
       });
     } catch {
       setPhase('error');
@@ -310,7 +326,7 @@ export default function VoiceConversation({
       }
 
       await playAgentReply(data.reply_text, data.audio, () => {
-        setPhase(data.call_ended ? 'completed' : 'ready');
+        handleAgentReplyEnded(data.call_ended);
       });
     } catch {
       setPhase('error');
