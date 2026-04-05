@@ -258,7 +258,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 </tr>
 <tr>
 <td align="center">
-<img src="![nagarflow- simulation](https://github.com/user-attachments/assets/4ed1a6cb-5f9e-40e7-9603-08ffb7ccacee)" alt="Digital Twin Simulator" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/6c35dede-cb89-4d02-a562-90fd0c0f2d08" alt="Digital Twin Simulator" width="100%"/><br/>
 <strong>Digital Twin Simulator</strong><br/>
 <sub>Demand / failure / weather sliders · Before vs. After zone grids · Projected KPIs</sub>
 </td>
@@ -275,7 +275,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Haversine-paired suggestions · Truck type labels · Accept / Reject actions</sub>
 </td>
 <td align="center">
-<img src="![nagarflow- reports](https://github.com/user-attachments/assets/a800665d-8b15-4332-89d7-051aa1df0258)" alt="KPI Reports" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/5824b45b-2c54-47e9-b849-db8c81d07249" alt="KPI Reports" width="100%"/><br/>
 <strong>KPI Reports</strong><br/>
 <sub>Accuracy trend · Coverage chart · Equity score · Retraining trigger</sub>
 </td>
@@ -287,7 +287,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Per-zone temperature · AQI · Wind speed · Flood probability from NOAA</sub>
 </td>
 <td align="center">
-<img src="![nagarflow- maintenance](https://github.com/user-attachments/assets/d661aa35-e2cb-4093-9b45-75f23176f313)" alt="Maintenance Tracker" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/b95a7342-8bd2-441e-9f4f-faefb7292a2b" alt="Maintenance Tracker" width="100%"/><br/>
 <strong>Maintenance Center</strong><br/>
 <sub>Auto-generated tasks · Team assignment · Status tracking · Zone coverage feedback</sub>
 </td>
