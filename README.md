@@ -1,66 +1,39 @@
-# NagarFlow — Smart City Complaint Management System
+# NagarFlow
 
-NagarFlow is a full-stack smart city platform built for the Mumbai Metropolitan Region (MMR). It ingests citizen complaints via WhatsApp, voice calls, and a web simulator, runs AI-powered zone prioritization, and dispatches municipal fleet assets through an interactive operations dashboard.
+**Smart City Complaint Management System for the Mumbai Metropolitan Region**
+
+NagarFlow is a full-stack civic intelligence platform that ingests citizen complaints from WhatsApp, voice calls, and a web simulator — then routes them through an AI pipeline to prioritize zones, dispatch fleet assets, and surface actionable insights for municipal operators.
 
 ---
 
-## What's Built
+## Features
 
-### 1. WhatsApp Complaint Agent (N8n + Twilio)
-Citizens send complaints in plain Hinglish to a Twilio WhatsApp sandbox number. An N8n workflow powered by GPT-4o-mini (the "Nagar" agent) holds a natural conversation, collects the area and issue, confirms the complaint, then POSTs it to Flask via HTTP.
+### Complaint Ingestion
+- **WhatsApp / Telegram** — Citizens send complaints in plain Hindi or English. An N8n workflow powered by GPT-4o-mini holds a natural conversation, collects the area and issue, confirms the complaint, then POSTs it to the backend. Greetings and acknowledgements are dropped; only valid complaints with a zone and issue type are saved.
+- **Voice Agent** — Speech-to-text via Sarvam AI (`saaras:v3`), complaint extraction via Gemini, and audio confirmation via Sarvam TTS (`bulbul:v3`). Compatible with Vapi webhooks for telephony integration.
+- **Web Simulator** — Browser-based chat interface for submitting text complaints without WhatsApp. Uses the same backend pipeline.
 
-- Responds in Hinglish, handles back-and-forth naturally
-- Only saves messages that contain a valid Mumbai zone AND a specific issue type — greetings and acknowledgements are silently dropped
-- Complaint lands in SQLite and appears on the dashboard in real time
+### AI & Prediction
+- **Gemini NLU** — Extracts zone, locality, issue type, and severity from free-text and transcribed speech in any language.
+- **AiRLLM Priority Engine** — Generates priority scores (0–100) for 65+ Mumbai zones by combining historical complaint density (51,000+ real MMR 311 records), real-time weather from Open-Meteo, and time since last service visit.
 
-### 2. Voice Complaint Agent (Sarvam AI)
-Citizens can call in and speak in Hindi. The voice pipeline transcribes speech using Sarvam `saaras:v3`, extracts zone and issue via Gemini NLU, and synthesizes confirmation audio using `bulbul:v3`.
-
-- Vapi webhook compatible for telephony integration
-- Falls back to regex extraction if Gemini is unavailable
-
-### 3. Web Complaint Simulator
-Browser-based chat interface that simulates citizen complaints without WhatsApp. Text complaints are parsed and saved with the same pipeline as WhatsApp.
-
-### 4. AiRLLM Predictive Engine
-Custom prediction engine that generates Priority Scores (0–100) for 65+ Mumbai zones by combining:
-- Historical complaint density from 51,000+ real 311 MMR complaints
-- Real-time weather data from Open-Meteo
-- Time since last municipal service visit
-
-Predictions drive the map heatmap and fleet dispatch suggestions.
-
-### 5. Greedy Fleet Dispatcher (Haversine)
-Pairs high-priority zones with the nearest idle fleet asset using Haversine distance geometry. Operators accept or override suggestions from the dashboard. Accepted dispatches animate on the live map.
-
-### 6. Interactive Operations Dashboard
-- Live Leaflet map with zone heatmap circles (color = priority) and truck markers
+### Operations Dashboard
+- Live Leaflet map with zone heatmap (color = priority score) and truck position markers
 - Locality hotspot clusters from aggregated complaint density
-- Haversine Target Array sidebar: dispatch cards with ETA, truck type, zone
-- Dispatch animation: truck icon moves along route on accept
+- Greedy fleet dispatcher — pairs high-priority zones with the nearest idle truck using Haversine distance, shows ETA and truck type
+- Dispatch animation: truck icon moves along route on operator accept
 - Emergency surge simulation (+35% demand injection)
-- Live operator log
+- Live operator action log
 
-### 7. Complaint Insights Page
-Full complaint feed from the database with:
-- Filter by urgency, category, keyword search
-- Stats bar: total complaints, high priority count, voice vs text split, last sync time
-- Social media simulation panel (static mock tweets/reddit posts for demo)
-
-### 8. Maintenance Task Manager
-Auto-generates maintenance tasks for zones with priority score > 80. Operators assign field teams, track status (PENDING → IN_PROGRESS → COMPLETED), and completions update zone coverage.
-
-### 9. Model Performance & Prediction Validation
-Tracks prediction accuracy by comparing predicted priority scores against actual demand recorded when trucks arrive. Shows accuracy trend, error margin, and drift alerts.
-
-### 10. Digital Twin Simulation Dashboard
-Slider-controlled simulation of demand increase, infrastructure failures, and weather severity. Renders projected zone scores and KPI deltas (coverage %, response time, equity score) without touching live data.
-
-### 11. Agency Registry
-Scraped and stored directory of Mumbai municipal agencies with contact info, service categories, and source URLs. Viewable from the Agencies page.
-
-### 12. Weather Zone Overlay
-Per-zone weather data (condition, temperature, risk level, flood probability) fetched from Open-Meteo and displayed on the Emergency dashboard map.
+### Management Pages
+- **Complaint Insights** — Full complaint feed with filters by urgency, category, and keyword. Stats bar shows totals, high-priority count, voice vs text split, and last sync time.
+- **Dispatch** — Manage and track all fleet dispatch assignments
+- **Predictions** — Zone priority scores table from the AiRLLM engine
+- **Maintenance** — Auto-generates tasks for zones scoring > 80. Operators assign teams, update status (PENDING → IN_PROGRESS → COMPLETED), and completions feed back into zone coverage.
+- **Simulation** — Digital twin with slider controls for demand increase, infrastructure failure, and weather severity. Shows projected KPI deltas without touching live data.
+- **Reports** — KPI summary and model prediction accuracy tracking
+- **Emergency** — Per-zone weather overlay (condition, temperature, flood probability) from Open-Meteo
+- **Agencies** — Directory of Mumbai municipal agencies with contact info and service categories
 
 ---
 
@@ -68,49 +41,58 @@ Per-zone weather data (condition, temperature, risk level, flood probability) fe
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 16, React 19, Framer Motion, Leaflet, Lucide React |
+| Frontend | Next.js, React, Framer Motion, Leaflet, Lucide React |
 | Backend | Python 3.11, Flask |
-| Database | SQLite (`nagarflow.db`) |
-| AI / NLU | Google Gemini `gemini-1.5-flash`, OpenAI `gpt-4o-mini` (N8n) |
-| Voice | Sarvam AI `saaras:v3` (STT), `bulbul:v3` (TTS) |
-| WhatsApp | Twilio Sandbox + N8n workflow |
-| Tunneling | ngrok (dev) |
-| Deployment | Netlify (frontend) + Railway / Render (backend) |
+| Database | SQLite |
+| AI / NLU | Google Gemini `gemini-1.5-flash`, OpenAI `gpt-4o-mini` |
+| Voice | Sarvam AI — `saaras:v3` (STT), `bulbul:v3` (TTS) |
+| Automation | N8n workflow for WhatsApp/Telegram ingestion |
+| Tunneling | ngrok (local development) |
 
 ---
 
-## Environment Variables
+## Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- API keys for Gemini, OpenAI, and Sarvam AI (see below)
+
+---
+
+## Setup
+
+### 1. Clone and configure environment
+
+```bash
+git clone <repo-url>
+cd nagarflow
+```
 
 Create a `.env` file in the project root:
 
 ```env
 GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key
 SARVAM_API_KEY=your_sarvam_key
 VAPI_WEBHOOK_SECRET=your_vapi_secret   # optional
 ```
 
----
+### 2. Backend
 
-## Local Development
-
-### Backend
 ```bash
-# Install dependencies
 pip install flask requests python-dotenv google-generativeai
 
-# Seed the database (only needed first time)
+# First-time only: seed the database
 python ingest_data.py
 python fleet_manager.py
 
 # Start Flask
 python app.py
 # Runs at http://127.0.0.1:5000
-
-# Expose via ngrok for WhatsApp/N8n
-ngrok http 5000
 ```
 
-### Frontend
+### 3. Frontend
+
 ```bash
 cd nagarflow-next
 npm install
@@ -118,25 +100,60 @@ npm run dev
 # Runs at http://localhost:3000
 ```
 
+### 4. WhatsApp / Telegram integration (optional)
+
+Expose your local backend via ngrok:
+
+```bash
+ngrok http 5000
+```
+
+Point your N8n workflow HTTP node to `https://<ngrok-url>/api/whatsapp-complaint`.
+
 ---
 
 ## Pages
 
 | Route | Description |
 |---|---|
-| `/dashboard` | Main operations map + fleet dispatch |
-| `/complaints` | Full complaint feed + stats |
-| `/dispatch` | Dispatch management panel |
-| `/predictions` | Zone priority scores from AiRLLM |
+| `/dashboard` | Live map, zone heatmap, fleet dispatch |
+| `/complaints` | Unified complaint feed with filters and stats |
+| `/dispatch` | Fleet dispatch management |
+| `/predictions` | Zone priority scores |
 | `/maintenance` | Maintenance task tracker |
-| `/simulation` | Digital twin parameter controls |
-| `/reports` | KPI report + model accuracy |
-| `/emergency` | Weather zone overlay + alerts |
+| `/simulation` | Digital twin parameter simulation |
+| `/reports` | KPI reports and model accuracy |
+| `/emergency` | Weather overlay and zone alerts |
 | `/agencies` | Municipal agency directory |
 | `/complaint-simulator` | Browser-based complaint chat |
 
 ---
 
+## API Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/complaints` | Fetch complaints (supports `area`, `type`, `severity`, `limit` filters) |
+| POST | `/api/whatsapp-complaint` | Ingest complaint from N8n / Twilio |
+| GET | `/api/predictions` | Zone priority scores |
+| GET | `/api/dashboard` | Zone coverage and fleet status |
+| GET | `/api/dispatch` | Current dispatch suggestions |
+| POST | `/api/dispatch/accept` | Accept a dispatch suggestion |
+| POST | `/api/dispatch/arrive` | Mark truck as arrived |
+| GET | `/api/hotspots` | Locality-level complaint density clusters |
+| GET | `/api/weather/zones` | Per-zone weather data |
+| GET | `/api/simulation/baseline` | Current simulation baseline values |
+| POST | `/api/simulation/run` | Run simulation with given parameters |
+| GET | `/api/maintenance/data` | Maintenance tasks and zone data |
+| POST | `/api/maintenance/assign` | Assign a team to a task |
+| POST | `/api/maintenance/complete` | Mark task as completed |
+| GET | `/api/reports` | KPI and accuracy report data |
+| GET | `/api/agencies` | Agency directory |
+| POST | `/api/agent/respond` | Voice agent response (audio) |
+| POST | `/api/agent/respond-chat` | Text agent response |
+
+---
+
 ## Data
 
-The database ships pre-loaded with 51,426 real MMR 311 complaints sourced from Mumbai municipal open data. Each complaint has zone, locality, issue type, severity, complaint count, and timestamp.
+The database ships pre-loaded with **51,440 real MMR 311 complaints** sourced from Mumbai municipal open data. Each record includes zone, locality, issue type, severity, complaint count, and timestamp. This dataset powers the AiRLLM priority engine and the complaint insights page.
