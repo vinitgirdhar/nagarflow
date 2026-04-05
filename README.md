@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="![<img width="390" height="380" alt="image" src="https://github.com/user-attachments/assets/e8f3b5d0-ab68-4056-b434-bbe6d901378d" />)" width="72" alt="NagarFlow" />
+<img width="72" height="380" alt="image" src="https://github.com/user-attachments/assets/e8f3b5d0-ab68-4056-b434-bbe6d901378d" />
 
 # NagarFlow
 
