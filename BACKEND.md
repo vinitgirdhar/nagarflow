@@ -4,7 +4,7 @@
 
 **Python 3.11 · Flask · SQLite · 25+ REST Endpoints · 1,609 LOC**
 
-[← Back to Main README](README.md) · [Frontend Docs →](nagarflow-next/README.md)
+[← Back to Main README](README.md) · [Frontend Docs →](FRONTEND.md)
 
 </div>
 
