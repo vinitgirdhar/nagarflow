@@ -325,24 +325,58 @@ def ensure_tables_exist():
     if cursor.fetchone()[0] == 0:
         import uuid as _uuid
         now = datetime.datetime.now()
+        def ts(h): return (now - datetime.timedelta(hours=h)).strftime('%Y-%m-%d %H:%M:%S')
         tasks = [
-            ('MT-101', 'Dharavi', 'Garbage', 'HIGH', 'PENDING', 'Alpha-1', (now - datetime.timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
-            ('MT-102', 'Andheri', 'Water', 'MEDIUM', 'PENDING', 'Bravo-1', (now - datetime.timedelta(hours=4)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
-            ('MT-103', 'Bandra', 'Road', 'HIGH', 'ON GROUND', 'Alpha-1', (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
-            ('MT-104', 'Colaba', 'Drain', 'LOW', 'PENDING', 'Alpha-1', (now - datetime.timedelta(hours=6)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
-            ('MT-105', 'Kurla', 'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1', (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Cleared all garbage bags from main road junction.'),
-            ('MT-106', 'Dadar', 'Drain', 'HIGH', 'COMPLETED_UNVERIFIED', 'Alpha-1', (now - datetime.timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Drain unblocked and cleaned. Area clear.'),
+            # Alpha-1
+            ('MT-101',   'Dharavi',      'Garbage', 'HIGH',   'PENDING',              'Alpha-1',   ts(2),  None,    None, None),
+            ('MT-103',   'Bandra',       'Road',    'HIGH',   'ON GROUND',            'Alpha-1',   ts(1),  None,    None, None),
+            ('MT-104',   'Colaba',       'Drain',   'LOW',    'PENDING',              'Alpha-1',   ts(6),  None,    None, None),
+            ('MT-106',   'Dadar',        'Drain',   'HIGH',   'COMPLETED_UNVERIFIED', 'Alpha-1',   ts(5),  ts(1),   None, 'Drain unblocked and cleaned. Area clear.'),
+            # Alpha-2
+            ('MT-A2-01', 'Sion',         'Garbage', 'MEDIUM', 'PENDING',              'Alpha-2',   ts(3),  None,    None, None),
+            ('MT-A2-02', 'Matunga',      'Garbage', 'HIGH',   'ON GROUND',            'Alpha-2',   ts(1),  None,    None, None),
+            # Bravo-1
+            ('MT-102',   'Andheri',      'Water',   'MEDIUM', 'PENDING',              'Bravo-1',   ts(4),  None,    None, None),
+            ('MT-105',   'Kurla',        'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1',   ts(3),  ts(0.5), None, 'Cleared all garbage bags from main road junction.'),
+            # Bravo-2
+            ('MT-B2-01', 'Mulund',       'Water',   'HIGH',   'PENDING',              'Bravo-2',   ts(2),  None,    None, None),
+            ('MT-B2-02', 'Thane West',   'Water',   'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-2',   ts(4),  ts(0.5), None, 'Water line flushed and pressure restored.'),
+            # Charlie-1
+            ('MT-C1-01', 'Goregaon',     'Road',    'HIGH',   'PENDING',              'Charlie-1', ts(5),  None,    None, None),
+            ('MT-C1-02', 'Malad',        'Road',    'MEDIUM', 'ON GROUND',            'Charlie-1', ts(2),  None,    None, None),
+            # Charlie-2
+            ('MT-C2-01', 'Kandivali',    'Road',    'LOW',    'PENDING',              'Charlie-2', ts(6),  None,    None, None),
+            ('MT-C2-02', 'Borivali',     'Road',    'HIGH',   'COMPLETED_UNVERIFIED', 'Charlie-2', ts(3),  ts(1),   None, 'Pothole filled and surface levelled.'),
+            # Delta-1
+            ('MT-D1-01', 'Ghatkopar',    'Drain',   'MEDIUM', 'PENDING',              'Delta-1',   ts(4),  None,    None, None),
+            ('MT-D1-02', 'Vikhroli',     'Drain',   'HIGH',   'ON GROUND',            'Delta-1',   ts(1),  None,    None, None),
+            # Delta-2
+            ('MT-D2-01', 'Mankhurd',     'Garbage', 'LOW',    'PENDING',              'Delta-2',   ts(7),  None,    None, None),
+            ('MT-D2-02', 'Chembur West', 'Road',    'MEDIUM', 'COMPLETED_UNVERIFIED', 'Delta-2',   ts(5),  ts(2),   None, 'Road markings repainted and potholes patched.'),
         ]
         cursor.executemany("INSERT INTO maintenance_tasks (id, zone, type, priority, status, assigned_team_id, reported_time, completed_time, image_url, worker_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tasks)
         print(f"🛠️  Maintenance Engine: {len(tasks)} field tasks queued.")
     else:
-        # Ensure verified demo tasks exist even on existing DBs
+        # Ensure all-squad demo tasks exist on existing DBs
         now = datetime.datetime.now()
+        def ts2(h): return (now - datetime.timedelta(hours=h)).strftime('%Y-%m-%d %H:%M:%S')
         for row in [
-            ('MT-105', 'Kurla', 'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1', (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Cleared all garbage bags from main road junction.'),
-            ('MT-106', 'Dadar', 'Drain', 'HIGH', 'COMPLETED_UNVERIFIED', 'Alpha-1', (now - datetime.timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Drain unblocked and cleaned. Area clear.'),
+            ('MT-A2-01', 'Sion',         'Garbage', 'MEDIUM', 'PENDING',              'Alpha-2',   ts2(3), None,    None, None),
+            ('MT-A2-02', 'Matunga',      'Garbage', 'HIGH',   'ON GROUND',            'Alpha-2',   ts2(1), None,    None, None),
+            ('MT-B2-01', 'Mulund',       'Water',   'HIGH',   'PENDING',              'Bravo-2',   ts2(2), None,    None, None),
+            ('MT-B2-02', 'Thane West',   'Water',   'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-2',   ts2(4), ts2(0.5), None, 'Water line flushed and pressure restored.'),
+            ('MT-C1-01', 'Goregaon',     'Road',    'HIGH',   'PENDING',              'Charlie-1', ts2(5), None,    None, None),
+            ('MT-C1-02', 'Malad',        'Road',    'MEDIUM', 'ON GROUND',            'Charlie-1', ts2(2), None,    None, None),
+            ('MT-C2-01', 'Kandivali',    'Road',    'LOW',    'PENDING',              'Charlie-2', ts2(6), None,    None, None),
+            ('MT-C2-02', 'Borivali',     'Road',    'HIGH',   'COMPLETED_UNVERIFIED', 'Charlie-2', ts2(3), ts2(1),  None, 'Pothole filled and surface levelled.'),
+            ('MT-D1-01', 'Ghatkopar',    'Drain',   'MEDIUM', 'PENDING',              'Delta-1',   ts2(4), None,    None, None),
+            ('MT-D1-02', 'Vikhroli',     'Drain',   'HIGH',   'ON GROUND',            'Delta-1',   ts2(1), None,    None, None),
+            ('MT-D2-01', 'Mankhurd',     'Garbage', 'LOW',    'PENDING',              'Delta-2',   ts2(7), None,    None, None),
+            ('MT-D2-02', 'Chembur West', 'Road',    'MEDIUM', 'COMPLETED_UNVERIFIED', 'Delta-2',   ts2(5), ts2(2),  None, 'Road markings repainted and potholes patched.'),
+            ('MT-105',   'Kurla',        'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1',   ts2(3), ts2(0.5), None, 'Cleared all garbage bags from main road junction.'),
+            ('MT-106',   'Dadar',        'Drain',   'HIGH',   'COMPLETED_UNVERIFIED', 'Alpha-1',   ts2(5), ts2(1),  None, 'Drain unblocked and cleaned. Area clear.'),
         ]:
-            cursor.execute("INSERT OR REPLACE INTO maintenance_tasks (id, zone, type, priority, status, assigned_team_id, reported_time, completed_time, image_url, worker_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row)
+            cursor.execute("INSERT OR IGNORE INTO maintenance_tasks (id, zone, type, priority, status, assigned_team_id, reported_time, completed_time, image_url, worker_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row)
     # Add locality column if upgrading from older schema
     try:
         cursor.execute("ALTER TABLE image_complaints ADD COLUMN locality TEXT DEFAULT ''")
