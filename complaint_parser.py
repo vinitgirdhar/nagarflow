@@ -1,9 +1,9 @@
 import os
-import re
 import json
 import sys
 from groq import Groq
 from dotenv import load_dotenv
+from localities import get_locality_context_for_prompt, find_zone_and_locality
 
 load_dotenv()
 
@@ -20,6 +20,9 @@ VALID_ZONES = [
 ]
 
 VALID_ISSUES = ["Garbage", "Drainage", "Roads", "Water"]
+
+# Pre-built locality context injected into every prompt
+_LOCALITY_CONTEXT = get_locality_context_for_prompt()
 
 
 def _safe_log(message: str) -> None:
@@ -47,6 +50,11 @@ def extract_complaint_details(transcript: str) -> dict:
 
     ### Standard Issues:
     {', '.join(VALID_ISSUES)}
+
+    ### Mumbai Sub-Locality Reference (Zone → known neighbourhoods):
+    Use this map to resolve vague mentions like "near lokhandwala", "mindspace area", "bkc side".
+    If a sub-locality is mentioned, set `zone` to its parent zone and `specific_location` to the sub-locality name.
+{_LOCALITY_CONTEXT}
 
     ### Your Core Mission:
     0. **High-Quality English Summary**: ALWAYS provide a clean, 1-sentence English summary for the official city record.
@@ -104,8 +112,20 @@ def extract_complaint_details(transcript: str) -> dict:
             text = text.split("```")[1].split("```")[0].strip()
 
         data = json.loads(text)
+
+        # Post-process: if Groq couldn't resolve zone/locality, run local lookup
+        if data.get("zone", "Unknown") == "Unknown" or not data.get("specific_location"):
+            local_zone, local_locality = find_zone_and_locality(transcript)
+            if local_zone != "Unknown":
+                if data.get("zone", "Unknown") == "Unknown":
+                    data["zone"] = local_zone
+                if not data.get("specific_location"):
+                    data["specific_location"] = local_locality
+
         _safe_log(
-            f"Groq Extraction: {data.get('input_language')} -> {data.get('translated_input_en')}"
+            f"Groq Extraction: [{data.get('input_language')}] "
+            f"{data.get('zone')} / {data.get('specific_location')} → "
+            f"{data.get('translated_input_en')}"
         )
         return data
 

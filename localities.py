@@ -1,5 +1,13 @@
 import re
 import unicodedata
+from typing import Optional
+
+# ---------------------------------------------------------------------------
+# LOCALITY → ZONE reverse lookup map
+# Built dynamically from SUB_LOCALITY_MAP at module load time.
+# Supports fuzzy substring matching so users can say:
+#   "near lokhandwala", "malad mindspace area", "bkc bandra side"
+# ---------------------------------------------------------------------------
 
 ZONE_ALIAS_MAP = {
     "Airoli": ["ऐरोली", "airoli station"],
@@ -49,17 +57,30 @@ SUB_LOCALITY_MAP: dict[str, list[tuple[str, str]]] = {
         ("Andheri Station", "अंधेरी स्टेशन"), ("DN Nagar", "डीएन नगर"),
         ("Millat Nagar", "मिल्लत नगर"), ("Gilbert Hill", "गिल्बर्ट हिल"),
         ("Sher-E-Punjab", "शेर-ए-पंजाब"), ("Veera Desai", "वीरा देसाई"),
+        ("Andheri West", "अंधेरी पश्चिम"), ("Seven Bungalows", "सेवन बंगलोज"),
+        ("Yari Road", "यारी रोड"), ("Veera Desai Road", "वीरा देसाई रोड"),
+        ("Shastri Nagar", "शास्त्री नगर"),
     ],
     "Bandra": [
         ("Bandra Reclamation", "बांद्रा रिक्लेमेशन"), ("Carter Road", "कार्टर रोड"),
         ("Hill Road", "हिल रोड"), ("Linking Road", "लिंकिंग रोड"),
         ("Pali Hill", "पाली हिल"), ("Khar", "खार"), ("Turner Road", "टर्नर रोड"),
         ("Mehboob Studio", "मेहबूब स्टूडियो"), ("Bandra Station", "बांद्रा स्टेशन"),
+        ("Bandra West", "बांद्रा पश्चिम"), ("Bandra Talao", "बांद्रा तलाव"),
+        ("Mount Mary", "माउंट मेरी"), ("Bandra Kurla Complex", "बांद्रा कुर्ला कॉम्प्लेक्स"),
+        ("BKC", "बीकेसी"), ("Linking Road Bandra", "लिंकिंग रोड बांद्रा"),
     ],
     "Borivali": [
         ("IC Colony", "आईसी कॉलोनी"), ("Eksar", "एक्सार"), ("Dahisar", "दहिसर"),
         ("Borivali Station", "बोरीवली स्टेशन"), ("Rajendra Nagar", "राजेंद्र नगर"),
         ("Shimpoli", "शिम्पोली"), ("Kandarpada", "कांदरपाडा"),
+        ("Borivali West", "बोरीवली पश्चिम"), ("Borivali East", "बोरीवली पूर्व"),
+    ],
+    "Churchgate": [
+        ("Marine Lines", "मरीन लाइन्स"), ("Nariman Point", "नरीमन पॉइंट"),
+        ("Kala Ghoda", "काला घोडा"), ("Mantralaya", "मंत्रालय"),
+        ("Oval Maidan", "ओव्हल मैदान"), ("Fort", "फोर्ट"),
+        ("Churchgate Station", "चर्चगेट स्टेशन"),
     ],
     "Dharavi": [
         ("Dharavi Cross Road", "धारावी क्रॉस रोड"), ("90 Feet Road", "90 फीट रोड"),
@@ -74,6 +95,9 @@ SUB_LOCALITY_MAP: dict[str, list[tuple[str, str]]] = {
         ("Aarey Colony", "आरे कॉलोनी"), ("Film City", "फिल्म सिटी"),
         ("Goregaon East", "गोरेगांव पूर्व"), ("Goregaon West", "गोरेगांव पश्चिम"),
         ("Jawahar Nagar", "जवाहर नगर"), ("Oberoi", "ओबेरॉय"),
+        ("Bangur Nagar", "बांगुर नगर"), ("Motilal Nagar", "मोतीलाल नगर"),
+        ("SV Road Goregaon", "एसवी रोड गोरेगांव"), ("Goregaon Link Road", "गोरेगांव लिंक रोड"),
+        ("Unnat Nagar", "उन्नत नगर"), ("Jawahar Nagar Goregaon", "जवाहर नगर गोरेगांव"),
     ],
     "Kandivali": [
         ("Kandivali East", "कांदिवली पूर्व"), ("Kandivali West", "कांदिवली पश्चिम"),
@@ -90,6 +114,10 @@ SUB_LOCALITY_MAP: dict[str, list[tuple[str, str]]] = {
         ("Malad East", "मालाड पूर्व"), ("Malad West", "मालाड पश्चिम"),
         ("Orlem", "ओरलेम"), ("Marve", "मार्वे"), ("Kurar", "कुरार"),
         ("Dindoshi", "दिंडोशी"), ("Sunder Nagar", "सुंदर नगर"),
+        ("Mindspace", "माइंडस्पेस"), ("Evershine Nagar", "एवरशाइन नगर"),
+        ("Malvani", "मालवणी"), ("Marve Road", "मार्वे रोड"),
+        ("Malad Link Road", "मालाड लिंक रोड"), ("Chincholi Bunder", "चिंचोली बंदर"),
+        ("Liberty Garden", "लिबर्टी गार्डन"), ("Somwar Bazaar", "सोमवार बाजार"),
     ],
     "Powai": [
         ("Hiranandani Gardens", "हिरानंदानी गार्डन्स"), ("IIT", "आईआईटी"),
@@ -129,16 +157,74 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", normalized).strip()
 
 
+# ---------------------------------------------------------------------------
+# Reverse lookup: locality_name_lowercase → parent_zone
+# Built at import time from SUB_LOCALITY_MAP.
+# ---------------------------------------------------------------------------
+LOCALITY_TO_ZONE: dict[str, str] = {}
+for _zone, _subs in SUB_LOCALITY_MAP.items():
+    for _eng, _hindi in _subs:
+        LOCALITY_TO_ZONE[_eng.lower()] = _zone
+        if _hindi:
+            _hindi_norm = unicodedata.normalize("NFKC", _hindi).lower()
+            LOCALITY_TO_ZONE[_hindi_norm] = _zone
+
+
+def zone_from_locality(text: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Fuzzy substring scan: finds the first known locality name that appears
+    anywhere in `text` (e.g. "near lokhandwala" → ("Andheri", "Lokhandwala")).
+    Returns (zone, locality_display_name) or (None, None) if nothing matches.
+    Longer keys are tried first so "Bandra Kurla Complex" beats "Bandra".
+    """
+    normalized = _normalize_text(text)
+    # Sort by key length descending so longer, more specific names win
+    for locality_key in sorted(LOCALITY_TO_ZONE, key=len, reverse=True):
+        if locality_key in normalized:
+            zone = LOCALITY_TO_ZONE[locality_key]
+            # Find the display name (title-cased English form)
+            for eng, _ in SUB_LOCALITY_MAP.get(zone, []):
+                if eng.lower() == locality_key or _normalize_text(eng) == locality_key:
+                    return zone, eng
+            return zone, locality_key.title()
+    return None, None
+
+
+def get_locality_context_for_prompt() -> str:
+    """
+    Returns a formatted string of all zones + sub-localities for injection
+    into the Groq prompt, so the model has full Mumbai locality context.
+    """
+    lines = []
+    for zone, subs in SUB_LOCALITY_MAP.items():
+        eng_names = [e for e, _ in subs]
+        lines.append(f"  {zone}: {', '.join(eng_names)}")
+    return "\n".join(lines)
+
+
 def find_zone_and_locality(text: str) -> tuple[str, str]:
     """
     Extract the zone and most specific sub-locality from text.
     Returns (zone, locality). Falls back to (zone, zone) if no sub-locality found.
+
+    Resolution order:
+      0. Reverse locality map (fuzzy substring) — catches "near lokhandwala", "bkc side"
+      1. Zone alias map (direct + Hindi aliases)
+      2. Sub-locality map for the detected zone
+      3. Cross-zone sub-locality scan
+      4. Suffix heuristic (nagar, colony, road …)
     """
     normalized = _normalize_text(text)
     detected_zone = "Unknown"
     detected_locality = None
 
-    # 1. Detect zone from alias map
+    # 0. Fastest path: reverse locality lookup (substring, longest match first)
+    fuzzy_zone, fuzzy_locality = zone_from_locality(text)
+    if fuzzy_zone:
+        detected_zone = fuzzy_zone
+        detected_locality = fuzzy_locality
+
+    # 1. Detect zone from alias map (may refine if step 0 only got locality)
     for zone, aliases in ZONE_ALIAS_MAP.items():
         all_aliases = [zone.lower()] + [a.lower() for a in aliases]
         for alias in all_aliases:
