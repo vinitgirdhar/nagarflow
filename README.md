@@ -20,7 +20,7 @@
 
 <br />
 
-<img src="https://github.com/user-attachments/assets/fa618f82-8299-44ef-b1cb-79b4754356ef" />" alt="NagarFlow Landing Page — 3D city visualization with live ticker" width="100%" />
+<img src="https://github.com/user-attachments/assets/fa618f82-8299-44ef-b1cb-79b4754356ef" alt="NagarFlow Landing Page — 3D city visualization with live ticker" width="100%" />
 
 </div>
 
