@@ -1,6 +1,7 @@
 <div align="center">
 
-<img src="https://nagarflow.netlify.app/favicon.ico" width="80" alt="NagarFlow Logo" />
+<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/d02a5fdd-d89d-4334-bb20-776245ce086e)
+" width="80" alt="NagarFlow Logo" />
 
 # NagarFlow
 
