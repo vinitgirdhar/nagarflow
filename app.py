@@ -12,6 +12,7 @@ import threading
 import time
 from fleet_manager import get_zone_coordinates
 from flask import Flask, jsonify, request
+import requests
 from dotenv import load_dotenv
 
 # Explicitly load .env from current directory to ensure keys are picked up
@@ -27,6 +28,9 @@ from localities import find_zone_and_locality
 
 app = Flask(__name__)
 DB_PATH = 'nagarflow.db'
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 # Optimized Professional Voice Scripts (Pure Hindi/English - Rahul Persona)
 AGENT_GREETING_TEXT = (
     "Namaste! Main NagarFlow AI Agent hoon. "
@@ -293,25 +297,104 @@ def ensure_tables_exist():
                        type TEXT, status TEXT, current_zone TEXT)''')
     
     # Maintenance Tasks Table
-    cursor.execute('''CREATE TABLE IF NOT EXISTS maintenance_tasks 
-                      (id TEXT PRIMARY KEY, zone TEXT, type TEXT, 
-                       priority TEXT, status TEXT, assigned_team_id TEXT, 
-                       reported_time TEXT, completed_time TEXT)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS maintenance_tasks
+                      (id TEXT PRIMARY KEY, zone TEXT, type TEXT,
+                       priority TEXT, status TEXT, assigned_team_id TEXT,
+                       reported_time TEXT, completed_time TEXT,
+                       image_url TEXT, worker_notes TEXT)''')
+    
+    # Migration for proof of work
+    try: cursor.execute("ALTER TABLE maintenance_tasks ADD COLUMN image_url TEXT")
+    except: pass
+    try: cursor.execute("ALTER TABLE maintenance_tasks ADD COLUMN worker_notes TEXT")
+    except: pass
+
+    # Image Complaints Table (Telegram bot photo complaints)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS image_complaints
+                      (id TEXT PRIMARY KEY, file_id TEXT, image_url TEXT,
+                       caption TEXT, chat_id TEXT,
+                       zone TEXT DEFAULT 'Unknown',
+                       locality TEXT DEFAULT '',
+                       issue_type TEXT DEFAULT 'General',
+                       priority TEXT DEFAULT 'pending',
+                       status TEXT DEFAULT 'new',
+                       timestamp TEXT)''')
+    
+    # Maintenance Task seeding for demo
+    cursor.execute("SELECT count(*) FROM maintenance_tasks")
+    if cursor.fetchone()[0] == 0:
+        import uuid as _uuid
+        now = datetime.datetime.now()
+        tasks = [
+            ('MT-101', 'Dharavi', 'Garbage', 'HIGH', 'PENDING', 'Alpha-1', (now - datetime.timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
+            ('MT-102', 'Andheri', 'Water', 'MEDIUM', 'PENDING', 'Bravo-1', (now - datetime.timedelta(hours=4)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
+            ('MT-103', 'Bandra', 'Road', 'HIGH', 'ON GROUND', 'Alpha-1', (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
+            ('MT-104', 'Colaba', 'Drain', 'LOW', 'PENDING', 'Alpha-1', (now - datetime.timedelta(hours=6)).strftime('%Y-%m-%d %H:%M:%S'), None, None, None),
+            ('MT-105', 'Kurla', 'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1', (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Cleared all garbage bags from main road junction.'),
+            ('MT-106', 'Dadar', 'Drain', 'HIGH', 'COMPLETED_UNVERIFIED', 'Alpha-1', (now - datetime.timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Drain unblocked and cleaned. Area clear.'),
+        ]
+        cursor.executemany("INSERT INTO maintenance_tasks (id, zone, type, priority, status, assigned_team_id, reported_time, completed_time, image_url, worker_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", tasks)
+        print(f"🛠️  Maintenance Engine: {len(tasks)} field tasks queued.")
+    else:
+        # Ensure verified demo tasks exist even on existing DBs
+        now = datetime.datetime.now()
+        for row in [
+            ('MT-105', 'Kurla', 'Garbage', 'MEDIUM', 'COMPLETED_UNVERIFIED', 'Bravo-1', (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Cleared all garbage bags from main road junction.'),
+            ('MT-106', 'Dadar', 'Drain', 'HIGH', 'COMPLETED_UNVERIFIED', 'Alpha-1', (now - datetime.timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S'), (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S'), None, 'Drain unblocked and cleaned. Area clear.'),
+        ]:
+            cursor.execute("INSERT OR REPLACE INTO maintenance_tasks (id, zone, type, priority, status, assigned_team_id, reported_time, completed_time, image_url, worker_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row)
+    # Add locality column if upgrading from older schema
+    try:
+        cursor.execute("ALTER TABLE image_complaints ADD COLUMN locality TEXT DEFAULT ''")
+    except Exception:
+        pass
+
+    # Seed mock image complaints if table is nearly empty (for demo)
+    cursor.execute("SELECT COUNT(*) FROM image_complaints")
+    img_count = cursor.fetchone()[0]
+    if img_count < 5:
+        import uuid as _uuid
+        now = datetime.datetime.now()
+        mock_img = [
+            (_uuid.uuid4().hex[:8].upper(), 'Garbage bags overflowing on street corner in Dharavi',
+             'Dharavi', '90 Feet Road', 'Garbage', 'high', 'new',
+             (now - datetime.timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S')),
+            (_uuid.uuid4().hex[:8].upper(), 'Road completely broken near Andheri station entrance',
+             'Andheri', 'Andheri Station', 'Roads', 'critical', 'under_review',
+             (now - datetime.timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')),
+            (_uuid.uuid4().hex[:8].upper(), 'Water pipeline burst flooding entire lane in Kandivali',
+             'Kandivali', 'Charkop', 'Water', 'critical', 'in_progress',
+             (now - datetime.timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S')),
+            (_uuid.uuid4().hex[:8].upper(), 'Open drainage causing bad smell near Borivali market',
+             'Borivali', 'Borivali Market', 'Drainage', 'medium', 'new',
+             (now - datetime.timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')),
+            (_uuid.uuid4().hex[:8].upper(), 'Street light not working for 5 days in Malad West',
+             'Malad', 'Malad West', 'Electricity', 'low', 'resolved',
+             (now - datetime.timedelta(hours=5)).strftime('%Y-%m-%d %H:%M:%S')),
+            (_uuid.uuid4().hex[:8].upper(), 'Illegal dumping near school in Ghatkopar',
+             'Ghatkopar', 'Ghatkopar East', 'Garbage', 'high', 'under_review',
+             (now - datetime.timedelta(hours=6)).strftime('%Y-%m-%d %H:%M:%S')),
+        ]
+        for m in mock_img:
+            cid = f"IMG-{m[0]}"
+            cursor.execute("""
+                INSERT OR IGNORE INTO image_complaints
+                (id, file_id, image_url, caption, chat_id, zone, locality, issue_type, priority, status, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (cid, '', '', m[1], 'mock', m[2], m[3], m[4], m[5], m[6], m[7]))
 
     # Seed Teams if empty
     cursor.execute("SELECT count(*) FROM teams")
     if cursor.fetchone()[0] == 0:
         teams = [
-            ('A1', 'Alpha 1', 4, 'Garbage', 'Idle', None),
-            ('B2', 'Bravo 2', 3, 'Water', 'Idle', None),
-            ('C1', 'Charlie 1', 5, 'Road', 'Idle', None),
-            ('D3', 'Delta 3', 3, 'General', 'Idle', None),
-            ('E1', 'Echo 1', 4, 'Garbage', 'Idle', None),
-            ('F2', 'Foxtrot 2', 3, 'Drain', 'Idle', None),
-            ('G1', 'Gamma 1', 4, 'Road', 'Idle', None),
-            ('H1', 'Hotel 1', 3, 'Water', 'Idle', None),
-            ('I3', 'India 3', 4, 'Drain', 'Idle', None),
-            ('J2', 'Juliet 2', 5, 'General', 'Idle', None)
+            ('Alpha-1', 'Alpha-1', 4, 'Garbage', 'Idle', None),
+            ('Alpha-2', 'Alpha-2', 3, 'Garbage', 'Idle', None),
+            ('Bravo-1', 'Bravo-1', 5, 'Water', 'Idle', None),
+            ('Bravo-2', 'Bravo-2', 3, 'Water', 'Idle', None),
+            ('Charlie-1', 'Charlie-1', 4, 'Road', 'Idle', None),
+            ('Charlie-2', 'Charlie-2', 3, 'Road', 'Idle', None),
+            ('Delta-1', 'Delta-1', 4, 'General', 'Idle', None),
+            ('Delta-2', 'Delta-2', 5, 'General', 'Idle', None)
         ]
         cursor.executemany("INSERT INTO teams (id, name, member_count, type, status, current_zone) VALUES (?, ?, ?, ?, ?, ?)", teams)
         print(f"👷  BMC Workforce Initialized: {len(teams)} teams registered.")
@@ -452,7 +535,7 @@ def _infer_default_truck_type(seed_value: Any, name: Optional[str] = None) -> st
 def add_cors_headers(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,PATCH,DELETE,OPTIONS')
     return response
 
 @app.route('/api/predictions', methods=['GET'])
@@ -850,6 +933,99 @@ def assign_maintenance():
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+@app.route('/api/worker/teams', methods=['GET'])
+def worker_teams():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, name, type, status FROM teams")
+    teams = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(teams)
+
+
+@app.route('/api/worker/tasks', methods=['GET'])
+def worker_tasks():
+    team_id = request.args.get('team_id', '').strip()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    if team_id:
+        cursor.execute(
+            "SELECT * FROM maintenance_tasks WHERE assigned_team_id = ? AND status != 'COMPLETED' ORDER BY reported_time DESC",
+            (team_id,)
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM maintenance_tasks WHERE status != 'COMPLETED' ORDER BY reported_time DESC"
+        )
+    tasks = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(tasks)
+
+
+@app.route('/api/worker/upload', methods=['POST'])
+def worker_upload():
+    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+    os.makedirs(upload_dir, exist_ok=True)
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Empty filename"}), 400
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
+        return jsonify({"error": "Unsupported file type"}), 400
+    filename = f"{uuid.uuid4().hex}{ext}"
+    file.save(os.path.join(upload_dir, filename))
+    url = f"http://127.0.0.1:5000/uploads/{filename}"
+    return jsonify({"success": True, "url": url})
+
+
+@app.route('/uploads/<path:filename>', methods=['GET'])
+def serve_upload(filename):
+    from flask import send_from_directory
+    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+    return send_from_directory(upload_dir, filename)
+
+
+@app.route('/api/worker/update-status', methods=['POST'])
+def worker_update_status():
+    data = request.get_json(silent=True) or {}
+    task_id = data.get('task_id', '').strip()
+    status = data.get('status', '').strip()
+    image_url = data.get('image_url', '').strip()
+    worker_notes = data.get('worker_notes', '').strip()
+
+    if not task_id or status not in ('IN_PROGRESS', 'COMPLETED_UNVERIFIED'):
+        return jsonify({"error": "task_id and valid status required"}), 400
+    if status == 'COMPLETED_UNVERIFIED' and not image_url:
+        return jsonify({"error": "image_url is required to mark task complete"}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, assigned_team_id FROM maintenance_tasks WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Task not found"}), 404
+
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    if status == 'IN_PROGRESS':
+        cursor.execute(
+            "UPDATE maintenance_tasks SET status = 'ON GROUND', image_url = ?, worker_notes = ? WHERE id = ?",
+            (image_url or None, worker_notes or None, task_id)
+        )
+    else:
+        cursor.execute(
+            "UPDATE maintenance_tasks SET status = 'COMPLETED_UNVERIFIED', completed_time = ?, image_url = ?, worker_notes = ? WHERE id = ?",
+            (now_str, image_url, worker_notes or None, task_id)
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
 
 @app.route('/api/maintenance/complete', methods=['POST'])
 def complete_maintenance():
@@ -1546,6 +1722,105 @@ def agent_respond_chat():
     })
 
 
+@app.route('/api/events', methods=['GET'])
+def get_upcoming_events():
+    """Return upcoming events from the dataset with predicted ward impacts."""
+    import csv
+
+    LOCATION_TO_WARDS = {
+        'Dadar':    ['Ward 5', 'Ward 9'],
+        'Wankhede': ['Ward 1', 'Ward 2'],
+        'Andheri':  ['Ward 7', 'Ward 8'],
+        'Bandra':   ['Ward 3', 'Ward 6'],
+        'Kurla':    ['Ward 11', 'Ward 12'],
+    }
+
+    ISSUE_TO_CATEGORY = {
+        'Garbage': 'garbage',
+        'Waterlogging': 'waterlogging',
+        'Crowd': 'crowd',
+        'Litter': 'garbage',
+        'Waste': 'garbage',
+        'Debris': 'garbage',
+        'Sanitation': 'garbage',
+        'Water': 'waterlogging',
+    }
+
+    MONTH_ORDER = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December']
+
+    csv_path = os.path.join(os.path.dirname(__file__), 'data', 'nagarflow_dataset.csv')
+    if not os.path.exists(csv_path):
+        return jsonify([])
+
+    now = datetime.datetime.now()
+    current_month_idx = now.month - 1  # 0-based
+
+    events = []
+    with open(csv_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            month = row.get('month', '').strip()
+            if month not in MONTH_ORDER:
+                continue
+            month_idx = MONTH_ORDER.index(month)
+
+            # Only show events in current month and next month
+            diff = (month_idx - current_month_idx) % 12
+            if diff > 1:
+                continue
+
+            surge_score = float(row.get('surge_score', 0) or 0)
+            location = row.get('location', '').strip()
+            wards = LOCATION_TO_WARDS.get(location, [location])
+
+            # Estimate hours until event based on month diff and day of month
+            days_in_month = 30
+            if diff == 0:
+                # Current month: remaining days
+                days_left = max(1, days_in_month - now.day)
+                hours_until = days_left * 24 // 3
+            else:
+                # Next month
+                hours_until = (days_in_month - now.day) * 24 + 24
+
+            # Cap for display
+            hours_until = min(hours_until, 72)
+
+            # Determine category from predicted_issue
+            predicted_issue = row.get('predicted_issue', '')
+            category = 'general'
+            for keyword, cat in ISSUE_TO_CATEGORY.items():
+                if keyword.lower() in predicted_issue.lower():
+                    category = cat
+                    break
+
+            event_type = row.get('event_type', 'public').strip()
+
+            # Impact percentage: surge_score is 1-20, map to 10-90%
+            impact_pct = min(90, max(10, int(surge_score * 4.5)))
+
+            events.append({
+                'name': row.get('event_name', '').strip(),
+                'type': event_type,
+                'month': month,
+                'location': location,
+                'wards': wards,
+                'hours_until': hours_until,
+                'surge_score': surge_score,
+                'surge_level': row.get('surge_level', 'Medium').strip(),
+                'predicted_issue': predicted_issue,
+                'category': category,
+                'impact_pct': impact_pct,
+                'expected_crowd': row.get('expected_crowd', 'medium').strip(),
+            })
+
+    # Sort by hours_until ascending, then surge_score descending
+    events.sort(key=lambda e: (e['hours_until'], -e['surge_score']))
+
+    return jsonify(events[:8])  # Return top 8 upcoming events
+
+
 def simulate_fleet_movement():
     """Background thread that nudges en-route trucks towards their targets."""
     print("🚚 Fleet Movement Simulation Heartbeat Started...")
@@ -1593,6 +1868,113 @@ def simulate_fleet_movement():
             print(f"Simulation Error: {e}")
         
         time.sleep(2) # 2-second simulation tick
+
+
+@app.route("/api/image-complaint", methods=["POST"])
+def image_complaint():
+    data = request.json or {}
+    print(f"[IMAGE] Incoming keys: {list(data.keys())}")
+    print(f"[IMAGE] Payload: {str(data)[:400]}")
+
+    chat_id = str(data.get("chat_id") or data.get("chatId") or data.get("from_id") or "")
+    file_id = data.get("file_id") or data.get("fileId") or data.get("photo_file_id") or ""
+    caption = data.get("caption") or data.get("text") or data.get("message") or "No caption"
+    raw_text = data.get("raw_text") or caption  # raw_text is the full caption for NLU
+    timestamp = data.get("timestamp") or datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    image_url = ""
+    if bot_token and file_id:
+        try:
+            resp = requests.get(
+                f"https://api.telegram.org/bot{bot_token}/getFile",
+                params={"file_id": file_id},
+                timeout=5
+            ).json()
+            file_path = resp.get("result", {}).get("file_path", "")
+            if file_path:
+                image_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+                print(f"[IMAGE] Resolved URL: {image_url}")
+            else:
+                print(f"[IMAGE] getFile failed: {resp}")
+        except Exception as e:
+            print(f"[IMAGE] Could not resolve image URL: {e}")
+
+    complaint_id = f"IMG-{uuid.uuid4().hex[:8].upper()}"
+
+    # Step 1: regex-based extraction as baseline
+    zone, locality = find_zone_and_locality(raw_text)
+    issue_type = extract_issue_from_text(raw_text) or "General"
+
+    # Step 2: Gemini refines zone/locality/issue if caption is meaningful
+    if raw_text and raw_text not in ("No caption", ""):
+        try:
+            gemini_data = extract_complaint_details(raw_text)
+            if "error" not in gemini_data:
+                if gemini_data.get("zone") and gemini_data["zone"] != "Unknown":
+                    zone = gemini_data["zone"]
+                if gemini_data.get("specific_location"):
+                    locality = gemini_data["specific_location"]
+                if gemini_data.get("issue_type") and gemini_data["issue_type"] != "General":
+                    issue_type = gemini_data["issue_type"]
+        except Exception as e:
+            print(f"[IMAGE] Gemini extraction failed: {e}")
+
+    print(f"[IMAGE] Extracted — zone={zone!r} locality={locality!r} issue={issue_type!r}")
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("""
+            INSERT INTO image_complaints (id, file_id, image_url, caption, chat_id, zone, locality, issue_type, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (complaint_id, file_id, image_url, caption, chat_id, zone, locality, issue_type, timestamp))
+        conn.commit()
+        return jsonify({"status": "ok", "complaint_id": complaint_id})
+    except Exception as e:
+        conn.rollback()
+        print(f"[IMAGE] DB error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route("/api/image-complaints", methods=["GET", "POST"])
+def get_image_complaints():
+    if request.method == "POST":
+        # Delegate to the same logic as /api/image-complaint
+        return image_complaint()
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM image_complaints ORDER BY timestamp DESC LIMIT 200"
+    ).fetchall()
+    conn.close()
+    return jsonify({"success": True, "complaints": [dict(r) for r in rows]})
+
+
+@app.route("/api/image-complaint/<complaint_id>", methods=["PATCH"])
+def update_image_complaint(complaint_id):
+    data = request.json or {}
+    zone = data.get("zone")
+    locality = data.get("locality")
+    issue_type = data.get("issue_type")
+    priority = data.get("priority")
+    status = data.get("status")
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            "UPDATE image_complaints SET zone=?, locality=?, issue_type=?, priority=?, status=? WHERE id=?",
+            (zone, locality, issue_type, priority, status, complaint_id)
+        )
+        conn.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        conn.close()
 
 
 if __name__ == '__main__':

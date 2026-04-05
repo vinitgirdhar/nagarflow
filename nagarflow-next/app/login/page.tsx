@@ -2,11 +2,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, Wrench, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Shield, Wrench, ArrowRight, ArrowLeft, HardHat } from 'lucide-react';
 
 const ROLES = [
   { id: 'admin', icon: Shield, label: 'Admin Access', sub: 'Full Command' },
   { id: 'maintenance', icon: Wrench, label: 'Maintenance', sub: 'Field Ops' },
+  { id: 'worker', icon: HardHat, label: 'Field Worker', sub: 'Ground Team' },
 ];
 
 export default function LoginPage() {
@@ -16,7 +17,11 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sessionStorage.setItem('nagarflow_role', selectedRole);
-    router.push('/dashboard');
+    if (selectedRole === 'worker') {
+      router.push('/worker-portal');
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   return (
@@ -70,7 +75,7 @@ export default function LoginPage() {
 
             <div className="form-group" style={{ marginBottom: '2rem' }}>
               <label className="form-label" style={{ marginBottom: '1rem' }}>Select Access Level</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                 {ROLES.map(r => {
                   const Icon = r.icon;
                   const isActive = selectedRole === r.id;

@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 // Types
-type TaskStatus = 'PENDING' | 'ON GROUND' | 'COMPLETED';
+type TaskStatus = 'PENDING' | 'ON GROUND' | 'COMPLETED' | 'COMPLETED_UNVERIFIED';
 type TeamStatus = 'Idle' | 'On Field';
 
 interface Team {
@@ -46,6 +46,8 @@ interface MaintenanceTask {
   assigned_team_id: string | null;
   reported_time: string;
   completed_time: string | null;
+  image_url: string | null;
+  worker_notes: string | null;
 }
 
 interface Stats {
@@ -82,6 +84,7 @@ export default function MaintenancePage() {
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigningTask, setAssigningTask] = useState<MaintenanceTask | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<{ url: string; task: MaintenanceTask } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -174,26 +177,25 @@ export default function MaintenancePage() {
         {/* Section 2: Task Board (Kanban) */}
         <div style={{ flex: '0 0 65%', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
           
-          {['PENDING', 'ON GROUND', 'COMPLETED'].map((status) => (
+          {([
+            { status: 'PENDING',              label: 'PENDING',    accent: 'var(--danger)' },
+            { status: 'ON GROUND',            label: 'IN PROGRESS',accent: 'var(--glow)' },
+            { status: 'COMPLETED_UNVERIFIED', label: 'VERIFY ✓',   accent: '#E8933A' },
+          ] as const).map(({ status, label, accent }) => (
             <div key={status} style={{ minHeight: '600px' }}>
-              <div style={{ 
-                verticalAlign: 'middle',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between', 
-                marginBottom: '1.5rem', 
-                padding: '0 .75rem',
-                borderBottom: `3px solid ${status === 'PENDING' ? 'var(--danger)' : status === 'ON GROUND' ? 'var(--glow)' : 'var(--accent)'}`,
-                paddingBottom: '.75rem'
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: '1.5rem', padding: '0 .75rem',
+                borderBottom: `3px solid ${accent}`, paddingBottom: '.75rem'
               }}>
-                <span className="mono" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-heading)', letterSpacing: '0.08em' }}>{status}</span>
+                <span className="mono" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-heading)', letterSpacing: '0.08em' }}>{label}</span>
                 <span className="badge badge--dark" style={{ opacity: 0.9, fontSize: '12px', padding: '4px 10px' }}>{tasks?.filter(t => t.status === status).length}</span>
               </div>
 
               <motion.div layout style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <AnimatePresence mode="popLayout">
                   {tasks?.filter(t => t.status === status).map((task) => (
-                    <motion.div 
+                    <motion.div
                       key={task.id}
                       layout
                       initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)' }}
@@ -210,9 +212,23 @@ export default function MaintenancePage() {
                       </div>
 
                       <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-heading)', marginBottom: '.5rem' }}>{task.zone}</div>
-                      <div className="mono" style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div className="mono" style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Clock size={12} /> Reported {new Date(task.reported_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
+
+                      {/* Proof of Work Thumbnail */}
+                      {task.image_url && (
+                        <button
+                          onClick={() => setPhotoPreview({ url: task.image_url!, task })}
+                          style={{ width: '100%', marginBottom: '1rem', padding: 0, border: '1px solid var(--border-subtle)', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', background: 'none', position: 'relative' }}
+                        >
+                          <img src={task.image_url} alt="Proof" style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }} />
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <CheckCircle2 size={14} color="#34d399" />
+                            <span style={{ fontSize: '10px', fontFamily: "'Space Mono', monospace", color: '#34d399', fontWeight: 700 }}>PROOF SUBMITTED — CLICK TO VIEW</span>
+                          </div>
+                        </button>
+                      )}
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -225,8 +241,8 @@ export default function MaintenancePage() {
                         </div>
 
                         {status === 'PENDING' && (
-                          <button 
-                            className="btn btn--primary" 
+                          <button
+                            className="btn btn--primary"
                             onClick={() => setAssigningTask(task)}
                             style={{ padding: '10px 20px', fontSize: '12px', height: 'auto', borderRadius: '8px' }}
                           >
@@ -235,12 +251,22 @@ export default function MaintenancePage() {
                         )}
 
                         {status === 'ON GROUND' && (
-                          <button 
-                            className="btn btn--success" 
+                          <button
+                            className="btn btn--outline"
+                            onClick={() => handleComplete(task.id)}
+                            style={{ padding: '10px 20px', fontSize: '12px', height: 'auto', borderRadius: '8px', borderColor: 'var(--glow)', color: 'var(--glow)' }}
+                          >
+                            <CheckCircle size={16} /> Mark Done
+                          </button>
+                        )}
+
+                        {status === 'COMPLETED_UNVERIFIED' && (
+                          <button
+                            className="btn btn--success"
                             onClick={() => handleComplete(task.id)}
                             style={{ padding: '10px 20px', fontSize: '12px', height: 'auto', borderRadius: '8px' }}
                           >
-                            <CheckCircle size={16} /> Done
+                            <CheckCircle size={16} /> Approve
                           </button>
                         )}
                       </div>
@@ -366,6 +392,52 @@ export default function MaintenancePage() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Photo Lightbox */}
+      <AnimatePresence>
+        {photoPreview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPhotoPreview(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: 'var(--dark-surface)', borderRadius: '16px', overflow: 'hidden', maxWidth: '520px', width: '100%', border: '1px solid var(--border-subtle)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '15px' }}>{photoPreview.task.zone}</div>
+                  <div className="mono" style={{ fontSize: '10px', color: 'var(--secondary)', marginTop: 2 }}>PROOF OF WORK · {photoPreview.task.assigned_team_id || 'Unknown Squad'}</div>
+                </div>
+                <button onClick={() => setPhotoPreview(null)} style={{ background: 'none', border: 'none', color: 'var(--secondary)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+              <img src={photoPreview.url} alt="Proof of work" style={{ width: '100%', maxHeight: '380px', objectFit: 'cover', display: 'block' }} />
+              {photoPreview.task.worker_notes && (
+                <div style={{ padding: '1rem 1.25rem', fontSize: '13px', color: 'var(--secondary)', fontStyle: 'italic', borderTop: '1px solid var(--border-subtle)' }}>
+                  &ldquo;{photoPreview.task.worker_notes}&rdquo;
+                </div>
+              )}
+              <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  className="btn btn--success"
+                  onClick={() => { handleComplete(photoPreview.task.id); setPhotoPreview(null); }}
+                  style={{ padding: '10px 24px', fontSize: '13px', height: 'auto', borderRadius: '8px' }}
+                >
+                  <CheckCircle size={16} /> Approve & Complete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -1,0 +1,31 @@
+event_name,event_type,month,location,expected_crowd,predicted_issue,surge_score,surge_level,garbage_trucks,cleaning_staff,extra_bins
+Makar Sankranti Kite Festival,festival,January,Dadar,high,Garbage Surge,14,High,5,60,40
+Republic Day Parade Viewing,public,January,Bandra,medium,Crowd Waste,9,Medium,3,35,25
+Valentine's Day Market,public,February,Bandra,medium,Garbage Surge,7,Medium,2,25,18
+Shivaji Jayanti Procession,public,February,Dadar,high,Crowd Waste,11,Medium,4,48,32
+IPL Season Opener – MI vs CSK,sports,March,Wankhede,high,"Crowd Waste, Waterlogging",17,High,6,80,55
+Holi Celebrations,festival,March,Andheri,high,"Garbage Surge, Water Waste",16,High,5,75,50
+IPL Match – MI vs KKR,sports,April,Wankhede,high,Crowd Waste,15,High,5,70,45
+Gudi Padwa Street Procession,festival,April,Dadar,high,"Garbage Surge, Traffic Waste",15,High,5,65,45
+Weekend Flea Market,public,April,Bandra,medium,Garbage Surge,8,Medium,3,30,20
+IPL Playoffs Match,sports,May,Wankhede,high,"Crowd Waste, Litter Surge",18,High,6,85,60
+Eid-ul-Fitr Gathering,festival,May,Kurla,high,"Crowd Waste, Garbage Surge",16,High,5,75,50
+Pre-Monsoon Cultural Fair,public,May,Andheri,medium,Garbage Surge,7,Medium,2,28,18
+Bakri Eid Celebrations,festival,June,Kurla,high,"Waste Disposal, Sanitation Pressure",15,High,5,70,45
+Monsoon Weekend Market,public,June,Bandra,low,"Waterlogging, Minor Waste",5,Low,1,15,8
+Rath Yatra Procession,festival,July,Dadar,high,"Crowd Waste, Garbage Surge",13,High,4,55,38
+Monsoon Night Bazaar,public,July,Andheri,medium,Garbage Surge,6,Low,2,22,14
+Independence Day Parade,public,August,Dadar,medium,Crowd Waste,10,Medium,3,40,28
+Ganesh Chaturthi – Day 1,festival,August,Dadar,high,"Garbage Surge, Crowd Waste",20,High,6,100,70
+Ganesh Chaturthi – Visarjan,festival,September,Dadar,high,"Waterlogging, Mass Waste Disposal",20,High,6,120,80
+IPL Final Match,sports,September,Wankhede,high,"Crowd Waste, Litter Surge",18,High,6,90,62
+Navratri Garba Night,festival,October,Andheri,high,"Garbage Surge, Noise & Litter",14,High,5,60,40
+Dussehra Effigies Burning,festival,October,Kurla,high,Ash & Debris Cleanup,13,High,4,55,35
+Weekend Farmers' Market,public,October,Bandra,medium,Organic Waste Surge,6,Low,2,20,12
+Diwali – Main Night,festival,November,Andheri,high,"Garbage Surge, Firecracker Debris",19,High,6,100,65
+Diwali – Post-Celebration Cleanup,festival,November,Dadar,medium,"Debris, Packaging Waste",13,High,4,55,38
+Bandra-Kurla Night Market,public,November,Kurla,medium,Garbage Surge,9,Medium,3,33,22
+Political Rally,public,November,Bandra,high,"Crowd Waste, Litter",12,High,4,50,35
+Christmas Street Carnival,festival,December,Bandra,high,"Garbage Surge, Crowd Waste",14,High,5,65,42
+New Year's Eve Countdown,public,December,Bandra,high,"Garbage Surge, Firecracker Debris",18,High,6,90,60
+New Year's Eve Party Zone,public,December,Andheri,high,"Garbage Surge, Crowd Waste",17,High,6,85,58

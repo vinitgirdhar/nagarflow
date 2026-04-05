@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
-import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon, Trash2, Droplets, HardHat, ShieldAlert } from 'lucide-react';
+import { PartyPopper, Trophy, CloudRain, Store, CheckSquare, LucideIcon, Trash2, Droplets, HardHat, ShieldAlert, Users } from 'lucide-react';
 
 const STATS = [
   { label: 'Forecast Accuracy', value: '94.1%', sub: 'AiRLLM Live Engine' },
@@ -10,28 +10,39 @@ const STATS = [
   { label: 'Events Tracked', value: '5', sub: 'calendar-aware' },
 ];
 
-interface EventData {
-  icon: LucideIcon;
-  name: string;
-  detail: string;
-  impact: string;
-  color: string;
-}
-
-const EVENTS: EventData[] = [
-  { icon: PartyPopper, name: 'Ganesh Chaturthi Procession', detail: 'Ward 5, Ward 9 — starts in 36hr', impact: '+45%', color: '#C1440E' },
-  { icon: Trophy, name: 'Cricket Match — Wankhede', detail: 'Ward 1 — starts in 18hr', impact: '+28%', color: '#E8933A' },
-  { icon: CloudRain, name: 'Heavy Rain Warning', detail: 'All wards — 12-24hr window', impact: '+35%', color: '#C1440E' },
-  { icon: Store, name: 'Weekly Market Day', detail: 'Ward 3, Ward 6 — tomorrow', impact: '+15%', color: '#D4A96A' },
-  { icon: CheckSquare, name: 'Local Election Activity', detail: 'Ward 2, Ward 8 — in 48hr', impact: '+20%', color: '#D4A96A' },
-];
-
 const BIAS = [
   { ward: 'Ward 2', expected: 85, actual: 34, corrected: 78 },
   { ward: 'Ward 7', expected: 90, actual: 42, corrected: 85 },
   { ward: 'Ward 11', expected: 72, actual: 28, corrected: 68 },
   { ward: 'Ward 6', expected: 55, actual: 30, corrected: 52 },
 ];
+
+interface ApiEvent {
+  name: string;
+  type: string;
+  location: string;
+  wards: string[];
+  hours_until: number;
+  surge_level: string;
+  predicted_issue: string;
+  category: string;
+  impact_pct: number;
+}
+
+function getEventIcon(type: string, category: string): LucideIcon {
+  if (type === 'festival') return PartyPopper;
+  if (type === 'sports') return Trophy;
+  if (category === 'waterlogging') return CloudRain;
+  if (category === 'crowd') return Users;
+  if (category === 'garbage') return Trash2;
+  return Store;
+}
+
+function getImpactColor(pct: number): string {
+  if (pct >= 70) return '#C1440E';
+  if (pct >= 40) return '#E8933A';
+  return '#D4A96A';
+}
 
 function getColor(v: number) {
   // v is expected to be 0-100
@@ -61,6 +72,14 @@ export default function PredictionsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterSearch, setFilterSearch] = useState<string>('');
+  const [upcomingEvents, setUpcomingEvents] = useState<ApiEvent[]>([]);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:5000/api/events')
+      .then(res => res.json())
+      .then((data: ApiEvent[]) => setUpcomingEvents(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch('http://127.0.0.1:5000/api/predictions')
@@ -364,19 +383,28 @@ export default function PredictionsPage() {
         <div>
           <div className="card__title" style={{ marginBottom: '.75rem' }}>Event Impact Timeline</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-            {EVENTS.map((e, i) => {
-              const Icon = e.icon;
-              return (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.75rem 1rem', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'rgba(193,68,14,.1)', color: 'var(--primary)' }}><Icon size={18} /></div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', color: 'var(--text-heading)', fontWeight: 500 }}>{e.name}</div>
-                  <div className="mono" style={{ fontSize: '11px', color: 'var(--secondary)', marginTop: '.2rem' }}>{e.detail}</div>
-                </div>
-                <div className="mono" style={{ fontSize: '12px', fontWeight: 700, color: e.color }}>{e.impact}</div>
-              </div>
-              );
-            })}
+            {upcomingEvents.length === 0
+              ? <p className="mono" style={{ fontSize: '11px', color: 'var(--secondary)' }}>Loading events...</p>
+              : upcomingEvents.map((e, i) => {
+                const Icon = getEventIcon(e.type, e.category);
+                const color = getImpactColor(e.impact_pct);
+                const wardLabel = e.wards.join(', ');
+                const timeLabel = e.hours_until <= 24 ? `in ${e.hours_until}hr` : `in ${Math.round(e.hours_until / 24)}d`;
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.75rem 1rem', background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+                    <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', background: 'rgba(193,68,14,.1)', color: 'var(--primary)' }}><Icon size={18} /></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '14px', color: 'var(--text-heading)', fontWeight: 500 }}>{e.name}</div>
+                      <div className="mono" style={{ fontSize: '11px', color: 'var(--secondary)', marginTop: '.2rem' }}>{wardLabel} — {timeLabel}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div className="mono" style={{ fontSize: '12px', fontWeight: 700, color }}>{`+${e.impact_pct}%`}</div>
+                      <div className="mono" style={{ fontSize: '9px', color: 'var(--secondary)', marginTop: '2px' }}>{e.surge_level.toUpperCase()}</div>
+                    </div>
+                  </div>
+                );
+              })
+            }
           </div>
         </div>
 
