@@ -20,17 +20,34 @@ load_dotenv(dotenv_path=env_path)
 
 from agencies_scraper import get_agency_registry
 from greedy_dispatcher import generate_dispatch_suggestions
-from sarvam import SarvamError, speech_to_text, text_to_speech
+from sarvam import SarvamError, speech_to_text, text_to_speech, translate_to_english
 from complaint_parser import extract_complaint_details
 from localities import find_zone_and_locality
 
 app = Flask(__name__)
 DB_PATH = 'nagarflow.db'
 # Optimized Professional Voice Scripts (Pure Hindi/English - Rahul Persona)
-AGENT_GREETING_TEXT = "Namaste! mein NagarFlow Mumbai mein aapka swagat hai. Main Nagarflow agent hoon, aapki madad ke liye yahan. Kripya apna area/ward batayein aur kya problem face kar rahe hain, Main turant aapki complaint register karne mein help karunga."
-AGENT_CONFIRMATION_TEXT = "Ji, maine aapki complaint darj kar li hai. Hamari team jald hi karravayi karegi. Kya main aapki kisi aur cheez mein madad kar sakta hoon?"
-AGENT_RETRY_TEXT = "Kshama kijiye, main aapka ward ya samasya samajh nahi paaya. Kripya phir se vistaar se batayein."
-AGENT_CLOSING_TEXT = "Dhanyavad. NagarFlow se judne ke liye shukriya. Aapka din shubh ho."
+AGENT_GREETING_TEXT = (
+    "Namaste! Main NagarFlow AI Agent hoon. "
+    "Aap Mumbai mein kisi bhi civic problem ke baare mein mujhe bata sakte hain — "
+    "chahe garbage ho, paani ki dikkat ho, sadak ho ya drainage. "
+    "Bas apna area aur problem batayein, main abhi register kar deta hoon."
+)
+AGENT_CONFIRMATION_TEXT = (
+    "Bilkul, maine aapki complaint darj kar li hai. "
+    "Hamare field team ko alert bhej diya gaya hai — woh jald kaam shuru karenge. "
+    "Kya kuch aur hai jisme main aapki help kar sakta hoon?"
+)
+AGENT_RETRY_TEXT = (
+    "Sorry, mujhe thoda samajhne mein dikkat hui. "
+    "Kya aap apna area aur problem thoda aur clearly bata sakte hain? "
+    "For example — 'Andheri mein garbage nahi utha' ya 'Bandra mein pipe leak hai'."
+)
+AGENT_CLOSING_TEXT = (
+    "Theek hai, dhanyavaad call karne ke liye. "
+    "Aapki complaint hamare system mein safe hai. "
+    "NagarFlow hamesha aapki seva mein hai. Aapka din achha jaaye!"
+)
 MAX_AUDIO_BYTES = 10 * 1024 * 1014
 MAX_TRANSCRIPT_LENGTH = 500
 SOURCE_ID_PREFIXES = {
@@ -358,13 +375,33 @@ CALL_END_EXACT_PHRASES = {
     "that is all",
     "thats all",
     "that's all",
+    "thank you",
+    "thanks",
+    "thank you so much",
+    "thanks a lot",
+    "ok thank you",
+    "okay thank you",
+    "ok thanks",
+    "goodbye",
+    "bye",
+    "bye bye",
     "nahi",
     "nahin",
     "nahi hai",
     "bas",
+    "shukriya",
+    "dhanyawad",
+    "dhanyavaad",
+    "dhanyabad",
+    "theek hai shukriya",
+    "ok shukriya",
     "बस",
     "नहीं",
     "नही",
+    "शुक्रिया",
+    "धन्यवाद",
+    "ठीक है",
+    "अलविदा",
 }
 CALL_END_CONTAINS_PHRASES = [
     "aur nahi",
@@ -372,8 +409,17 @@ CALL_END_CONTAINS_PHRASES = [
     "no more issue",
     "no other issue",
     "nothing more",
+    "thank you",
+    "thanks",
+    "shukriya",
+    "dhanyawad",
+    "dhanyavaad",
+    "bas itna hi",
+    "bas itna",
     "और नहीं",
     "और कुछ नहीं",
+    "शुक्रिया",
+    "धन्यवाद",
 ]
 
 def _normalize_truck_type(truck_type: Optional[str]) -> str:
@@ -683,7 +729,7 @@ def run_simulation():
         # Demand increase and weather impact
         increase = (base * (demand_inc / 100.0)) + (weather * 8) + random.uniform(-2, 5)
         new_score = min(100, max(0, int(base + increase)))
-        if new_score >= 80: overloaded_count += 1
+        if new_score >= 75: overloaded_count += 1
         simulated.append({"zone": b['zone'], "priority_score": new_score, "category": b.get('category', 'General')})
         
     # KPI Math
@@ -997,10 +1043,15 @@ def _insert_voice_complaint(zone, issue_type, severity='High', summary=None):
     _insert_complaint(zone, issue_type, severity=severity, summary=summary, source='voice_call')
 
 
+def _needs_translation(text: str) -> bool:
+    """Return True if the text contains non-ASCII characters (likely Hindi/Devanagari)."""
+    return any(ord(c) > 127 for c in (text or ""))
+
+
 def _build_agent_response_from_transcript(transcript: str, complaint_source: str = 'voice_call') -> dict:
     # 1. Use Gemini for smart NLU extraction (Multi-step: Detect, Translate, Extract, Respond)
     gemini_data = extract_complaint_details(transcript)
-    
+
     # Defaults
     translated_transcript = transcript
     input_language = "Unknown"
@@ -1010,21 +1061,35 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
         call_ended = gemini_data.get('is_closing', False)
         zone = gemini_data.get('zone') if gemini_data.get('zone') != 'Unknown' else None
         issue_type = gemini_data.get('issue_type') if gemini_data.get('issue_type') != 'General' else None
-        locality = gemini_data.get('specific_location')
+        locality = gemini_data.get('specific_location') or None
         severity = gemini_data.get('severity', 'Medium')
-        
-        # New Multilingual fields
+
         input_language = gemini_data.get('input_language', 'English')
-        translated_transcript = gemini_data.get('translated_input_en', transcript)
+        translated_transcript = gemini_data.get('translated_input_en') or transcript
         reply_text_native = gemini_data.get('reply_text_native')
+
+        # If Gemini didn't give a specific sub-locality, try our local map
+        if not locality or locality == zone:
+            _, map_locality = find_zone_and_locality(transcript)
+            if map_locality and map_locality != zone and map_locality != "Unknown":
+                locality = map_locality
     else:
-        # Static Fallback Logic (Legacy Keyword Matching)
+        # Gemini unavailable — use keyword + sub-locality map
         call_ended = _is_call_end_response(transcript)
-        zone = _extract_zone(transcript)
-        locality = None
+        zone, locality = find_zone_and_locality(transcript)
+        zone = zone if zone != "Unknown" else None
+        locality = locality if locality not in ("Unknown", zone) else None
         issue_type = _extract_issue_type(transcript)
         severity = "High" if _extract_severity(transcript) == "High" else "Medium"
         reply_text_native = None
+
+        # Translate description via OpenAI when Gemini is unavailable
+        if _needs_translation(transcript):
+            try:
+                translated_transcript = translate_to_english(transcript)
+            except Exception as e:
+                _safe_log(f"Sarvam translation fallback failed: {e}")
+                translated_transcript = transcript
 
     # Smart Filing: Log if we have EITHER a recognized zone OR a specific locality, as long as issue exists
     complaint_logged = bool((zone or locality) and issue_type)
@@ -1034,14 +1099,13 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
     else:
         if complaint_logged:
             reply_text = reply_text_native or AGENT_CONFIRMATION_TEXT
-            # We log the English summary for the dispatcher's system logic
             _insert_complaint(
                 zone=zone or "Unknown",
                 issue_type=issue_type,
                 severity=severity,
                 summary=translated_transcript,
                 source=complaint_source,
-                locality=locality
+                locality=locality,
             )
         else:
             reply_text = reply_text_native or AGENT_RETRY_TEXT
@@ -1167,6 +1231,30 @@ def whatsapp_complaint():
             "issue_type": complaint_type
         }), 200
 
+    # Translate message to English before storing.
+    # Primary: Gemini (also refines zone/locality/type).
+    # Fallback: Sarvam translate API.
+    translated_description = user_msg
+    try:
+        gemini_data = extract_complaint_details(user_msg)
+        if "error" not in gemini_data and gemini_data.get("translated_input_en"):
+            translated_description = gemini_data["translated_input_en"]
+            if gemini_data.get("zone") and gemini_data["zone"] != "Unknown":
+                zone = gemini_data["zone"]
+            if gemini_data.get("specific_location"):
+                locality = gemini_data["specific_location"]
+            if gemini_data.get("issue_type") and gemini_data["issue_type"] != "General":
+                complaint_type = gemini_data["issue_type"]
+        else:
+            # Gemini failed — use Sarvam translation
+            translated_description = translate_to_english(user_msg)
+    except Exception as e:
+        print(f"[WHATSAPP] Gemini failed, trying Sarvam translation: {e}")
+        try:
+            translated_description = translate_to_english(user_msg)
+        except Exception as e2:
+            print(f"[WHATSAPP] Sarvam translation also failed, storing original: {e2}")
+
     # Generate complaint ID matching MMR-XXXXX
     complaint_id = f"MMR-{uuid.uuid4().hex[:8].upper()}"
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1183,7 +1271,7 @@ def whatsapp_complaint():
     cursor.execute("""
         INSERT INTO complaints (id, zone, locality, issue_type, complaint_count, weather, timestamp, severity, description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (complaint_id, zone, locality, complaint_type, 1, 'no', timestamp, severity, user_msg))
+    """, (complaint_id, zone, locality, complaint_type, 1, 'no', timestamp, severity, translated_description))
 
     # Update zone_coverage
     cursor.execute("""
@@ -1349,6 +1437,7 @@ def agent_greet():
         "success": True,
         "reply_text": AGENT_GREETING_TEXT,
         "audio": audio,
+        "audio_format": "wav" if voice_mode == "sarvam" else "mp3",
         "voice_mode": voice_mode,
     })
 
@@ -1376,13 +1465,16 @@ def agent_respond():
 
     try:
         audio = text_to_speech(result["reply_text"])
+        audio_format = "wav"
     except SarvamError:
         audio = None
+        audio_format = None
 
     return jsonify({
         "success": True,
         **result,
         "audio": audio,
+        "audio_format": audio_format,
     })
 
 
@@ -1403,13 +1495,16 @@ def agent_respond_text():
 
     try:
         audio = text_to_speech(result["reply_text"])
+        audio_format = "wav"
     except SarvamError:
         audio = None
+        audio_format = None
 
     return jsonify({
         "success": True,
         **result,
         "audio": audio,
+        "audio_format": audio_format,
     })
 
 

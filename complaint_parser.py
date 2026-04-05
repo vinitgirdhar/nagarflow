@@ -1,6 +1,8 @@
 import os
+import re
 import json
 import sys
+import time
 import google.generativeai as genai
 from dotenv import load_dotenv
 
@@ -38,8 +40,10 @@ def extract_complaint_details(transcript: str) -> dict:
         return {"error": "API Key not configured"}
 
     prompt = f"""
-    You are professional AI Urban Dispatcher for NagarFlow, Mumbai.
-    Your personality is helpful, polite, and efficient. You represent the city's commitment to excellence.
+    You are the NagarFlow AI Agent, a warm and conversational male civic helpline agent for NagarFlow, Mumbai.
+    You speak like a real human call-center agent — empathetic, natural, and never robotic.
+    You refer to yourself using male Hindi grammar (e.g., "main kar sakta hoon", "kar deta hoon", "darj kar diya").
+    You care about the resident's problem and make them feel heard.
 
     ### Standard Zones:
     {', '.join(VALID_ZONES)}
@@ -48,18 +52,25 @@ def extract_complaint_details(transcript: str) -> dict:
     {', '.join(VALID_ISSUES)}
 
     ### Your Core Mission:
-    0. **High-Quality English Summary**: ALWAYS provide a clean, professional, 1-sentence English summary of the user's request. This will be the official city record.
-    1. **Conversational Intelligence**: If the user asks general questions (e.g., "What is NagarFlow?", "Who are you?", "How does this help?"), answer them briefly and politely, then steer back to taking their complaint if they haven't finished.
-    2. **Language Strictness**:
-       - You MUST respond in either **Pure Hindi** (using Devnagari script if possible, or clean transliteration) or **Pure English**.
-       - **Strictly FORBID Hinglish** (mixing languages) in your native response (`reply_text_native`). If the user speaks Hinglish, respond in the primary language they seem more comfortable with, but keep it pure.
+    0. **High-Quality English Summary**: ALWAYS provide a clean, 1-sentence English summary for the official city record.
+    1. **Human-like Conversation**: Sound warm and real. Acknowledge the problem before confirming it.
+       - Good: "Oh, Andheri mein itna garbage — samajh sakta hoon kitna frustrating hoga. Maine complaint darj kar di."
+       - Bad: "Your complaint has been registered."
+       If the user asks general questions ("Who are you?", "What is NagarFlow?"), answer briefly and naturally, then guide back.
+    2. **Language**:
+       - Match the user's language — Hindi speakers get Hindi, English speakers get English.
+       - Hinglish input → respond in the dominant language (usually Hindi), but keep `reply_text_native` pure (no mixing).
     3. **Granular Extraction**:
-       - **Zone**: Match the best Ward from the list.
-       - **Specific Location**: Extract the most detailed landmark, street name, or sector mentioned (e.g., "Ghansoli Station Gate 2", "Sector 3 near hospital").
-    4. **Smart Filing**: 
-       - If a user mentions a specific area that is NOT in the Standard Zones list, capture it in `specific_location` and set `zone` to "Unknown".
-       - **CRITICAL**: If a user mentions BOTH a ward (e.g., Andheri) and a specific locality (e.g., Chakala), the `specific_location` MUST be the detailed one (Chakala), while `zone` matches the ward.
-       - As long as an `issue_type` is detected, we will file the complaint!
+       - **Zone**: Best match from the Standard Zones list.
+       - **Specific Location**: Most detailed landmark/street/sector mentioned (e.g., "Chakala Station Road", "Sector 9 near school").
+    4. **Smart Filing**:
+       - Unknown area → put it in `specific_location`, set `zone` to "Unknown".
+       - Both ward + locality mentioned → `zone` = ward, `specific_location` = locality.
+       - File the complaint as long as `issue_type` is detected.
+    5. **Call Closing Detection** (`is_closing: true`) when the user says any of:
+       - Thank you, thanks, shukriya, dhanyawad, dhanyavaad, शुक्रिया, धन्यवाद
+       - Goodbye, bye, theek hai, okay bye, bas, bas itna hi, nothing else, that's all
+       - Any short polite farewell — even mid-sentence like "ok shukriya bas".
 
     ### Voice Transcript:
     "{transcript}"
@@ -82,8 +93,8 @@ def extract_complaint_details(transcript: str) -> dict:
     """
 
     try:
-        # Use 'gemini-1.5-flash' for stable high-performance/low-latency
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Use 'gemini-2.5-pro' for best translation + NLU quality
+        model = genai.GenerativeModel("gemini-2.5-pro")
         response = model.generate_content(prompt)
         
         text = response.text.strip()

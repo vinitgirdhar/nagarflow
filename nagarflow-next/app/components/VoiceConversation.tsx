@@ -49,6 +49,7 @@ interface BrowserSpeechRecognitionCtor {
 interface AgentResponse {
   success: boolean;
   audio?: string | null;
+  audio_format?: 'wav' | 'mp3' | null;
   call_ended?: boolean;
   complaint_logged?: boolean;
   error?: string;
@@ -153,7 +154,7 @@ export default function VoiceConversation({
     window.speechSynthesis.speak(utterance);
   };
 
-  const playAudio = async (base64Audio?: string | null, onEnded?: () => void) => {
+  const playAudio = async (base64Audio?: string | null, onEnded?: () => void, audioFormat?: string | null) => {
     cleanupAudio();
 
     if (!base64Audio) {
@@ -163,7 +164,8 @@ export default function VoiceConversation({
 
     const binary = atob(base64Audio);
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    const blob = new Blob([bytes], { type: 'audio/wav' });
+    const mimeType = audioFormat === 'wav' ? 'audio/wav' : 'audio/mpeg';
+    const blob = new Blob([bytes], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
 
@@ -195,9 +197,9 @@ export default function VoiceConversation({
     }
   };
 
-  const playAgentReply = async (replyText?: string, base64Audio?: string | null, onEnded?: () => void) => {
+  const playAgentReply = async (replyText?: string, base64Audio?: string | null, onEnded?: () => void, audioFormat?: string | null) => {
     if (base64Audio) {
-      await playAudio(base64Audio, onEnded);
+      await playAudio(base64Audio, onEnded, audioFormat);
       return;
     }
 
@@ -244,9 +246,9 @@ export default function VoiceConversation({
         return;
       }
 
-      setUseBrowserVoice(data.voice_mode === 'browser' || !data.audio);
+      setUseBrowserVoice(data.voice_mode === 'browser' || (!data.audio && data.voice_mode !== 'sarvam'));
       setConversation([{ speaker: 'agent', text: data.reply_text }]);
-      await playAgentReply(data.reply_text, data.audio, () => handleAgentReplyEnded(data.call_ended));
+      await playAgentReply(data.reply_text, data.audio, () => handleAgentReplyEnded(data.call_ended), data.audio_format);
     } catch {
       setPhase('error');
       setErrorText('Could not reach the backend. Start app.py and try again.');
@@ -289,7 +291,7 @@ export default function VoiceConversation({
 
       await playAgentReply(data.reply_text, data.audio, () => {
         handleAgentReplyEnded(data.call_ended);
-      });
+      }, data.audio_format);
     } catch {
       setPhase('error');
       setErrorText('The backend could not process your audio. Please try again.');
@@ -327,7 +329,7 @@ export default function VoiceConversation({
 
       await playAgentReply(data.reply_text, data.audio, () => {
         handleAgentReplyEnded(data.call_ended);
-      });
+      }, data.audio_format);
     } catch {
       setPhase('error');
       setErrorText('The backend could not process your transcript. Please try again.');
@@ -551,7 +553,7 @@ export default function VoiceConversation({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-heading)' }}>
-                Sarvam AI Voice Agent
+                NagarFlow AI Agent
               </div>
             </div>
             {(phase !== 'idle' && phase !== 'completed') && (

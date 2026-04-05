@@ -6,10 +6,10 @@ import { TrendingUp, Truck, CloudRain, Clock, Building, TriangleAlert, Search } 
 const WEATHER_LABELS = ['Clear', 'Light Rain', 'Moderate', 'Heavy', 'Extreme'];
 
 function getColor(v: number) {
-  if (v >= 80) return '#C1440E';
-  if (v >= 60) return '#E8933A';
-  if (v >= 40) return '#D4A96A';
-  return '#7A8C5E';
+  if (v >= 75) return '#C1440E';   // Critical — red
+  if (v >= 55) return '#E8933A';   // High — orange
+  if (v >= 35) return '#D4A96A';   // Medium — amber
+  return '#7A8C5E';                // Low — green
 }
 
 interface ResultCard { label: string; value: string; delta: string; color?: string; deltaColor?: string; }

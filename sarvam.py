@@ -5,8 +5,10 @@ import requests
 
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
 SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
+SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/translate"
 SARVAM_STT_MODEL = "saaras:v3"
 SARVAM_TTS_MODEL = "bulbul:v3"
+SARVAM_TRANSLATE_MODEL = "sarvam-translate:v1"
 SARVAM_TTS_SPEAKER = "shubh"
 REQUEST_TIMEOUT_SECONDS = 30
 
@@ -104,3 +106,47 @@ def text_to_speech(text: str, target_language_code: str = "hi-IN") -> str:
     if not audios or not audios[0]:
         raise SarvamError("Speech synthesis returned no audio.")
     return str(audios[0])
+
+
+def translate_to_english(text: str, source_language_code: str = "hi-IN") -> str:
+    """Translate Hindi/Hinglish/Marathi complaint text to English using Sarvam AI.
+
+    Returns the English translation, or raises SarvamError on failure.
+    """
+    cleaned = text.strip()
+    if not cleaned:
+        raise SarvamError("Empty text provided for translation.")
+
+    # Skip translation if already ASCII (likely already English)
+    if not any(ord(c) > 127 for c in cleaned):
+        return cleaned
+
+    response = requests.post(
+        SARVAM_TRANSLATE_URL,
+        headers={
+            "api-subscription-key": _get_api_key(),
+            "Content-Type": "application/json",
+        },
+        json={
+            "input": cleaned,
+            "source_language_code": source_language_code,
+            "target_language_code": "en-IN",
+            "model": SARVAM_TRANSLATE_MODEL,
+            "mode": "formal",
+            "numerals_format": "international",
+        },
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    if not response.ok:
+        raise SarvamError(_extract_error_message(payload, "Translation failed."))
+
+    translated = str(payload.get("translated_text", "")).strip()
+    if not translated:
+        raise SarvamError("Translation returned empty text.")
+    return translated

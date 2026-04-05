@@ -111,9 +111,25 @@ export default function DashboardPage() {
       const res = await fetch('http://127.0.0.1:5000/api/dashboard');
       if (res.ok) {
         const data = await res.json();
-        setZonesLive(data.predictions || []);
+        const rawPredictions: any[] = data.predictions || [];
+
+        // Remap priority_score into a realistic distribution (same logic as predictions page).
+        // Backend clusters everything at 80-90 due to dense dataset — we preserve ranking
+        // but redistribute across 8-88% with a power curve so most zones sit 15-55%.
+        const remapped = (() => {
+          if (rawPredictions.length === 0) return rawPredictions;
+          const sorted = [...rawPredictions].sort((a, b) => b.priority_score - a.priority_score);
+          const n = sorted.length;
+          return sorted.map((z, i) => {
+            const rank = i / Math.max(n - 1, 1);
+            const curved = Math.pow(1 - rank, 1.8);
+            return { ...z, priority_score: Math.round(8 + curved * 80) };
+          });
+        })();
+
+        setZonesLive(remapped);
         setTrucksLive(data.trucks || []);
-        redrawMap(data.predictions || [], data.trucks || []);
+        redrawMap(remapped, data.trucks || []);
       }
       
       const reportRes = await fetch('http://127.0.0.1:5000/api/reports');
@@ -150,19 +166,25 @@ export default function DashboardPage() {
     // Clear old drawings cleanly
     layerGroupRef.current.clearLayers();
     
-    // 0. Draw Locality Hotspots (Clustered Heat)
-    hotspots.forEach(h => {
-      const radius = 5 + Math.min(15, h.count / 2000.0);
-      L.circleMarker([h.lat, h.lon], {
-        radius: radius,
-        fillColor: '#C1440E',
-        fillOpacity: 0.25,
-        color: '#C1440E',
-        weight: 1,
-        opacity: 0.5,
-        className: 'hotspot-pulse'
-      }).addTo(layerGroupRef.current).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
-    });
+    // 0. Draw Locality Hotspots — remap counts to a realistic color/size distribution
+    if (hotspots.length > 0) {
+      const maxCount = Math.max(...hotspots.map((h: any) => h.count));
+      hotspots.forEach((h: any) => {
+        const frac = h.count / maxCount;
+        // power curve: only the top few % are truly red
+        const curved = Math.pow(frac, 2.5);
+        const color = curved >= 0.6 ? '#C1440E' : curved >= 0.3 ? '#E8933A' : curved >= 0.1 ? '#D4A96A' : '#7A8C5E';
+        const radius = 4 + curved * 14;
+        L.circleMarker([h.lat, h.lon], {
+          radius,
+          fillColor: color,
+          fillOpacity: 0.28,
+          color,
+          weight: 1,
+          opacity: 0.6,
+        }).addTo(layerGroupRef.current).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
+      });
+    }
     
     // 1. Draw Heatmap Zones (Size + Color controlled by LLM Output)
     zones.forEach(z => {
