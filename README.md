@@ -1,291 +1,337 @@
-<br />
 <div align="center">
 
-<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/b2d2f2b4-6f37-4724-8e78-00149244ea63)" width="80" alt="NagarFlow Logo" />
-# NagarFlow
-### **The City's Brain. Predict. Dispatch. Learn.**
+<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/bd8fef09-33d9-46c3-bb32-c2b87e5e984e)" width="72" alt="NagarFlow" />
 
-*AI-powered civic intelligence platform that predicts urban resource demand and optimizes real-time allocation of water tankers, garbage trucks, and maintenance teams across the Mumbai Metropolitan Region.*
+# NagarFlow
+
+### The city's brain. Predict. Dispatch. Learn.
+
+AI-powered civic intelligence platform that predicts urban resource demand and optimizes<br/>real-time allocation of water tankers, garbage trucks, and maintenance teams across Mumbai.
+
+<br/>
 
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-nagarflow.netlify.app-C1440E?style=for-the-badge)](https://nagarflow.netlify.app/)
-[![Made For](https://img.shields.io/badge/🏆_Made_For-ITSAHACK_2026-D4A96A?style=for-the-badge)](#)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](#tech-stack)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](#tech-stack)
-[![License](https://img.shields.io/badge/License-Proprietary-7A8C5E?style=for-the-badge)](#license)
+[![GitHub](https://img.shields.io/badge/📦_Source-GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/vinitgirdhar/nagarflow)
+[![Hackathon](https://img.shields.io/badge/🏆_Built_For-ITSAHACK_2026-D4A96A?style=for-the-badge)](#)
+<br/>
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)](#-technology-stack)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](#-technology-stack)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5_Pro-4285F4?style=flat-square&logo=google&logoColor=white)](#-technology-stack)
+[![SQLite](https://img.shields.io/badge/SQLite-51K+_records-003B57?style=flat-square&logo=sqlite&logoColor=white)](#-data)
 
-**Zero Hardware · 48‑Hour Forecast · Equity‑First Dispatch**
+**Zero hardware · 48-hour forecast · Equity-first dispatch · Multilingual voice**
 
-<br />
+<br/>
 
-[Overview](#overview) · [Problem Statement](#-problem-statement) · [Architecture](#-system-architecture) · [Modules](#-10-intelligence-modules) · [Screenshots](#-screenshots) · [Tech Stack](#-tech-stack) · [Getting Started](#-getting-started) · [API Reference](#-api-reference) · [Team](#-team)
+[Overview](#-overview) · [Problem](#-the-problem) · [Architecture](#-system-architecture) · [Intelligence Modules](#-intelligence-modules) · [Screenshots](#-screenshots) · [Tech Stack](#-technology-stack) · [API Reference](#-api-reference) · [Getting Started](#-getting-started) · [Team](#-team)
 
-<br />
+<br/>
 
-<img src="https://github.com/user-attachments/assets/fa618f82-8299-44ef-b1cb-79b4754356ef" alt="NagarFlow Landing Page — 3D city visualization with live ticker" width="100%" />
+<img src="<img width="1915" height="965" alt="nagarflow - landing page" src="https://github.com/user-attachments/assets/74a75835-4281-433a-909e-c554ab0c459f" alt="NagarFlow — 3D city visualization with live intelligence ticker" width="100%"/>
 
 </div>
 
 ---
 
-## Overview
+## 📋 Overview
 
-**NagarFlow** is a full-stack civic intelligence platform that ingests citizen complaints from **WhatsApp**, **voice calls** (in Hindi, English, Marathi), and a **web simulator** — then routes them through an AI pipeline to prioritize zones, dispatch fleet assets, and surface actionable insights for municipal operators.
+**NagarFlow** is a full-stack civic intelligence platform that ingests citizen complaints from **WhatsApp**, **voice calls** (Hindi, English, Marathi), and a **web chat simulator** — then routes them through an AI pipeline to prioritize 65+ urban zones, match fleet assets via Haversine distance, and close the loop via prediction error tracking.
 
-The system is built as a **decoupled monorepo** with two independently deployable services:
+The system is deployed as a **decoupled monorepo** with two independently running services:
 
-| Component | Technology | Role |
+| Layer | Stack | What It Does |
 |:---|:---|:---|
-| **Frontend** | Next.js 16, React 19, Framer Motion | Interactive dashboard with live map, dispatch cards, digital twin simulator, and 10+ operator views |
-| **Backend** | Python 3.11, Flask | REST API orchestrating AI inference, NLU, fleet dispatch, weather polling, complaint ingestion, and feedback loops |
-| **Database** | SQLite | Relational store with **51,440+ real MMR 311 records**, fleet state, predictions, zone coverage, agencies, and maintenance tasks |
-| **AI / NLU** | Gemini 2.5 Pro, GPT-4o-mini | Multilingual complaint extraction, severity classification, and zone routing |
-| **Voice** | Sarvam AI (saaras:v3 STT, bulbul:v3 TTS) | Hindi/English speech recognition, text-to-speech, and translation |
-| **Automation** | N8n + WhatsApp/Telegram | Automated conversational complaint collection via messaging platforms |
+| **Frontend** | Next.js 16 · React 19 · Three.js · Leaflet | 11-page operator dashboard — live map, dispatch cards, digital twin, voice agent, KPI reports |
+| **Backend** | Python 3.11 · Flask · 25+ REST endpoints | AI orchestration, multilingual NLU, fleet dispatch, weather polling, complaint ingestion |
+| **Database** | SQLite · 9 tables · 51,440+ records | Complaints, trucks, predictions, outcomes, zone coverage, teams, maintenance tasks, agencies |
+| **AI / NLU** | Gemini 2.5 Pro · GPT-4o-mini | Multilingual complaint extraction, severity classification, zone routing — single-prompt pipeline |
+| **Voice** | Sarvam AI (saaras:v3 · bulbul:v3) | Hindi/English speech-to-text, text-to-speech, Devanagari translation |
+| **Automation** | N8n · WhatsApp · Telegram | Conversational complaint collection — GPT-4o-mini holds the conversation, backend logs the complaint |
+
+> 📖 **Sub-documentation:** [Frontend README →](nagarflow-next/README.md) · [Backend README →](BACKEND.md) · [Deployment Guide →](DEPLOYMENT.md)
 
 ---
 
-## 🎯 Problem Statement
+## 🎯 The Problem
 
-> **Indian municipalities lose ₹1,500+ crore annually** due to reactive, complaint-driven resource allocation. Garbage trucks visit empty zones while overflowing wards go unserved. Water tankers respond to the loudest complainers, not the driest neighborhoods.
+> Indian municipalities spend **₹1,500+ crore annually** on reactive, complaint-driven resource allocation. Garbage trucks patrol empty zones. Water tankers chase the loudest complainers. Low-income wards with fewer smartphone users stay invisible.
 
-**NagarFlow solves this** by replacing reactive dispatch with a **predictive, equity-corrected intelligence pipeline** that:
+**NagarFlow replaces this** with a predictive, equity-corrected intelligence pipeline:
 
-- 📊 **Forecasts demand 48 hours ahead** using historical complaint data + weather + calendar signals
-- ⚖️ **Corrects systemic under-reporting bias** — low-income wards with fewer complaints get amplified priority
-- 🚛 **Dispatches optimal fleet assets** via Haversine-based greedy matching to nearest idle trucks
-- 🧠 **Learns from every dispatch** through a closed-loop feedback mechanism that tracks prediction error
+| Before NagarFlow | After NagarFlow |
+|:---|:---|
+| Trucks go where complaints come from | Trucks go where **demand will be** in 48 hours |
+| Low-income wards under-report → ignored | Equity engine **amplifies silent wards** automatically |
+| Manual dispatch by phone/radio | Greedy Haversine matcher pairs **nearest idle truck** |
+| No feedback on AI accuracy | Closed-loop error tracking with **automatic retraining alerts** |
+| One complaint channel (phone) | **WhatsApp + Voice + Web** — Hindi, English, Marathi |
 
 ---
 
 ## 🏗 System Architecture
 
 ```mermaid
-flowchart TB
-    subgraph INGESTION["📥 Data Ingestion Layer"]
+flowchart LR
+    subgraph IN["📥 Ingestion"]
+        direction TB
         WA["WhatsApp / Telegram\n(N8n + GPT-4o-mini)"]
-        VC["Voice Calls\n(Sarvam STT → Gemini NLU)"]
-        WEB["Web Simulator\n(Browser Chat)"]
-        CSV["311 Open Data\n(51,440+ records)"]
+        VC["Voice Calls\n(Sarvam STT → Gemini)"]
+        WEB["Web Chat\n(Browser)"]
+        CSV["311 Open Data\n(51,440 records)"]
     end
 
-    subgraph PROCESSING["⚙️ Processing Engine"]
+    subgraph PROC["⚙️ Processing"]
+        direction TB
         NLU["Gemini 2.5 Pro\nMultilingual NLU"]
         PP["Preprocessing\nTransformer"]
-        WP["Weather Poller\n(Open-Meteo / NOAA)"]
-        CG["Coverage Gap\nScanner (48hr)"]
+        WP["NOAA Weather\nPoller (15 min)"]
+        CG["Coverage Gap\nScanner (48 hr)"]
     end
 
-    subgraph AI_ENGINE["🧠 AiRLLM Priority Engine"]
-        LLM["LLM Inference\n(API or Heuristic)"]
-        NORM["Global Normalizer\n(30-90% Range)"]
-        PRED["Predictions Table\n(65+ zones scored)"]
+    subgraph AI["🧠 AiRLLM Engine"]
+        direction TB
+        LLM["LLM Inference\n(or Heuristic Fallback)"]
+        NORM["Global Normalizer\n30 – 90% range"]
     end
 
-    subgraph DISPATCH["🚚 Greedy Dispatcher"]
-        HAV["Haversine Distance\nCalculator"]
-        FLEET["Fleet Manager\n(15+ trucks)"]
-        MATCH["Zone↔Truck\nMatching"]
+    subgraph DSP["🚚 Dispatcher"]
+        direction TB
+        HAV["Haversine Calculator\n(R = 6371 km)"]
+        FLEET["Fleet Manager\n15 trucks · 2 types"]
     end
 
-    subgraph DASHBOARD["🖥️ Operator Dashboard"]
-        MAP["Live Leaflet Map\n(Heatmap + Trucks)"]
-        CARDS["Dispatch Cards\n(Accept/Reject)"]
+    subgraph UI["🖥️ Dashboard"]
+        direction TB
+        MAP["Leaflet Heatmap\n+ Truck Markers"]
+        CARDS["Dispatch Cards\nAccept / Reject"]
         SIM["Digital Twin\nSimulator"]
-        MAINT["Maintenance\nTracker"]
-        RPT["KPI Reports &\nFeedback Loop"]
+        RPT["KPI Reports\n+ Feedback Loop"]
     end
 
-    WA --> NLU
-    VC --> NLU
-    WEB --> NLU
+    IN --> NLU
     CSV --> PP
     NLU --> PP
     WP --> PP
     CG --> PP
     PP --> LLM
     LLM --> NORM
-    NORM --> PRED
-    PRED --> HAV
-    FLEET --> MATCH
-    HAV --> MATCH
-    MATCH --> CARDS
-    PRED --> MAP
+    NORM --> HAV
+    FLEET --> HAV
+    HAV --> CARDS
+    NORM --> MAP
     FLEET --> MAP
-    MATCH --> MAP
-    PRED --> SIM
-    PRED --> MAINT
-    PRED --> RPT
-    CARDS -->|"Feedback Loop"| RPT
+    NORM --> SIM
+    NORM --> RPT
+    CARDS -.->|"Error = |Predicted − Actual|"| RPT
 
-    style INGESTION fill:#FFF5ED,stroke:#C1440E,stroke-width:2px
-    style PROCESSING fill:#FFF8F0,stroke:#D4A96A,stroke-width:2px
-    style AI_ENGINE fill:#F5F0E8,stroke:#7A5C3A,stroke-width:2px
-    style DISPATCH fill:#F0F5ED,stroke:#7A8C5E,stroke-width:2px
-    style DASHBOARD fill:#FFF5ED,stroke:#C1440E,stroke-width:2px
+    style IN fill:#FFF5ED,stroke:#C1440E,color:#000
+    style PROC fill:#FFF8F0,stroke:#D4A96A,color:#000
+    style AI fill:#F5F0E8,stroke:#7A5C3A,color:#000
+    style DSP fill:#F0F5ED,stroke:#7A8C5E,color:#000
+    style UI fill:#FFF5ED,stroke:#C1440E,color:#000
 ```
 
-**Seven-stage pipeline:** Raw Data → NLU Extraction → Preprocessing → LLM Inference → Normalization → Greedy Dispatch → Operator Action → Feedback Loop
+<details>
+<summary><strong>📐 Pipeline in plain text (7 stages)</strong></summary>
+
+```
+Stage 1 → DATA INGESTION      311 CSVs · WhatsApp · Voice · Web Chat
+Stage 2 → NLU EXTRACTION      Gemini 2.5 Pro — zone, locality, issue, severity, language
+Stage 3 → PREPROCESSING       Cross-table aggregation: complaints × weather × coverage gaps
+Stage 4 → LLM INFERENCE       AiRLLM priority scoring (log₁₀ scaling + rain + gap penalty)
+Stage 5 → NORMALIZATION        Global min-max to 30-90% range · voice overrides to 84-90%
+Stage 6 → GREEDY DISPATCH      Haversine pairs top-5 zones ↔ nearest idle truck · ETA at 30 km/h
+Stage 7 → FEEDBACK LOOP        Error = |Predicted − Actual| · Rolling-20 avg · Retraining alert at >25%
+```
+
+</details>
 
 ---
 
-## 🧠 10 Intelligence Modules
+## 🧠 Intelligence Modules
 
 <table>
-<tr>
-<td width="50%">
+<tr><td width="50%" valign="top">
 
-### F01 · Equity-Corrected Demand Engine
-**Poor areas served even without complaints**
+### `F01` Equity-Corrected Demand Engine
+> Poor areas served even without complaints
 
-Calculates expected vs actual complaints per ward. When actual < expected, priority is amplified. Systemic under-reporting in low-income wards is corrected to guarantee proportional resource dispatch.
+Calculates expected vs. actual complaint volume per ward. When actual < expected, priority is **amplified**. Systemic under-reporting in low-income wards is corrected to guarantee proportional dispatch.
 
-`complaint_count × population_weight × equity_multiplier`
+**Formula:** `priority × (expected / max(actual, 1))`
 
-</td>
-<td width="50%">
+</td><td width="50%" valign="top">
 
-### F02 · Dual-Layer Map + Time Slider
-**Forecast vs reality on one screen**
+### `F02` Live Heatmap + Truck Overlay
+> Real-time city state on one screen
 
-Live Leaflet heatmap with zone priority colors (🔴 High · 🟡 Medium · 🟢 Low) overlaid with real-time truck position markers. Priority zones pulse with urgency scoring from AiRLLM.
+Leaflet.js renders priority-colored zone circles (`🔴 High` · `🟡 Medium` · `🟢 Low`) overlaid with truck position markers (🚛 Garbage · 💧 Water Tanker). 10-second auto-poll. Truck icons animate along routes on dispatch accept.
 
-</td>
-</tr>
-<tr>
-<td>
+</td></tr>
+<tr><td valign="top">
 
-### F03 · NLP Complaint Intelligence
-**Urgency, language & category from free text**
+### `F03` Multilingual NLU Pipeline
+> Hindi · English · Hinglish · Marathi → one JSON
 
-Gemini 2.5 Pro classifies incoming complaints across **Hindi, English, Marathi, and Hinglish**. Extracts zone, specific locality, issue type, severity, and generates human-like responses — all in a single unified prompt for minimum latency.
+Single unified Gemini 2.5 Pro prompt: detects language, translates to English, extracts `{zone, locality, issue_type, severity}`, generates human-like native-language reply. Fallback to keyword matching + Sarvam translation if Gemini is unavailable.
 
-</td>
-<td>
+</td><td valign="top">
 
-### F04 · Multi-Channel Ingestion
-**WhatsApp + Voice + Web — one pipeline**
+### `F04` Multi-Channel Complaint Ingestion
+> WhatsApp + Voice + Web — same database schema
 
-Citizens call, text, or chat. An N8n workflow handles WhatsApp/Telegram conversations via GPT-4o-mini. Voice calls use Sarvam AI STT + Gemini NLU. All channels converge into the same database schema.
+**WhatsApp/Telegram:** N8n workflow → GPT-4o-mini conversation → backend POST.<br/>
+**Voice:** Sarvam STT (saaras:v3) → Gemini NLU → Sarvam TTS (bulbul:v3) confirmation.<br/>
+**Web:** Browser chat interface with the same pipeline.
 
-</td>
-</tr>
-<tr>
-<td>
+</td></tr>
+<tr><td valign="top">
 
-### F05 · Predictive Surge Forecaster
-**48-hour pre-positioning intelligence**
+### `F05` AiRLLM Priority Engine
+> Logarithmic scoring for 65+ zones
 
-Combines historical complaint density, real-time weather from Open-Meteo (NOAA), and coverage gap signals to forecast surge demand. The AiRLLM engine uses logarithmic complaint scaling to prevent score clumping in dense wards.
+```
+Score = log₁₀(complaints) × 10
+      + zone_volatility (±5, MD5-seeded)
+      + rain_bonus (+20 if NOAA code 61-99)
+      + gap_penalty (hours_since_visit / 4, max 15)
+```
 
-</td>
-<td>
+Global normalization maps all scores to `30-90%`. Voice complaints override to `84-90%`.
 
-### F06 · Weather Emergency Protocols
-**Auto fleet reconfiguration on weather triggers**
+</td><td valign="top">
 
-NOAA weather poller runs every 15 minutes. WMO weather codes for rain/thunderstorm (61-99) automatically flag heavy rain. Rain status feeds directly into the AiRLLM priority formula, boosting drainage and flood-prone zones.
+### `F06` NOAA Weather Integration
+> Automatic rain detection every 15 minutes
 
-</td>
-</tr>
-<tr>
-<td>
+Open-Meteo API fetches WMO weather codes for Mumbai (19.076°N, 72.878°E). Codes 61-99 (rain, thunderstorm, showers) set global `rain_status = Yes`, boosting drainage and flood-prone zones by +20 priority points in the AiRLLM formula.
 
-### F07 · Digital Twin Simulator
-**What-if sandbox before committing resources**
+</td></tr>
+<tr><td valign="top">
 
-Full parameter simulation: Demand increase (0-100%), Vehicle failures (0-100%), Weather severity (Clear → Extreme). Shows **Before vs After** zone grids with projected KPI deltas — no real resources committed.
+### `F07` Digital Twin Simulator
+> What-if sandbox — zero real-world impact
 
-</td>
-<td>
+Slider controls: Demand Increase (0-100%), Vehicle Failures (0-100%), Weather Severity (Clear → Extreme). Shows **Before vs. After** zone grids with projected KPI deltas. All simulation math runs server-side — no actual resources committed.
 
-### F08 · Multi-Agency Coordination Hub
-**Garbage + Water + Maintenance on one board**
+</td><td valign="top">
 
-Unified dispatch across sanitation (garbage trucks), water supply (tankers), and maintenance teams. Truck type auto-matched to zone's dominant complaint category using historical complaint distribution analysis.
+### `F08` Greedy Haversine Dispatcher
+> Optimal truck ↔ zone pairing
 
-</td>
-</tr>
-<tr>
-<td>
+Pairs top-5 AiRLLM zones with nearest idle truck accounting for Earth's curvature (R = 6,371 km). Truck type auto-matched to zone's dominant complaint category. 30 km/h Mumbai street-traffic ETA. Accept → en\_route. Arrive → idle + zone reset.
 
-### F09 · Greedy Autonomous Dispatcher
-**Haversine-optimized fleet routing**
+</td></tr>
+<tr><td valign="top">
 
-Greedy algorithm pairs top-5 AiRLLM priority zones with nearest idle truck using Haversine distance (accounting for Earth's 6,371 km curvature radius). 30 km/h Mumbai street-traffic ETA calculation. Accept → truck animates along route. Arrive → zone coverage resets.
+### `F09` Maintenance Task Engine
+> Auto-generates tasks for score > 80
 
-</td>
-<td>
+Zones scoring above 80 automatically create maintenance tasks (PENDING). Operators assign teams (Alpha through Juliet), track status (`PENDING → ON GROUND → COMPLETED`), and completions update zone_coverage in the feedback loop.
 
-### F10 · Feedback Loop & Auto Reports
-**Closed-loop prediction validation**
+</td><td valign="top">
 
-Every physical dispatch generates `Error = |Predicted − Actual|`. Rolling 20-prediction error average tracked. If error exceeds 25%, `MODEL RETRAINING RECOMMENDED` alert fires. KPI dashboard shows accuracy trend, coverage completion, and equity scores.
+### `F10` Closed-Loop Feedback & Reports
+> Every dispatch validates the model
 
-</td>
-</tr>
+Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 20-prediction average tracked. If error > 25%, dashboard fires **"Model Retraining Recommended"** alert. KPI charts show the accuracy trend and coverage completion over time.
+
+</td></tr>
 </table>
 
 ---
 
 ## 📸 Screenshots
 
-<div align="center">
-
-| Landing Page | Operations Dashboard |
-|:---:|:---:|
-| <img src="<img width="1915" height="965" alt="nagarflow - landing page" src="https://github.com/user-attachments/assets/3d51f911-5792-42c9-8f78-33ab251f549e" alt="Landing Page — 3D Three.js city with live ticker" width="100%" /> | <img src="docs/screenshots/dashboard.png" alt="Dashboard — Live Leaflet map with zone heatmap and fleet dispatch cards" width="100%" /> |
-| *3D Three.js city · Live alert ticker · 10 feature cards* | *Leaflet heatmap · KPI cards · Haversine dispatch array* |
-
-| Complaint Insights | Digital Twin Simulator |
-|:---:|:---:|
-| <img src="<img width="1918" height="962" alt="nagarflow - complain" src="https://github.com/user-attachments/assets/f2c4a83a-7290-4bfa-9290-6a50e14582cd" alt="Complaints — AiRLLM breakdown and complaint feed" width="100%" /> | <img src="docs/screenshots/simulation.png" alt="Simulation — What-if scenario sandbox with before/after" width="100%" /> |
-| *AiRLLM breakdown · Category filters · Voice/text split* | *Demand/failure/weather sliders · Before vs After grid* |
-
-</div>
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="https://github.com/user-attachments/assets/11741689-df43-4914-84ce-8e764fe255be" alt="Landing Page" width="100%"/><br/>
+<strong>Landing Page</strong><br/>
+<sub>3D Three.js city · Live alert ticker · 10 feature flip-cards · Pipeline visualization</sub>
+</td>
+<td align="center" width="50%">
+<img src="https://github.com/user-attachments/assets/c89eed26-ede5-4182-b496-464fa4db4899" alt="Operations Dashboard" width="100%"/><br/>
+<strong>Operations Dashboard</strong><br/>
+<sub>Leaflet heatmap · 5 KPI cards · Haversine dispatch array · Live operator log</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="![WhatsApp Image 2026-04-05 at 6 03 46 PM](https://github.com/user-attachments/assets/0791eae1-43fd-4354-ac46-bff33d1d118f)" alt="Digital Twin Simulator" width="100%"/><br/>
+<strong>Digital Twin Simulator</strong><br/>
+<sub>Demand / failure / weather sliders · Before vs. After zone grids · Projected KPIs</sub>
+</td>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/2c983b6f-35e5-4997-ba5b-ea4901a6c007" alt="Complaint Insights" width="100%"/><br/>
+<strong>Complaint Insights</strong><br/>
+<sub>AiRLLM breakdown · Category filters · Voice vs. text split · Last sync time</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/316da9b8-adf4-496d-b9d2-1e87b603a589" alt="Fleet Dispatch" width="100%"/><br/>
+<strong>Fleet Dispatch</strong><br/>
+<sub>Haversine-paired suggestions · Truck type labels · Accept / Reject actions</sub>
+</td>
+<td align="center">
+<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6b7a9da9-696a-41af-8257-143c79ebff2e)" alt="KPI Reports" width="100%"/><br/>
+<strong>KPI Reports</strong><br/>
+<sub>Accuracy trend · Coverage chart · Equity score · Retraining trigger</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/4955cea5-3057-41bb-861d-d2bc98ca82dc" alt="Emergency Weather" width="100%"/><br/>
+<strong>Emergency Weather Overlay</strong><br/>
+<sub>Per-zone temperature · AQI · Wind speed · Flood probability from NOAA</sub>
+</td>
+<td align="center">
+<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6a516aa2-4227-4340-89fd-70f13ff0bb6f)" alt="Maintenance Tracker" width="100%"/><br/>
+<strong>Maintenance Center</strong><br/>
+<sub>Auto-generated tasks · Team assignment · Status tracking · Zone coverage feedback</sub>
+</td>
+</tr>
+</table>
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Technology Stack
 
-### AI & Machine Learning
+### AI & Language Processing
 
-| Technology | Purpose |
-|:---|:---|
-| **Google Gemini 2.5 Pro** | Primary NLU engine — multilingual complaint extraction, severity classification, zone routing |
-| **OpenAI GPT-4o-mini** | WhatsApp/Telegram conversational agent via N8n workflow automation |
-| **AiRLLM Engine** (Custom) | Priority scoring pipeline: logarithmic complaint scaling + zone stability seed + global normalization (30-90% range) |
-| **Haversine Formula** | Earth-curvature-aware distance calculation for optimal truck-to-zone matching |
+| Technology | Role | Used In |
+|:---|:---|:---|
+| **Gemini 2.5 Pro** | Multilingual NLU — complaint extraction, severity, zone routing | `complaint_parser.py` |
+| **GPT-4o-mini** | WhatsApp/Telegram conversational agent (via N8n) | N8n workflow |
+| **Sarvam AI saaras:v3** | Hindi/English speech-to-text | `sarvam.py` |
+| **Sarvam AI bulbul:v3** | Text-to-speech audio confirmations | `sarvam.py` |
+| **Sarvam Translate v1** | Hindi/Devanagari → English normalization | `sarvam.py` |
+| **AiRLLM Engine** *(custom)* | Priority scoring: log₁₀ scaling + global normalization | `airllm_engine.py` |
 
-### Voice & Language
+### Backend
 
-| Technology | Purpose |
-|:---|:---|
-| **Sarvam AI — saaras:v3** | Speech-to-text for Hindi, English, Marathi voice complaints |
-| **Sarvam AI — bulbul:v3** | Text-to-speech for audio confirmations in native language |
-| **Sarvam Translate v1** | Hindi/Devanagari → English translation for record normalization |
+| Technology | Role | Used In |
+|:---|:---|:---|
+| **Python 3.11** | Core language | All `.py` files |
+| **Flask** | REST API framework (25+ routes) | `app.py` |
+| **SQLite** | Embedded RDBMS | `nagarflow.db` |
+| **Open-Meteo API** | NOAA weather data (WMO codes) | `weather_poller.py` |
+| **Haversine Formula** | Earth-curvature distance calculation | `greedy_dispatcher.py` |
+| **N8n** | WhatsApp/Telegram workflow automation | External |
+| **ngrok** | Local tunnel for webhook development | External |
 
 ### Frontend
 
-| Technology | Version | Purpose |
-|:---|:---|:---|
-| **Next.js** | 16.2 | App Router, SSR, API proxying |
-| **React** | 19.2 | Component UI with hooks |
-| **Framer Motion** | 12.x | Page transitions, micro-animations |
-| **Leaflet.js** | (CDN) | Interactive map with zone heatmap and truck markers |
-| **Three.js** | r128 | 3D city visualization on landing page |
-| **Lucide React** | 1.7 | Icon system |
-| **jsPDF + html2canvas** | Latest | Client-side PDF report generation |
-
-### Backend & Infrastructure
-
-| Technology | Version | Purpose |
-|:---|:---|:---|
-| **Python** | 3.11+ | Core backend language |
-| **Flask** | Latest | REST API framework |
-| **SQLite** | 3.x | Embedded relational database |
-| **Open-Meteo API** | Free tier | Real-time NOAA weather data (WMO codes) |
-| **N8n** | Self-hosted | WhatsApp/Telegram workflow automation |
-| **ngrok** | Latest | Local tunnel for webhook development |
+| Technology | Version | Role | Used In |
+|:---|:---|:---|:---|
+| **Next.js** | 16.2 | App Router, SSR, page routing | `nagarflow-next/` |
+| **React** | 19.2 | Component UI, hooks | All `.tsx` |
+| **Framer Motion** | 12.x | Page transitions, micro-animations | `PageTransition.tsx` |
+| **Three.js** | r128 | 3D city visualization | `page.tsx` (landing) |
+| **Leaflet.js** | CDN | Interactive heatmap + truck markers | Dashboard |
+| **Lucide React** | 1.7 | Icon system | All pages |
+| **jsPDF** | 4.x | Client-side PDF report generation | Reports |
 
 ---
 
@@ -293,151 +339,69 @@ Every physical dispatch generates `Error = |Predicted − Actual|`. Rolling 20-p
 
 ```
 nagarflow/
-├── README.md                     # ← You are here
-├── DEPLOYMENT.md                 # Production deployment guide
-├── app.py                        # 🏗  Flask API — 25+ routes, 1,600 LOC
-├── .env                          # API keys (Gemini, OpenAI, Sarvam)
 │
-├── ── AI & Processing ──
-├── airllm_engine.py              # 🧠 AiRLLM priority scoring engine
-├── preprocess_transformer.py     # 📦 Cross-table data aggregator for LLM prompts
-├── complaint_parser.py           # 🗣️  Gemini 2.5 Pro multilingual NLU
-├── prediction_store.py           # 📊 Prediction deduplication & canonical fetch
+├── 🏗 BACKEND (Python / Flask)
+├── app.py                        # Flask API — 25+ routes, 1,609 lines
+├── airllm_engine.py              # AiRLLM priority scoring engine
+├── preprocess_transformer.py     # Cross-table data aggregator for LLM prompts
+├── complaint_parser.py           # Gemini 2.5 Pro multilingual NLU
+├── greedy_dispatcher.py          # Haversine-based truck ↔ zone matcher
+├── fleet_manager.py              # Zone coordinates (34 zones) + fleet init
+├── coverage_gap.py               # 48-hour silent zone scanner
+├── weather_poller.py             # NOAA Open-Meteo polling (15-min cycle)
+├── sarvam.py                     # Sarvam AI STT / TTS / Translation client
+├── localities.py                 # 34 zones × 100+ sub-localities (EN + HI)
+├── prediction_store.py           # Prediction dedup + canonical fetch
+├── agencies_scraper.py           # Mumbai civic agency directory scraper
+├── ingest_data.py                # CSV → SQLite bulk complaint loader
+├── seed_full_demo.py             # Full demo data seeder
+├── nagarflow.db                  # Pre-loaded SQLite (51K+ records)
+├── .env                          # API keys (gitignored)
 │
-├── ── Fleet & Coverage ──
-├── greedy_dispatcher.py          # 🚚 Haversine-based truck↔zone matcher
-├── fleet_manager.py              # 🗺️  Zone coordinates + fleet initialization
-├── coverage_gap.py               # ⏱️  48-hour silent zone scanner
-├── localities.py                 # 📍 34 zones × 100+ sub-localities (EN + HI)
+├── 📁 data/                      # 51,440+ real MMR 311 complaint CSVs
+├── 📁 scripts/                   # Utility scripts
+├── 📁 tests/                     # Test suite
 │
-├── ── Voice & Ingestion ──
-├── sarvam.py                     # 🎙️  Sarvam AI STT/TTS/Translation client
-├── openai_voice.py               # 🔊 OpenAI voice integration
-├── ingest_data.py                # 📥 CSV → SQLite bulk complaint loader
-├── weather_poller.py             # 🌧️  NOAA Open-Meteo polling (15-min cycle)
-│
-├── ── Data & Seeding ──
-├── data/                         # 📁 51,440+ real MMR 311 complaint CSVs
-├── nagarflow.db                  # 💾 Pre-loaded SQLite database
-├── seed_full_demo.py             # 🌱 Demo data seeder for all tables
-├── agencies_scraper.py           # 🏛️  Mumbai municipal agency directory scraper
-├── areas.txt                     # 📋 Zone name reference list
-│
-├── ── Frontend ──
-├── nagarflow-next/               # ⚛️  Next.js 16 application
+├── ⚛️ FRONTEND (Next.js 16)
+├── nagarflow-next/
 │   ├── app/
-│   │   ├── page.tsx              # Landing page (Three.js + 10 feature cards)
-│   │   ├── layout.tsx            # Root layout with metadata
-│   │   ├── globals.css           # Design system (33KB — full theme)
-│   │   ├── dashboard/            # Operations center (map + dispatch)
-│   │   ├── complaints/           # Complaint insights + AiRLLM breakdown
-│   │   ├── complaint-simulator/  # Browser chat complaint submission
-│   │   ├── predictions/          # Zone priority scores table
-│   │   ├── dispatch/             # Fleet dispatch management
-│   │   ├── maintenance/          # Task tracker (PENDING → COMPLETED)
-│   │   ├── simulation/           # Digital twin what-if sandbox
-│   │   ├── reports/              # KPI dashboard + accuracy charts
-│   │   ├── emergency/            # Per-zone weather overlay
-│   │   ├── agencies/             # Municipal agency directory
-│   │   ├── login/                # Auth gate
+│   │   ├── page.tsx              # Landing — Three.js + 10 feature cards
+│   │   ├── globals.css           # Design system (33 KB)
+│   │   ├── dashboard/            # Operations center
+│   │   ├── complaints/           # Complaint insights
+│   │   ├── complaint-simulator/  # Browser chat
+│   │   ├── predictions/          # Zone priority table
+│   │   ├── dispatch/             # Fleet dispatch
+│   │   ├── maintenance/          # Task tracker
+│   │   ├── simulation/           # Digital twin
+│   │   ├── reports/              # KPI dashboard
+│   │   ├── emergency/            # Weather overlay
+│   │   ├── agencies/             # Agency directory
 │   │   └── components/
-│   │       ├── ApiRuntimeBridge.tsx   # Backend URL configuration
-│   │       ├── DashboardShell.tsx     # Sidebar navigation + layout
-│   │       ├── VoiceConversation.tsx  # Web mic → Sarvam STT → Gemini NLU
-│   │       └── PageTransition.tsx     # Framer Motion page transitions
-│   ├── package.json
-│   └── netlify.toml              # Netlify deploy configuration
+│   │       ├── DashboardShell.tsx      # Sidebar + layout
+│   │       ├── VoiceConversation.tsx   # Web mic → STT → NLU
+│   │       ├── ApiRuntimeBridge.tsx    # Backend URL config
+│   │       └── PageTransition.tsx      # Framer Motion
+│   └── package.json
 │
-├── docs/screenshots/             # README screenshots
-└── tests/                        # Test suite
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-| Requirement | Version |
-|:---|:---|
-| Python | 3.11 or newer |
-| Node.js | 18 or newer |
-| API Keys | Gemini, Sarvam AI (for voice), OpenAI (for WhatsApp) |
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/vinitgirdhar/nagarflow.git
-cd nagarflow
-```
-
-### 2. Configure Environment
-
-Create a `.env` file in the project root:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-OPENAI_API_KEY=your_openai_api_key          # Optional: WhatsApp pipeline
-SARVAM_API_KEY=your_sarvam_api_key          # Optional: Voice agent
-VAPI_WEBHOOK_SECRET=your_vapi_secret        # Optional: Telephony
-AIRLLM_API_ENDPOINT=                        # Optional: Custom LLM endpoint
-```
-
-### 3. Backend Setup
-
-```bash
-# Install Python dependencies
-pip install flask requests python-dotenv google-generativeai
-
-# Initialize database + seed 51,440 complaints
-python ingest_data.py
-
-# Initialize fleet (15 trucks across MMR)
-python fleet_manager.py
-
-# Run weather poller (fetches current NOAA data)
-python weather_poller.py
-
-# Compute coverage gaps (flags zones >48hr overdue)
-python coverage_gap.py
-
-# Generate AiRLLM predictions for all 65+ zones
-python airllm_engine.py
-
-# Start the Flask API server
-python app.py
-# → http://127.0.0.1:5001
-```
-
-### 4. Frontend Setup
-
-```bash
-cd nagarflow-next
-npm install
-npm run dev
-# → http://localhost:3000
-```
-
-### 5. WhatsApp / Telegram Integration *(Optional)*
-
-```bash
-# Expose backend via tunnel
-ngrok http 5001
-
-# Point your N8n HTTP node to:
-# https://<ngrok-url>/api/whatsapp-complaint
+├── 📁 docs/screenshots/          # README screenshots
+├── README.md                     # ← You are here
+├── BACKEND.md                    # Backend API documentation
+└── DEPLOYMENT.md                 # Production deployment guide
 ```
 
 ---
 
 ## 📡 API Reference
 
-### Complaint & Ingestion
+> Full backend documentation: [**BACKEND.md →**](BACKEND.md)
+
+### Complaints & Ingestion
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
-| `GET` | `/api/complaints` | Fetch complaints. Filters: `area`, `type`, `severity`, `limit` |
-| `POST` | `/api/whatsapp-complaint` | Ingest complaint from N8n / Twilio / WhatsApp |
+| `GET` | `/api/complaints` | Fetch complaints — filters: `area`, `type`, `severity`, `limit` |
+| `POST` | `/api/whatsapp-complaint` | Ingest from N8n / Twilio / WhatsApp |
 | `GET` | `/api/hotspots` | Locality-level complaint density clusters |
 
 ### AI & Predictions
@@ -445,126 +409,141 @@ ngrok http 5001
 | Method | Endpoint | Description |
 |:---|:---|:---|
 | `GET` | `/api/predictions` | Zone priority scores from AiRLLM engine |
-| `GET` | `/api/dashboard` | Combined zone coverage + fleet status payload |
+| `GET` | `/api/dashboard` | Combined zone coverage + fleet status |
 
-### Fleet & Dispatch
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/dispatch` | Current Haversine-paired dispatch suggestions (top 5) |
-| `POST` | `/api/dispatch/accept` | Accept dispatch: truck status → `en_route_to_{zone}` |
-| `POST` | `/api/dispatch/arrive` | Mark arrived: truck → `idle`, zone → `OK`, feedback → `prediction_outcomes` |
-| `POST` | `/api/simulate-surge` | Inject +35% demand spike for demo |
-
-### Simulation & Reports
+### Fleet Dispatch
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
-| `GET` | `/api/simulation/baseline` | Current prediction baseline for simulator |
-| `POST` | `/api/simulation/run` | Run scenario with `{demand, failures, weather}` parameters |
-| `GET` | `/api/reports` | KPI summary: accuracy, coverage, equity, efficiency + chart data |
+| `GET` | `/api/dispatch` | Top-5 Haversine-paired dispatch suggestions |
+| `POST` | `/api/dispatch/accept` | Accept: truck → `en_route_to_{zone}` |
+| `POST` | `/api/dispatch/arrive` | Arrive: truck → `idle`, zone → `OK`, error → `prediction_outcomes` |
+| `POST` | `/api/simulate-surge` | Inject +35% demand spike |
 
-### Maintenance & Operations
-
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/api/maintenance/data` | Tasks (auto-generated for score >80) + team roster |
-| `POST` | `/api/maintenance/assign` | Assign team to task: status → `ON GROUND` |
-| `POST` | `/api/maintenance/complete` | Complete task: team → `Idle`, zone → `Recently Visited` |
-
-### Weather & Agencies
+### Simulation
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
+| `GET` | `/api/simulation/baseline` | Current prediction baseline |
+| `POST` | `/api/simulation/run` | Run with `{demand, failures, weather}` |
+
+### Maintenance
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/api/maintenance/data` | Auto-generated tasks + team roster |
+| `POST` | `/api/maintenance/assign` | Assign team → status `ON GROUND` |
+| `POST` | `/api/maintenance/complete` | Complete → team `Idle`, zone `Recently Visited` |
+
+### Reports & Weather
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/api/reports` | KPI: accuracy, coverage, equity, efficiency + charts |
 | `GET` | `/api/weather/zones` | Per-zone temperature, AQI, wind, condition |
-| `GET` | `/api/agencies` | Mumbai municipal agency directory (scraped + cached) |
-| `GET` | `/api/agencies?refresh=1` | Force re-scrape agency data |
+| `GET` | `/api/agencies` | Mumbai municipal agency directory |
 
 ### Voice Agent
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
-| `POST` | `/api/agent/respond` | Voice complaint: audio → STT → Gemini NLU → TTS response |
-| `POST` | `/api/agent/respond-chat` | Text complaint: text → Gemini NLU → structured response |
+| `POST` | `/api/agent/respond` | Audio → STT → Gemini NLU → TTS reply |
+| `POST` | `/api/agent/respond-chat` | Text → Gemini NLU → structured response |
 
 ---
 
-## 📊 Dashboard Pages
+## 🚀 Getting Started
 
-| Route | Page | Key Functionality |
-|:---|:---|:---|
-| `/` | **Landing** | 3D Three.js city, 10 feature flip-cards, pipeline visualization, live scenario demos |
-| `/dashboard` | **Operations Center** | Live Leaflet map, KPI cards, zone heatmap, dispatch array, operator log |
-| `/complaints` | **Complaint Insights** | Full feed with filters (urgency, category, keyword), stats bar, voice/text split |
-| `/complaint-simulator` | **Chat Simulator** | Browser-based complaint submission via text/voice |
-| `/predictions` | **Zone Predictions** | Priority scores table from AiRLLM engine |
-| `/dispatch` | **Fleet Dispatch** | Manage and track all fleet assignments |
-| `/maintenance` | **Task Tracker** | Auto-generated tasks for high-priority zones, team assignment |
-| `/simulation` | **Digital Twin** | What-if sandbox with demand/failure/weather sliders |
-| `/reports` | **KPI Reports** | Accuracy trends, coverage charts, feedback loop metrics |
-| `/emergency` | **Weather Overlay** | Per-zone temperature, AQI, wind, flood probability |
-| `/agencies` | **Agency Directory** | Mumbai municipal bodies with contact info and service categories |
+### Prerequisites
 
----
+| Requirement | Minimum |
+|:---|:---|
+| Python | 3.11+ |
+| Node.js | 18+ |
+| API Keys | Gemini (required), Sarvam AI (for voice), OpenAI (for WhatsApp) |
 
-## 🔬 How the AiRLLM Engine Works
+### 1 · Clone
 
-The priority engine uses a **multi-factor scoring formula** that mimics LLM reasoning while remaining deterministic and fast:
-
-```
-Score = (log₁₀(complaints) × 10) + zone_volatility + rain_bonus + gap_penalty
+```bash
+git clone https://github.com/vinitgirdhar/nagarflow.git
+cd nagarflow
 ```
 
-| Factor | Weight | Description |
-|:---|:---|:---|
-| **Logarithmic Complaints** | `log₁₀(C) × 10` | Prevents score clumping in dense wards (Dharavi vs Colaba) |
-| **Zone Stability Seed** | `±5 points` | MD5-hashed zone name → deterministic personality per ward |
-| **Rain Bonus** | `+20 points` | Active when NOAA weather codes 61-99 detected |
-| **Coverage Gap** | `hours/4` (max 15) | Amplifies zones >48hr since last service visit |
-| **Voice Priority** | Override to `84-90` | Emergency calls bypass normal scoring |
+### 2 · Environment
 
-After raw scoring, a **global normalization pass** scales all zones to a professional `30-90%` range, preventing outlier domination.
+Create `.env` in the project root:
+
+```env
+GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key          # optional — WhatsApp pipeline
+SARVAM_API_KEY=your_sarvam_key          # optional — voice agent
+VAPI_WEBHOOK_SECRET=your_vapi_secret    # optional — telephony
+```
+
+### 3 · Backend
+
+```bash
+pip install flask requests python-dotenv google-generativeai
+
+python ingest_data.py          # Load 51,440 complaints into SQLite
+python fleet_manager.py        # Seed 15 trucks across MMR
+python weather_poller.py       # Fetch current NOAA weather
+python coverage_gap.py         # Flag zones >48 hr overdue
+python airllm_engine.py        # Generate AiRLLM predictions
+
+python app.py                  # Start Flask → http://127.0.0.1:5001
+```
+
+### 4 · Frontend
+
+```bash
+cd nagarflow-next
+npm install
+npm run dev                    # Start Next.js → http://localhost:3000
+```
+
+### 5 · WhatsApp Integration *(optional)*
+
+```bash
+ngrok http 5001
+# Point N8n HTTP node → https://<ngrok-url>/api/whatsapp-complaint
+```
 
 ---
 
 ## 📊 Data
 
-The database ships pre-loaded with:
-
 | Dataset | Records | Source |
 |:---|:---|:---|
 | **MMR 311 Complaints** | 51,440+ | Mumbai municipal open data |
-| **Zone Coverage Map** | 34 wards | Auto-seeded with visit timestamps |
+| **Zone Coverage** | 34 wards | Auto-seeded with visit timestamps |
 | **Fleet Assets** | 15 trucks | Garbage trucks + water tankers across 4 land clusters |
-| **Maintenance Teams** | 10 teams | Alpha through Juliet (Garbage, Water, Road, Drain, General) |
+| **Maintenance Teams** | 10 teams | Alpha → Juliet (Garbage, Water, Road, Drain, General) |
 | **Municipal Agencies** | 10+ | Live-scraped Mumbai civic body directory |
 
-Each complaint record includes: `zone`, `locality`, `issue_type`, `severity`, `complaint_count`, `population`, `weather`, `timestamp`, and `description`.
+Each complaint record includes: `zone`, `locality`, `issue_type`, `severity`, `complaint_count`, `population`, `weather`, `timestamp`, `description`.
 
 ---
 
-## 🗺️ Coverage Map
+## 🗺 Coverage
 
-NagarFlow covers **34 primary zones + 40 extended wards** across the Mumbai Metropolitan Region:
+**34 primary wards + 40 extended zones** across the Mumbai Metropolitan Region:
 
 > Airoli · Andheri · Bandra · Belapur · Bhayander · Borivali · CST · Chembur · Churchgate · Colaba · Dadar · Dharavi · Fort · Ghatkopar · Goregaon · Hiranandani · Jogeshwari · Juhu · Kandivali · Kurla · Lower Parel · Malad · Matunga · Mulund · Parel · Powai · Santacruz · Sion · Thane · Versova · Vikhroli · Vile Parle · Wadala · Worli
 
-Each zone includes **verified land-only GPS coordinates** (checked against OpenStreetMap) and supports **Hindi/Devanagari aliases** for multilingual complaint routing.
+Every zone has **verified land-only GPS coordinates** (checked against OpenStreetMap) and supports **Hindi / Devanagari aliases** for multilingual complaint routing (100+ aliases total).
 
 ---
 
-## 🌐 Multilingual Support
+## 🎬 Live Demo Scenarios
 
-NagarFlow processes complaints in:
+Three pre-built scenarios run directly on [nagarflow.netlify.app](https://nagarflow.netlify.app/):
 
-| Language | Input Methods | Example |
+| # | Scenario | What Happens |
 |:---|:---|:---|
-| **English** | Text, Voice | *"Garbage piled up near Bandra station"* |
-| **Hindi** | Text, Voice | *"धारावी में कचरा पड़ा है"* |
-| **Hinglish** | Text, Voice | *"Andheri mein bohot kachra jama ho gaya hai"* |
-| **Marathi** | Voice | Via Sarvam AI STT auto-detection |
-
-The NLU pipeline uses a **single unified Gemini prompt** that detects language, translates to English, extracts structured data, and generates a native-language response — all in one inference call for minimum latency.
+| S1 | **Normal Day** | Standard weekday. NLP flags 1 critical complaint. Equity engine detects Ward 3 reporting gap — tanker rerouted before complaints arrive. |
+| S2 | **Rainstorm Protocol** | Heavy rain alert triggers automatic reconfiguration. 12 routes adjusted, risky roads flagged, priority zones pre-loaded — zero human intervention. |
+| S3 | **+40% Surge** | Digital Twin simulation: demand spikes +40%. Fleet overload detected. System recommends pre-positioning 2 reserve trucks. No real resources committed. |
 
 ---
 
@@ -572,27 +551,32 @@ The NLU pipeline uses a **single unified Gemini prompt** that detects language, 
 
 <div align="center">
 
-**Built by**
-
-| | Name | Role |
+| | Name | Contribution |
 |:---|:---|:---|
-| 🧑‍💻 | **Vinit Girdhar** | Full-Stack Development & AI Architecture |
-| 🧑‍💻 | **Kashmira Ghag** | Backend Engineering & Data Pipeline |
-| 🧑‍💻 | **Annie Dande** | Frontend Engineering & UI/UX Design |
+| 🧑‍💻 | **Vinit Girdhar** | Full-Stack Development · AI Architecture · System Design |
+| 🧑‍💻 | **Kashmira Ghag** | Backend Engineering · Data Pipeline · AI Integration |
+| 🧑‍💻 | **Annie Dande** | Frontend Engineering · UI/UX Design · Dashboard |
 
-**Made for ITSAHACK 2026** · Smart City Platform · Municipal Intelligence Unit
+<br/>
+
+**Made for ITSAHACK 2026** — Smart City Platform · Municipal Intelligence Unit
+
+*NagarFlow — नगर (city) + Flow (continuous intelligence)*
 
 </div>
 
+---
+
+## 📜 License
+
+Proprietary software developed for municipal government use. All rights reserved by the authors. Licensed for government deployment under negotiated terms.
 
 ---
 
 <div align="center">
 
-**NagarFlow** — *Nagar* (नगर, city) + *Flow* (continuous intelligence)
+**v1.0.0** · `© 2026` · System Online 🟢
 
-The city's brain. Predict. Dispatch. Learn.
-
-`v1.0.0` · `© 2026`
+*The city's brain. Predict. Dispatch. Learn.*
 
 </div>
