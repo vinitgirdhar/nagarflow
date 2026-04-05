@@ -4,7 +4,7 @@
 
 **Next.js 16 · React 19 · Three.js · Leaflet · Framer Motion**
 
-[← Back to Main README](../README.md) · [Backend Docs →](../BACKEND.md)
+[← Back to Main README](README.md) · [Backend Docs →](BACKEND.md)
 
 </div>
 
@@ -314,6 +314,6 @@ nagarflow-next/
 
 <div align="center">
 
-[← Main README](../README.md) · [Backend Docs →](../BACKEND.md) · [Deployment →](../DEPLOYMENT.md)
+[← Main README](README.md) · [Backend Docs →](BACKEND.md) · [Deployment →](DEPLOYMENT.md)
 
 </div>
