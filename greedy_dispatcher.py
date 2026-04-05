@@ -1,6 +1,7 @@
 import sqlite3
 import math
 from fleet_manager import get_zone_coordinates
+from prediction_store import fetch_canonical_predictions
 
 DB_PATH = 'nagarflow.db'
 TRUCK_TYPE_LABELS = {
@@ -95,13 +96,7 @@ def generate_dispatch_suggestions():
     cursor = conn.cursor()
     
     # Pull Top 5 Critical Surge zones marked by AiRLLM
-    cursor.execute('''
-        SELECT zone, priority_score, action, reason 
-        FROM predictions 
-        ORDER BY priority_score DESC 
-        LIMIT 5
-    ''')
-    top_zones = cursor.fetchall()
+    top_zones = fetch_canonical_predictions(cursor, limit=5)
     
     # Grab all Trucks tracking as 'idle' right now
     cursor.execute("SELECT id, name, lat, lon, truck_type FROM trucks WHERE status = 'idle'")

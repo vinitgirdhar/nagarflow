@@ -6,6 +6,7 @@ from preprocess_transformer import build_llm_payloads
 
 import os
 import requests
+from prediction_store import collapse_prediction_records
 
 DB_PATH = 'nagarflow.db'
 # Configure your endpoint or keep blank to use the local smart simulator fallback
@@ -148,7 +149,10 @@ def run_airllm_engine():
             if r['priority_score'] >= 80: r['type'] = "high"
             elif r['priority_score'] >= 55: r['type'] = "medium"
             else: r['type'] = "low"
-            
+
+    canonical_results = collapse_prediction_records(results)
+
+    for r in canonical_results:
         cursor.execute('''
             INSERT INTO predictions (zone, priority_score, type, action, reason, category)
             VALUES (?, ?, ?, ?, ?, ?)

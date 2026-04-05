@@ -20,6 +20,7 @@ load_dotenv(dotenv_path=env_path)
 
 from agencies_scraper import get_agency_registry
 from greedy_dispatcher import generate_dispatch_suggestions
+from prediction_store import deduplicate_predictions_table, fetch_canonical_predictions
 from sarvam import SarvamError, speech_to_text, text_to_speech, translate_to_english
 from complaint_parser import extract_complaint_details
 from localities import find_zone_and_locality
@@ -248,6 +249,7 @@ def ensure_tables_exist():
     # Simple migration for existing databases
     try: cursor.execute("ALTER TABLE predictions ADD COLUMN category TEXT DEFAULT 'General'")
     except: pass
+    deduplicate_predictions_table(conn)
     
     # Prediction Outcomes Table
     cursor.execute('''CREATE TABLE IF NOT EXISTS prediction_outcomes 
@@ -462,14 +464,8 @@ def get_predictions():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    cursor.execute('''
-        SELECT zone, priority_score as demand, type, action, reason, category
-        FROM predictions 
-        ORDER BY priority_score DESC
-    ''')
-    
     from fleet_manager import get_zone_coordinates
-    predictions = [dict(row) for row in cursor.fetchall()]
+    predictions = fetch_canonical_predictions(cursor)
     
     # Formatting for Next.js expectations
     formatted = []
@@ -477,7 +473,7 @@ def get_predictions():
         lat, lon = get_zone_coordinates(p['zone'])
         formatted.append({
             'name': p['zone'],
-            'demand': p['demand'],
+            'demand': p['priority_score'],
             'type': p['type'],
             'action': p['action'],
             'reason': p['reason'],
@@ -548,13 +544,21 @@ def get_dashboard():
         truck_data["truck_type"] = _normalize_truck_type(truck_data.get("truck_type"))
         truck_data["truck_type_label"] = _truck_type_label(truck_data["truck_type"])
         trucks.append(truck_data)
-    cursor.execute("SELECT zone, priority_score, action, reason FROM predictions ORDER BY priority_score DESC")
-    predictions = [dict(p) for p in cursor.fetchall()]
+    predictions = fetch_canonical_predictions(cursor)
     from fleet_manager import get_zone_coordinates
+    dashboard_predictions = []
     for p in predictions:
-        p['lat'], p['lon'] = get_zone_coordinates(p['zone'])
+        lat, lon = get_zone_coordinates(p['zone'])
+        dashboard_predictions.append({
+            "zone": p["zone"],
+            "priority_score": p["priority_score"],
+            "action": p["action"],
+            "reason": p["reason"],
+            "lat": lat,
+            "lon": lon,
+        })
     conn.close()
-    return jsonify({"trucks": trucks, "predictions": predictions})
+    return jsonify({"trucks": trucks, "predictions": dashboard_predictions})
 
 @app.route('/api/dispatch/accept', methods=['POST'])
 def accept_dispatch():
@@ -581,9 +585,9 @@ def arrive_dispatch():
     cursor.execute("UPDATE zone_coverage SET last_visited = ?, status = 'OK' WHERE zone = ?", (now_str, zone))
     
     # FEEDBACK LOOP: Calculate LLM Prediction Error vs Physical Math
-    cursor.execute("SELECT priority_score FROM predictions WHERE zone = ? ORDER BY timestamp DESC LIMIT 1", (zone,))
-    pred_row = cursor.fetchone()
-    predicted = pred_row[0] if pred_row else 50
+    predictions = fetch_canonical_predictions(cursor)
+    prediction = next((entry for entry in predictions if entry["zone"] == zone), None)
+    predicted = prediction["priority_score"] if prediction else 50
     import random
     actual = max(0, min(100, predicted + random.randint(-15, 20))) 
     error = abs(predicted - actual)
@@ -700,10 +704,16 @@ def get_simulation_baseline():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT zone, priority_score, category FROM predictions")
-    rows = cursor.fetchall()
+    rows = [
+        {
+            "zone": row["zone"],
+            "priority_score": row["priority_score"],
+            "category": row["category"],
+        }
+        for row in fetch_canonical_predictions(cursor)
+    ]
     conn.close()
-    return jsonify([dict(row) for row in rows])
+    return jsonify(rows)
 
 @app.route('/api/simulation/run', methods=['POST'])
 def run_simulation():
@@ -715,8 +725,14 @@ def run_simulation():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT zone, priority_score, category FROM predictions")
-    baseline = [dict(row) for row in cursor.fetchall()]
+    baseline = [
+        {
+            "zone": row["zone"],
+            "priority_score": row["priority_score"],
+            "category": row["category"],
+        }
+        for row in fetch_canonical_predictions(cursor)
+    ]
     
     # Simulation Logic
     simulated = []
@@ -769,8 +785,11 @@ def get_maintenance_data():
     cursor = conn.cursor()
     
     # Auto-generate tasks for high-priority zones if they don't exist
-    cursor.execute("SELECT zone, priority_score, type, category FROM predictions WHERE priority_score > 80")
-    high_zones = cursor.fetchall()
+    high_zones = [
+        row
+        for row in fetch_canonical_predictions(cursor)
+        if float(row.get("priority_score") or 0) > 80
+    ]
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     for row in high_zones:
