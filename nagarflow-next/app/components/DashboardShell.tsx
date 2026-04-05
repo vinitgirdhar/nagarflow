@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from './PageTransition';
+import NextImage from 'next/image';
 import {
   LayoutDashboard,
   MapPin,
@@ -23,8 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
   Image,
-  HardHat,
-  ClipboardList
+  HardHat
 } from 'lucide-react';
 
 type NavItem =
@@ -117,7 +117,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`} id="sidebar">
         <div className="sidebar__logo">
-          <span className="sidebar__logo-dot"></span>
+          <NextImage src="/nagarflow.png" alt="NagarFlow" width={28} height={28} className="sidebar__logo-icon" />
           <span className="sidebar__logo-text">NagarFlow</span>
         </div>
         <nav className="sidebar__nav">

@@ -151,7 +151,7 @@ export default function MaintenancePage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         {[
           { label: 'Teams Total', val: stats.total_teams, icon: <Users size={20} />, color: 'var(--primary)' },
-          { label: 'Active Now', val: stats.active, icon: <Activity size={20} />, color: 'var(--glow)' },
+          { label: 'In Progress', val: stats.active, icon: <Play size={20} />, color: 'var(--glow)' },
           { label: 'Idle / Ready', val: stats.idle, icon: <Truck size={20} />, color: 'var(--accent)' },
           { label: 'Tasks Pending', val: stats.pending, icon: <Clock size={20} />, color: 'var(--danger)' },
         ].map((s, i) => (

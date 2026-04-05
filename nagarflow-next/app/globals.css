@@ -79,16 +79,12 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
 }
 .app.collapsed .sidebar__logo { justify-content: center; padding: 1.25rem 0; }
 .app.collapsed .sidebar__logo-text { display: none; }
-.sidebar__logo-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-  animation: dot-pulse 1.5s ease-in-out infinite alternate;
+.sidebar__logo-icon {
+  flex-shrink: 0;
+  transition: opacity .2s;
 }
-@keyframes dot-pulse {
-  from { background: var(--primary); }
-  to { background: var(--accent); }
-}
+.app.collapsed .sidebar__logo-icon { margin: 0; }
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

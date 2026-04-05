@@ -967,11 +967,12 @@ def get_maintenance_data():
     active_teams = len([t for t in teams if t['status'] == 'On Field'])
     idle_teams = len([t for t in teams if t['status'] == 'Idle'])
     pending_tasks = len([t for t in tasks if t['status'] == 'PENDING'])
-    
+    in_progress_tasks = len([t for t in tasks if t['status'] == 'ON GROUND'])
+
     return jsonify({
         "stats": {
             "total_teams": len(teams),
-            "active": active_teams,
+            "active": in_progress_tasks,
             "idle": idle_teams,
             "pending": pending_tasks
         },

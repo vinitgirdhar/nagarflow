@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { 
-  Network, SlidersHorizontal, MessageSquare, Globe2, TrendingUp, 
+import NextImage from 'next/image';
+import {
+  SlidersHorizontal, MessageSquare, Globe2, TrendingUp,
   CloudLightning, MonitorPlay, Users, BrainCircuit, FileBarChart,
   Radio, Scale, Calculator, Bot, Map, FileOutput, ChevronDown
 } from 'lucide-react';
@@ -348,7 +349,10 @@ export default function LandingPage() {
 
       {/* NAV */}
       <nav className="nav" id="nav" ref={navRef} aria-label="Main navigation">
-        <span className="nav__logo">NagarFlow</span>
+        <span className="nav__logo">
+          <NextImage src="/nagarflow.png" alt="NagarFlow" width={22} height={22} style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }} />
+          NagarFlow
+        </span>
         <ul className="nav__links">
           <li><a href="#features" data-section="features">Features</a></li>
           <li><a href="#pipeline" data-section="pipeline">Pipeline</a></li>
@@ -363,6 +367,7 @@ export default function LandingPage() {
         <div className="hero__fog"></div>
         <div className="hero__noise" style={{ filter: 'url(#noise-filter)', background: 'var(--text-heading)' }}></div>
         <div className="hero__content reveal">
+          <NextImage src="/nagarflow.png" alt="NagarFlow" width={160} height={160} style={{ marginBottom: '1.2rem', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
           <h1 className="hero__title">NagarFlow</h1>
           <p className="hero__tagline">NagarFlow is an AI-powered platform that predicts demand and optimizes allocation of public resources like water tankers, garbage trucks, and maintenance teams in real-time.</p>
           <p className="hero__sub">Zero hardware · 48-hr forecast · Equity-first dispatch</p>
