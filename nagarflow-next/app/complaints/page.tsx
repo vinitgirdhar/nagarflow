@@ -246,10 +246,10 @@ export default function ComplaintsPage() {
                         <span style={{ color: 'var(--text-heading)', fontWeight: 500 }}>{complaint.locality}</span>
                       </td>
                       <td>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: complaint.source === 'voice_call' ? 'var(--text-heading)' : 'var(--secondary)' }}>
-                          {complaint.source === 'voice_call' ? <PhoneCall size={14} /> : <MessageSquareText size={14} />}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem', color: complaint.source === 'voice_call' ? 'var(--text-heading)' : complaint.source === 'whatsapp' ? '#25D366' : 'var(--secondary)' }}>
+                          {complaint.source === 'voice_call' ? <PhoneCall size={14} /> : complaint.source === 'whatsapp' ? <MessageCircle size={14} /> : <MessageSquareText size={14} />}
                           <span className="mono" style={{ fontSize: '10px' }}>
-                            {complaint.source === 'voice_call' ? 'voice call' : complaint.source === 'text_chat' ? 'text complaint' : 'dataset'}
+                            {complaint.source === 'voice_call' ? 'voice call' : complaint.source === 'text_chat' ? 'text complaint' : complaint.source === 'whatsapp' ? 'whatsapp' : 'dataset'}
                           </span>
                         </span>
                       </td>

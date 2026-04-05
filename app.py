@@ -1152,6 +1152,8 @@ def _infer_complaint_source(complaint_id: str) -> str:
         return "voice_call"
     if complaint_id.startswith("TEXT-"):
         return "text_chat"
+    if complaint_id.startswith("MMR-"):
+        return "whatsapp"
     return "dataset"
 
 
@@ -1212,28 +1214,12 @@ def whatsapp_complaint():
     phone = data.get("phone") or data.get("From") or data.get("from") or ""
     source = data.get("source", "whatsapp")
 
-    # Extract zone and locality
+    # Extract zone/locality/type using regex heuristics as initial values
     zone, locality = find_zone_and_locality(user_msg)
-
-    # Extract complaint type
     complaint_type = extract_issue_from_text(user_msg)
 
-    # GATE: reject greetings, acks, and messages without a real zone + issue
-    # A valid complaint must have both a known zone and a specific issue type
-    is_valid_zone = zone != "Unknown"
-    is_valid_issue = complaint_type not in ("General", None, "")
-    if not is_valid_zone or not is_valid_issue:
-        print(f"[WHATSAPP] SKIPPED (not a valid complaint) zone={zone!r} issue={complaint_type!r} msg={user_msg[:80]!r}")
-        return jsonify({
-            "status": "skipped",
-            "reason": "Message does not contain a identifiable zone and issue type. Not saved.",
-            "zone": zone,
-            "issue_type": complaint_type
-        }), 200
-
-    # Translate message to English before storing.
-    # Primary: Gemini (also refines zone/locality/type).
-    # Fallback: Sarvam translate API.
+    # Try Gemini FIRST — it understands natural language locations like "Seawoods, Nerul"
+    # that the regex map won't catch. Gate runs AFTER Gemini enrichment.
     translated_description = user_msg
     try:
         gemini_data = extract_complaint_details(user_msg)
@@ -1246,7 +1232,6 @@ def whatsapp_complaint():
             if gemini_data.get("issue_type") and gemini_data["issue_type"] != "General":
                 complaint_type = gemini_data["issue_type"]
         else:
-            # Gemini failed — use Sarvam translation
             translated_description = translate_to_english(user_msg)
     except Exception as e:
         print(f"[WHATSAPP] Gemini failed, trying Sarvam translation: {e}")
@@ -1254,6 +1239,19 @@ def whatsapp_complaint():
             translated_description = translate_to_english(user_msg)
         except Exception as e2:
             print(f"[WHATSAPP] Sarvam translation also failed, storing original: {e2}")
+
+    # GATE: reject greetings, acks, and messages without a real zone + issue
+    # Runs after Gemini so natural-language locations are resolved before checking
+    is_valid_zone = zone != "Unknown"
+    is_valid_issue = complaint_type not in ("General", None, "")
+    if not is_valid_zone or not is_valid_issue:
+        print(f"[WHATSAPP] SKIPPED (not a valid complaint) zone={zone!r} issue={complaint_type!r} msg={user_msg[:80]!r}")
+        return jsonify({
+            "status": "skipped",
+            "reason": "Message does not contain a identifiable zone and issue type. Not saved.",
+            "zone": zone,
+            "issue_type": complaint_type
+        }), 200
 
     # Generate complaint ID matching MMR-XXXXX
     complaint_id = f"MMR-{uuid.uuid4().hex[:8].upper()}"

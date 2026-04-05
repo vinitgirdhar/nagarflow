@@ -168,15 +168,19 @@ def find_zone_and_locality(text: str) -> tuple[str, str]:
 
     # 3. Fallback: scan ALL sub-localities across zones (catches cross-zone mentions)
     if not detected_locality:
-        for zone_subs in SUB_LOCALITY_MAP.values():
+        for parent_zone, zone_subs in SUB_LOCALITY_MAP.items():
             for eng_name, hindi_name in zone_subs:
                 eng_normalized = eng_name.lower()
                 hindi_normalized = unicodedata.normalize("NFKC", hindi_name).lower()
                 if re.search(rf"\b{re.escape(eng_normalized)}\b", normalized):
                     detected_locality = eng_name
+                    if detected_zone == "Unknown":
+                        detected_zone = parent_zone
                     break
                 if hindi_normalized in normalized:
                     detected_locality = eng_name
+                    if detected_zone == "Unknown":
+                        detected_zone = parent_zone
                     break
             if detected_locality:
                 break
@@ -189,6 +193,9 @@ def find_zone_and_locality(text: str) -> tuple[str, str]:
         for i, word in enumerate(words):
             if word in suffixes and i > 0:
                 detected_locality = f"{words[i-1].capitalize()} {word.capitalize()}"
+                # Use locality as zone so the complaint isn't rejected
+                if detected_zone == "Unknown":
+                    detected_zone = detected_locality
                 break
 
     # Default locality = zone if nothing specific was found
