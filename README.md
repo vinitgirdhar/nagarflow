@@ -1,6 +1,7 @@
 # NagarFlow
 
 **Smart City Complaint Management System for the Mumbai Metropolitan Region**
+![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/81623e46-7515-4ea7-9eb6-e1596f99acfe)
 
 NagarFlow is a full-stack civic intelligence platform that ingests citizen complaints from WhatsApp, voice calls, and a web simulator — then routes them through an AI pipeline to prioritize zones, dispatch fleet assets, and surface actionable insights for municipal operators.
 
