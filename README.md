@@ -1,7 +1,8 @@
 <br />
 <div align="center">
 
-# 🏙️ NagarFlow
+<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/b2d2f2b4-6f37-4724-8e78-00149244ea63)" width="80" alt="NagarFlow Logo" />
+# NagarFlow
 ### **The City's Brain. Predict. Dispatch. Learn.**
 
 *AI-powered civic intelligence platform that predicts urban resource demand and optimizes real-time allocation of water tankers, garbage trucks, and maintenance teams across the Mumbai Metropolitan Region.*
@@ -232,12 +233,12 @@ Every physical dispatch generates `Error = |Predicted − Actual|`. Rolling 20-p
 
 | Landing Page | Operations Dashboard |
 |:---:|:---:|
-| <img src="docs/screenshots/landing.png" alt="Landing Page — 3D Three.js city with live ticker" width="100%" /> | <img src="docs/screenshots/dashboard.png" alt="Dashboard — Live Leaflet map with zone heatmap and fleet dispatch cards" width="100%" /> |
+| <img src="<img width="1915" height="965" alt="nagarflow - landing page" src="https://github.com/user-attachments/assets/3d51f911-5792-42c9-8f78-33ab251f549e" alt="Landing Page — 3D Three.js city with live ticker" width="100%" /> | <img src="docs/screenshots/dashboard.png" alt="Dashboard — Live Leaflet map with zone heatmap and fleet dispatch cards" width="100%" /> |
 | *3D Three.js city · Live alert ticker · 10 feature cards* | *Leaflet heatmap · KPI cards · Haversine dispatch array* |
 
 | Complaint Insights | Digital Twin Simulator |
 |:---:|:---:|
-| <img src="docs/screenshots/complaints.png" alt="Complaints — AiRLLM breakdown and complaint feed" width="100%" /> | <img src="docs/screenshots/simulation.png" alt="Simulation — What-if scenario sandbox with before/after" width="100%" /> |
+| <img src="<img width="1918" height="962" alt="nagarflow - complain" src="https://github.com/user-attachments/assets/f2c4a83a-7290-4bfa-9290-6a50e14582cd" alt="Complaints — AiRLLM breakdown and complaint feed" width="100%" /> | <img src="docs/screenshots/simulation.png" alt="Simulation — What-if scenario sandbox with before/after" width="100%" /> |
 | *AiRLLM breakdown · Category filters · Voice/text split* | *Demand/failure/weather sliders · Before vs After grid* |
 
 </div>
@@ -327,7 +328,7 @@ nagarflow/
 │   ├── app/
 │   │   ├── page.tsx              # Landing page (Three.js + 10 feature cards)
 │   │   ├── layout.tsx            # Root layout with metadata
-│   │   ├── globals.css           # 🎨 Design system (33KB — full theme)
+│   │   ├── globals.css           # Design system (33KB — full theme)
 │   │   ├── dashboard/            # Operations center (map + dispatch)
 │   │   ├── complaints/           # Complaint insights + AiRLLM breakdown
 │   │   ├── complaint-simulator/  # Browser chat complaint submission
@@ -347,8 +348,8 @@ nagarflow/
 │   ├── package.json
 │   └── netlify.toml              # Netlify deploy configuration
 │
-├── docs/screenshots/             # 📸 README screenshots
-└── tests/                        # 🧪 Test suite
+├── docs/screenshots/             # README screenshots
+└── tests/                        # Test suite
 ```
 
 ---
