@@ -4,7 +4,7 @@
 
 **Python 3.11 · Flask · SQLite · 25+ REST Endpoints · 1,609 LOC**
 
-[← Back to Main README](README.md) · [Frontend Docs →](nagarflow-next/README.md)
+[← Back to Main README](README.md) · [Frontend Docs →](FRONTEND.md)
 
 </div>
 
@@ -493,6 +493,6 @@ Run these once after cloning to bootstrap the database:
 
 <div align="center">
 
-[← Main README](README.md) · [Frontend Docs →](nagarflow-next/README.md) · [Deployment →](DEPLOYMENT.md)
+[← Main README](README.md) · [Frontend Docs →](FRONTEND.md) · [Deployment →](DEPLOYMENT.md)
 
 </div>

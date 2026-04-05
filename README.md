@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/bd8fef09-33d9-46c3-bb32-c2b87e5e984e)" width="72" alt="NagarFlow" />
+<img src="![nagarflow-logo](https://github.com/user-attachments/assets/a4be3484-7331-4fd1-8bb9-baabec7458ff)" width="72" alt="NagarFlow" />
 
 # NagarFlow
 
@@ -27,7 +27,7 @@ AI-powered civic intelligence platform that predicts urban resource demand and o
 
 <br/>
 
-<img src="<img width="1915" height="965" alt="nagarflow - landing page" src="https://github.com/user-attachments/assets/74a75835-4281-433a-909e-c554ab0c459f" alt="NagarFlow — 3D city visualization with live intelligence ticker" width="100%"/>
+<img src="https://github.com/user-attachments/assets/74a75835-4281-433a-909e-c554ab0c459f" alt="NagarFlow — 3D city visualization with live intelligence ticker" width="100%"/>
 
 </div>
 
@@ -48,7 +48,7 @@ The system is deployed as a **decoupled monorepo** with two independently runnin
 | **Voice** | Sarvam AI (saaras:v3 · bulbul:v3) | Hindi/English speech-to-text, text-to-speech, Devanagari translation |
 | **Automation** | N8n · WhatsApp · Telegram | Conversational complaint collection — GPT-4o-mini holds the conversation, backend logs the complaint |
 
-> 📖 **Sub-documentation:** [Frontend README →](nagarflow-next/README.md) · [Backend README →](BACKEND.md) · [Deployment Guide →](DEPLOYMENT.md)
+> 📖 **Sub-documentation:** [Frontend README →](FRONTEND.md) · [Backend README →](BACKEND.md) · [Deployment Guide →](DEPLOYMENT.md)
 
 ---
 
@@ -258,7 +258,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 </tr>
 <tr>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 03 46 PM](https://github.com/user-attachments/assets/0791eae1-43fd-4354-ac46-bff33d1d118f)" alt="Digital Twin Simulator" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/6c35dede-cb89-4d02-a562-90fd0c0f2d08" alt="Digital Twin Simulator" width="100%"/><br/>
 <strong>Digital Twin Simulator</strong><br/>
 <sub>Demand / failure / weather sliders · Before vs. After zone grids · Projected KPIs</sub>
 </td>
@@ -275,7 +275,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Haversine-paired suggestions · Truck type labels · Accept / Reject actions</sub>
 </td>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6b7a9da9-696a-41af-8257-143c79ebff2e)" alt="KPI Reports" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/5824b45b-2c54-47e9-b849-db8c81d07249" alt="KPI Reports" width="100%"/><br/>
 <strong>KPI Reports</strong><br/>
 <sub>Accuracy trend · Coverage chart · Equity score · Retraining trigger</sub>
 </td>
@@ -287,7 +287,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Per-zone temperature · AQI · Wind speed · Flood probability from NOAA</sub>
 </td>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6a516aa2-4227-4340-89fd-70f13ff0bb6f)" alt="Maintenance Tracker" width="100%"/><br/>
+<img src="https://github.com/user-attachments/assets/b95a7342-8bd2-441e-9f4f-faefb7292a2b" alt="Maintenance Tracker" width="100%"/><br/>
 <strong>Maintenance Center</strong><br/>
 <sub>Auto-generated tasks · Team assignment · Status tracking · Zone coverage feedback</sub>
 </td>
