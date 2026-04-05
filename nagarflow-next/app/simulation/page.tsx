@@ -180,8 +180,8 @@ export default function SimulationPage() {
             <motion.div 
               key={i} 
               variants={{
-                hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
-                show: { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                hidden: { opacity: 0, scale: 0.85 },
+                show: { opacity: 1, scale: 1, transition: { duration: 0.15, ease: 'easeOut' } }
               }}
               whileHover={{ scale: 1.05, zIndex: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}
               style={{ 
@@ -262,9 +262,9 @@ export default function SimulationPage() {
       </div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ delay: 0.2 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
         style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '4px' }}
       >
         {CATEGORIES.map(cat => (

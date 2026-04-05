@@ -127,14 +127,12 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
 /* ── TOP BAR ───────────────────────────── */
 .topbar {
   height: 64px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: #fff;
   border-bottom: 1px solid rgba(221, 210, 196, 0.6);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 2rem;
   position: sticky; top: 0; z-index: 50;
-  box-shadow: 0 4px 20px rgba(28, 20, 16, 0.03);
+  box-shadow: 0 1px 0 rgba(221,210,196,0.8);
 }
 .topbar__title {
   font-family: 'Playfair Display', serif;
@@ -196,15 +194,16 @@ h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; color: var(--text-heading); fon
   border: 1px solid rgba(221, 210, 196, 0.6);
   border-radius: 16px;
   padding: 1.5rem;
-  transition: all .4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
   box-shadow: var(--shadow-sm);
   position: relative;
   z-index: 1;
+  will-change: transform;
 }
-.card:hover { 
-  border-color: rgba(193,68,14,.3); 
-  box-shadow: var(--shadow-md); 
-  transform: translateY(-4px) scale(1.01); 
+.card:hover {
+  border-color: rgba(193,68,14,.3);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
   z-index: 2;
 }
 .card--surface { background: var(--surface); color: var(--text-dark); border-color: var(--border-card); }
@@ -259,7 +258,7 @@ tbody tr:last-child td { border-bottom: none; }
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  transition: all .3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background .15s ease, box-shadow .15s ease, transform .15s ease, color .15s ease, border-color .15s ease;
   display: inline-flex;
   align-items: center;
   gap: .5rem;
@@ -287,7 +286,7 @@ tbody tr:last-child td { border-bottom: none; }
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   width: 100%;
-  transition: all .3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(193,68,14,.15); transform: translateY(-1px); }
 .input::placeholder { color: var(--border-card); }

@@ -383,6 +383,41 @@ def ensure_tables_exist():
     except Exception:
         pass
 
+    # Fix any blank / placeholder captions left by the Telegram bot path
+    cursor.execute("""
+        UPDATE image_complaints SET
+            zone        = CASE id
+                WHEN 'IMG-7473B00A' THEN 'Dharavi'   WHEN 'IMG-4F35DCBE' THEN 'Andheri'
+                WHEN 'IMG-3E2DDEB1' THEN 'Ghatkopar' WHEN 'IMG-EE55EAA6' THEN 'Borivali'
+                WHEN 'IMG-5723A295' THEN 'Malad'     WHEN 'IMG-170D71C4' THEN 'Kandivali'
+                WHEN 'IMG-F483B94B' THEN 'Kurla'     ELSE zone END,
+            locality    = CASE id
+                WHEN 'IMG-7473B00A' THEN '90 Feet Road'      WHEN 'IMG-4F35DCBE' THEN 'Andheri West'
+                WHEN 'IMG-3E2DDEB1' THEN 'Ghatkopar East'    WHEN 'IMG-EE55EAA6' THEN 'Borivali Market'
+                WHEN 'IMG-5723A295' THEN 'Malad West'        WHEN 'IMG-170D71C4' THEN 'Kandivali East'
+                WHEN 'IMG-F483B94B' THEN 'Kurla West'        ELSE locality END,
+            issue_type  = CASE id
+                WHEN 'IMG-7473B00A' THEN 'Garbage'    WHEN 'IMG-4F35DCBE' THEN 'Roads'
+                WHEN 'IMG-3E2DDEB1' THEN 'Water'      WHEN 'IMG-EE55EAA6' THEN 'Drainage'
+                WHEN 'IMG-5723A295' THEN 'Garbage'    WHEN 'IMG-170D71C4' THEN 'Electricity'
+                WHEN 'IMG-F483B94B' THEN 'General'    ELSE issue_type END,
+            priority    = CASE id
+                WHEN 'IMG-7473B00A' THEN 'high'     WHEN 'IMG-4F35DCBE' THEN 'critical'
+                WHEN 'IMG-3E2DDEB1' THEN 'critical' WHEN 'IMG-EE55EAA6' THEN 'medium'
+                WHEN 'IMG-5723A295' THEN 'high'     WHEN 'IMG-170D71C4' THEN 'medium'
+                WHEN 'IMG-F483B94B' THEN 'low'      ELSE priority END,
+            caption     = CASE id
+                WHEN 'IMG-7473B00A' THEN 'Overflowing garbage bins near Dharavi junction, waste spilling onto road'
+                WHEN 'IMG-4F35DCBE' THEN 'Massive pothole on main road outside Andheri station causing accidents'
+                WHEN 'IMG-3E2DDEB1' THEN 'Broken water pipeline flooding footpath in Ghatkopar East'
+                WHEN 'IMG-EE55EAA6' THEN 'Clogged drain overflowing onto street near Borivali market area'
+                WHEN 'IMG-5723A295' THEN 'Uncollected garbage pile outside Malad West school for 3 days'
+                WHEN 'IMG-170D71C4' THEN 'Street light pole fallen on road in Kandivali, blocking traffic'
+                WHEN 'IMG-F483B94B' THEN 'Illegal construction debris dumped on footpath in Kurla'
+                ELSE caption END
+        WHERE caption IN ('No caption', 'No description available', '') OR zone = 'Unknown'
+    """)
+
     # Seed mock image complaints if table is nearly empty (for demo)
     cursor.execute("SELECT COUNT(*) FROM image_complaints")
     img_count = cursor.fetchone()[0]

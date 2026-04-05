@@ -93,8 +93,7 @@ def extract_complaint_details(transcript: str) -> dict:
     """
 
     try:
-        # Use 'gemini-2.5-pro' for best translation + NLU quality
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
         response = model.generate_content(prompt)
         
         text = response.text.strip()

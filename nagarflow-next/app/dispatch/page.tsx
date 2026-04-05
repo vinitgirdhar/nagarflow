@@ -7,18 +7,12 @@ import DashboardShell from '../components/DashboardShell';
 
 const STAGGER_CONTAINER: Variants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } }
 };
 
 const FADE_UP: Variants = {
-  hidden: { opacity: 0, y: 30, filter: 'blur(10px)', scale: 0.95 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    filter: 'blur(0px)', 
-    scale: 1,
-    transition: { type: 'spring', stiffness: 200, damping: 25 } 
-  }
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.2, ease: 'easeOut' } }
 };
 
 type TruckRecord = {
