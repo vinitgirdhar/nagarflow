@@ -2,23 +2,20 @@ import os
 import re
 import json
 import sys
-import time
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 
-# Ensure environment variables are loaded
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
+API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=API_KEY) if API_KEY else None
 
 VALID_ZONES = [
-    "Airoli", "Andheri", "Bandra", "Belapur", "Bhayander", "Borivali", 
-    "CST", "Chembur", "Churchgate", "Colaba", "Dadar", "Dharavi", 
-    "Fort", "Ghatkopar", "Goregaon", "Hiranandani", "Jogeshwari", 
-    "Juhu", "Kandivali", "Kurla", "Lower Parel", "Malad", "Matunga", 
-    "Mulund", "Parel", "Powai", "Santacruz", "Sion", "Thane", 
+    "Airoli", "Andheri", "Bandra", "Belapur", "Bhayander", "Borivali",
+    "CST", "Chembur", "Churchgate", "Colaba", "Dadar", "Dharavi",
+    "Fort", "Ghatkopar", "Goregaon", "Hiranandani", "Jogeshwari",
+    "Juhu", "Kandivali", "Kurla", "Lower Parel", "Malad", "Matunga",
+    "Mulund", "Parel", "Powai", "Santacruz", "Sion", "Thane",
     "Versova", "Vikhroli", "Vile Parle", "Wadala", "Worli"
 ]
 
@@ -30,14 +27,14 @@ def _safe_log(message: str) -> None:
     safe_text = str(message).encode(encoding, errors="replace").decode(encoding, errors="replace")
     print(safe_text)
 
+
 def extract_complaint_details(transcript: str) -> dict:
     """
-    Uses Gemini 1.5/2.0 Flash to detect language, translate to English, 
+    Uses Groq (llama-3.3-70b-versatile) to detect language, translate to English,
     extract structured data, and generate a translated response.
-    Unified prompt for maximum speed (low latency).
     """
-    if not API_KEY:
-        return {"error": "API Key not configured"}
+    if not client:
+        return {"error": "GROQ_API_KEY not configured"}
 
     prompt = f"""
     You are the NagarFlow AI Agent, a warm and conversational male civic helpline agent for NagarFlow, Mumbai.
@@ -81,7 +78,7 @@ def extract_complaint_details(transcript: str) -> dict:
       "is_english": boolean,
       "translated_input_en": "Standardized English version of the user request",
       "zone": "Match to one string from the Standard Zones list or 'Unknown'",
-      "specific_location": "The MOST SPECIFIC neighborhood, street, or landmark name mentioned (e.g., 'Chakala', 'Gully No 4'). DO NOT just repeat the Ward name if a better sub-locality exists.",
+      "specific_location": "The MOST SPECIFIC neighborhood, street, or landmark name mentioned. DO NOT just repeat the Ward name if a better sub-locality exists.",
       "issue_type": "Match to one string from the Standard Issues list or 'General'",
       "severity": "High" | "Medium" | "Low",
       "is_closing": boolean,
@@ -89,39 +86,41 @@ def extract_complaint_details(transcript: str) -> dict:
       "reply_text_native": "Response in Pure Hindi or Pure English (Match detected comfort level, NO Hinglish)"
     }}
 
-    Return ONLY the valid JSON object.
+    Return ONLY the valid JSON object, no markdown, no explanation.
     """
 
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
-        response = model.generate_content(prompt)
-        
-        text = response.text.strip()
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=1024,
+        )
+
+        text = response.choices[0].message.content.strip()
         if "```json" in text:
             text = text.split("```json")[1].split("```")[0].strip()
         elif "```" in text:
             text = text.split("```")[1].split("```")[0].strip()
-            
+
         data = json.loads(text)
-        
-        # Logging for debugging without crashing Windows terminals on Unicode output
         _safe_log(
-            f"Multilingual Engine: {data.get('input_language')} -> {data.get('translated_input_en')}"
+            f"Groq Extraction: {data.get('input_language')} -> {data.get('translated_input_en')}"
         )
-        
         return data
+
     except Exception as e:
-        _safe_log(f"Gemini Multilingual Extraction Failed: {e}")
+        _safe_log(f"Groq Extraction Failed: {e}")
         return {"error": str(e)}
 
+
 if __name__ == "__main__":
-    # Test cases
     test_1 = "Dharavi area mein bohot kachra jama ho gaya hai, please utha lijiye"
     test_2 = "Bandra station ke paas pipe leak ho raha hai paani barbad ho raha hai"
     test_3 = "नमस्ते, धारावी में कचरा पड़ा है।"
     test_4 = "आप यहाँ कॉल खत्म कर सकते हो"
     test_5 = "ठीक है शुक्रिया, बस इतना ही"
-    
+
     print("Test 1 (Hinglish Garbage):", extract_complaint_details(test_1))
     print("Test 2 (Hinglish Water):", extract_complaint_details(test_2))
     print("Test 3 (Hindi):", extract_complaint_details(test_3))
