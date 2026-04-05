@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="![WhatsApp Image 2026-04-05 at 12 44 33 AM](https://github.com/user-attachments/assets/bd8fef09-33d9-46c3-bb32-c2b87e5e984e)" width="72" alt="NagarFlow" />
+<img src="![nagarflow-logo](https://github.com/user-attachments/assets/a4be3484-7331-4fd1-8bb9-baabec7458ff)" width="72" alt="NagarFlow" />
 
 # NagarFlow
 
@@ -27,7 +27,7 @@ AI-powered civic intelligence platform that predicts urban resource demand and o
 
 <br/>
 
-<img src="<img width="1915" height="965" alt="nagarflow - landing page" src="https://github.com/user-attachments/assets/74a75835-4281-433a-909e-c554ab0c459f" alt="NagarFlow — 3D city visualization with live intelligence ticker" width="100%"/>
+<img src="https://github.com/user-attachments/assets/74a75835-4281-433a-909e-c554ab0c459f" alt="NagarFlow — 3D city visualization with live intelligence ticker" width="100%"/>
 
 </div>
 
@@ -258,7 +258,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 </tr>
 <tr>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 03 46 PM](https://github.com/user-attachments/assets/0791eae1-43fd-4354-ac46-bff33d1d118f)" alt="Digital Twin Simulator" width="100%"/><br/>
+<img src="![nagarflow- simulation](https://github.com/user-attachments/assets/4ed1a6cb-5f9e-40e7-9603-08ffb7ccacee)" alt="Digital Twin Simulator" width="100%"/><br/>
 <strong>Digital Twin Simulator</strong><br/>
 <sub>Demand / failure / weather sliders · Before vs. After zone grids · Projected KPIs</sub>
 </td>
@@ -275,7 +275,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Haversine-paired suggestions · Truck type labels · Accept / Reject actions</sub>
 </td>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6b7a9da9-696a-41af-8257-143c79ebff2e)" alt="KPI Reports" width="100%"/><br/>
+<img src="![nagarflow- reports](https://github.com/user-attachments/assets/a800665d-8b15-4332-89d7-051aa1df0258)" alt="KPI Reports" width="100%"/><br/>
 <strong>KPI Reports</strong><br/>
 <sub>Accuracy trend · Coverage chart · Equity score · Retraining trigger</sub>
 </td>
@@ -287,7 +287,7 @@ Each `Mark Arrived` action generates `Error = |Predicted − Actual|`. Rolling 2
 <sub>Per-zone temperature · AQI · Wind speed · Flood probability from NOAA</sub>
 </td>
 <td align="center">
-<img src="![WhatsApp Image 2026-04-05 at 6 04 10 PM](https://github.com/user-attachments/assets/6a516aa2-4227-4340-89fd-70f13ff0bb6f)" alt="Maintenance Tracker" width="100%"/><br/>
+<img src="![nagarflow- maintenance](https://github.com/user-attachments/assets/d661aa35-e2cb-4093-9b45-75f23176f313)" alt="Maintenance Tracker" width="100%"/><br/>
 <strong>Maintenance Center</strong><br/>
 <sub>Auto-generated tasks · Team assignment · Status tracking · Zone coverage feedback</sub>
 </td>
