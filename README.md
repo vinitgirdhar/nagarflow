@@ -48,7 +48,7 @@ The system is deployed as a **decoupled monorepo** with two independently runnin
 | **Voice** | Sarvam AI (saaras:v3 · bulbul:v3) | Hindi/English speech-to-text, text-to-speech, Devanagari translation |
 | **Automation** | N8n · WhatsApp · Telegram | Conversational complaint collection — GPT-4o-mini holds the conversation, backend logs the complaint |
 
-> 📖 **Sub-documentation:** [Frontend README →](nagarflow-next/README.md) · [Backend README →](BACKEND.md) · [Deployment Guide →](DEPLOYMENT.md)
+> 📖 **Sub-documentation:** [Frontend README →](FRONTEND.md) · [Backend README →](BACKEND.md) · [Deployment Guide →](DEPLOYMENT.md)
 
 ---
 
