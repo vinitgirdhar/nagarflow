@@ -302,15 +302,58 @@ nagarflow-next/
 
 ## Screenshots
 
-| Landing | Dashboard | Simulation |
-|:---:|:---:|:---:|
-| <img src="../docs/screenshots/landing.png" alt="Landing" width="100%"/> | <img src="../docs/screenshots/dashboard.png" alt="Dashboard" width="100%"/> | <img src="../docs/screenshots/simulation.png" alt="Simulation" width="100%"/> |
 
-| Complaints | Dispatch | Reports |
-|:---:|:---:|:---:|
-| <img src="../docs/screenshots/complaints.png" alt="Complaints" width="100%"/> | <img src="../docs/screenshots/dispatch.png" alt="Dispatch" width="100%"/> | <img src="../docs/screenshots/reports.png" alt="Reports" width="100%"/> |
+<table>
+<tr>
+<td align="center" width="50%">
+<img src="https://github.com/user-attachments/assets/11741689-df43-4914-84ce-8e764fe255be" alt="Landing Page" width="100%"/><br/>
+<strong>Landing Page</strong><br/>
+<sub>3D Three.js city · Live alert ticker · 10 feature flip-cards · Pipeline visualization</sub>
+</td>
+<td align="center" width="50%">
+<img src="https://github.com/user-attachments/assets/c89eed26-ede5-4182-b496-464fa4db4899" alt="Operations Dashboard" width="100%"/><br/>
+<strong>Operations Dashboard</strong><br/>
+<sub>Leaflet heatmap · 5 KPI cards · Haversine dispatch array · Live operator log</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/6c35dede-cb89-4d02-a562-90fd0c0f2d08" alt="Digital Twin Simulator" width="100%"/><br/>
+<strong>Digital Twin Simulator</strong><br/>
+<sub>Demand / failure / weather sliders · Before vs. After zone grids · Projected KPIs</sub>
+</td>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/2c983b6f-35e5-4997-ba5b-ea4901a6c007" alt="Complaint Insights" width="100%"/><br/>
+<strong>Complaint Insights</strong><br/>
+<sub>AiRLLM breakdown · Category filters · Voice vs. text split · Last sync time</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/316da9b8-adf4-496d-b9d2-1e87b603a589" alt="Fleet Dispatch" width="100%"/><br/>
+<strong>Fleet Dispatch</strong><br/>
+<sub>Haversine-paired suggestions · Truck type labels · Accept / Reject actions</sub>
+</td>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/5824b45b-2c54-47e9-b849-db8c81d07249" alt="KPI Reports" width="100%"/><br/>
+<strong>KPI Reports</strong><br/>
+<sub>Accuracy trend · Coverage chart · Equity score · Retraining trigger</sub>
+</td>
+</tr>
+<tr>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/4955cea5-3057-41bb-861d-d2bc98ca82dc" alt="Emergency Weather" width="100%"/><br/>
+<strong>Emergency Weather Overlay</strong><br/>
+<sub>Per-zone temperature · AQI · Wind speed · Flood probability from NOAA</sub>
+</td>
+<td align="center">
+<img src="https://github.com/user-attachments/assets/b95a7342-8bd2-441e-9f4f-faefb7292a2b" alt="Maintenance Tracker" width="100%"/><br/>
+<strong>Maintenance Center</strong><br/>
+<sub>Auto-generated tasks · Team assignment · Status tracking · Zone coverage feedback</sub>
+</td>
+</tr>
+</table>
 
----
 
 <div align="center">
 
