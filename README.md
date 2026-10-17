@@ -13,6 +13,8 @@ A protected workspace for municipal complaint intake, fleet assignments, field e
 
 The app does not claim validated live forecast accuracy, autonomous emergency response, inferred equity scores or real-time social scraping. Provider credentials and live deployment configuration are separate from local code verification.
 
+`main` is the default and current development branch. It includes the previous `master` and `verison-updation` history. Pull `main` for the latest supported setup.
+
 ## Run on your computer
 
 Requires Python 3.12, Node.js 22 (with npm), Git and SQLite with FTS5. Use macOS/Linux Bash, or WSL on Windows. Keep the backend and frontend terminals running.
@@ -74,7 +76,7 @@ npx playwright install chromium
 CI=1 npm run test:e2e
 ```
 
-Tests use isolated databases and synthetic accounts. The CI workflow runs backend checks, the reproducible intelligence evaluation, production build and browser journeys. A workflow definition is not evidence of a completed GitHub Actions run.
+Tests use isolated databases and synthetic accounts. The CI workflow runs backend checks, the reproducible intelligence evaluation, production build and browser journeys. Commit `62d102d` passed the full workflow: [successful GitHub Actions run](https://github.com/vinitgirdhar/nagarflow/actions/runs/39030290654). Check the latest run under [Actions](https://github.com/vinitgirdhar/nagarflow/actions) for subsequent commits.
 
 ## Documentation
 

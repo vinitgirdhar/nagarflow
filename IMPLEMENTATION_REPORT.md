@@ -2,9 +2,9 @@
 
 Completed account/tenant security, durable dispatch and intake, grounded lexical document retrieval, aggregate complaint retrieval, real fitted forecasting, operations forms, MFA, backup/restore, structured correlation logging, honest public UI and deployment tooling. See README.md and linked runbooks for exact behavior.
 
-Verified locally: 99 backend tests; 17 Playwright browser tests; production Next build; synthetic intelligence evaluation. New product code received targeted lint checks. CI has not run remotely. Provider credentials, production domain/storage, initial real administrator and external connectivity remain launch gates. No promise of zero defects or live-model accuracy is made.
+Verified locally: 99 backend tests; 17 Playwright browser tests; production Next build; synthetic intelligence evaluation. New product code received targeted lint checks. Commit `62d102d` also passed the complete remote GitHub CI workflow, including production build and browser journeys: [successful GitHub Actions run](https://github.com/vinitgirdhar/nagarflow/actions/runs/39030290654). Provider credentials, production domain/storage, initial real administrator and external connectivity remain launch gates. No promise of zero defects or live-model accuracy is made.
 
-The implementation is prepared for publication on `main`; verify the remote commit before pulling. Earlier milestone details follow as historical records.
+The implementation and jsPDF type-conflict fix are published on `main`, now the default branch. Both legacy branch tips (`master` and `verison-updation`) are ancestors of `main`; no commits from those branches are missing. Earlier milestone details follow as historical records.
 
 # Durable dispatch milestone — 2026-10-17
 
