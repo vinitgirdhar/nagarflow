@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../../lib/api';
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -55,8 +56,8 @@ export default function TaskDetailPage() {
   const loadTask = async () => {
     setLoading(true);
     try {
-      const teamId = sessionStorage.getItem('worker_team_id') || '';
-      const res = await fetch(`http://127.0.0.1:5000/api/worker/tasks?team_id=${encodeURIComponent(teamId)}`);
+      const teamId = '';
+      const res = await apiFetch(`/api/worker/tasks?team_id=${encodeURIComponent(teamId)}`);
       if (res.ok) {
         const all: WorkerTask[] = await res.json();
         const found = all.find(t => t.id === taskId);
@@ -79,7 +80,8 @@ export default function TaskDetailPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch('http://127.0.0.1:5000/api/worker/upload', { method: 'POST', body: formData });
+      formData.append('task_id', taskId);
+      const res = await apiFetch('/api/worker/upload', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
         setUploadedUrl(data.url);
@@ -100,7 +102,7 @@ export default function TaskDetailPage() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/worker/update-status', {
+      const res = await apiFetch('/api/worker/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -307,7 +309,7 @@ export default function TaskDetailPage() {
                 onClick={() => updateStatus('IN_PROGRESS')}
                 disabled={submitting}
                 style={{
-                  width: '100%', padding: '16px', borderRadius: '14px', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                  width: '100%', padding: '16px', borderRadius: '14px', cursor: submitting ? 'not-allowed' : 'pointer',
                   background: 'linear-gradient(135deg, #E8933A, #C1440E)', color: 'white',
                   fontSize: '16px', fontWeight: 700, fontFamily: "'Outfit', sans-serif",
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
@@ -324,7 +326,7 @@ export default function TaskDetailPage() {
                 onClick={() => updateStatus('COMPLETED_UNVERIFIED')}
                 disabled={submitting || !uploadedUrl}
                 style={{
-                  width: '100%', padding: '16px', borderRadius: '14px', border: 'none',
+                  width: '100%', padding: '16px', borderRadius: '14px',
                   cursor: (submitting || !uploadedUrl) ? 'not-allowed' : 'pointer',
                   background: uploadedUrl ? 'linear-gradient(135deg, #34d399, #059669)' : 'var(--dark-surface)',
                   color: uploadedUrl ? 'white' : 'var(--secondary)',

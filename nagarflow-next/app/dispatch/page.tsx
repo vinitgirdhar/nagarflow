@@ -1,4 +1,9 @@
 'use client';
+import { apiFetch } from '../lib/api';
+import { htmlText } from '../lib/html';
+import { acceptDispatch } from '../lib/dispatch';
+import ActiveDispatches from '../components/ActiveDispatches';
+import FleetRegistration from '../components/FleetRegistration';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, Check, Truck, X, MapPin, Activity } from 'lucide-react';
@@ -35,6 +40,8 @@ type PredictionRecord = {
 };
 
 type SuggestionRecord = {
+  prediction_id: number;
+  prediction_version: string;
   action: string;
   distance_km: number;
   eta_mins: number;
@@ -84,7 +91,7 @@ type LeafletLike = {
   divIcon: (options: { className: string; html: string; iconSize: number[]; iconAnchor: number[] }) => unknown;
 };
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = '';
 
 function getTruckTypeBadgeStyle(truckType: string) {
   if (truckType === 'water') {
@@ -110,13 +117,15 @@ export default function DispatchPage() {
   const [vehicles, setVehicles] = useState<TruckRecord[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mapUnavailable,setMapUnavailable]=useState(false);
+  const [mutationError, setMutationError] = useState('');
   const [errorText, setErrorText] = useState('');
   const [activeTruckId, setActiveTruckId] = useState<number | null>(null);
   const [dismissedSuggestionKeys, setDismissedSuggestionKeys] = useState<string[]>([]);
   const [hotspots, setHotspots] = useState<any[]>([]);
 
   const getSuggestionKey = (suggestion: SuggestionRecord) =>
-    `${suggestion.truck_id}-${suggestion.zone}`;
+    `${suggestion.truck_id}-${suggestion.prediction_version}`;
 
   const getLeaflet = () => (window as Window & { L?: LeafletLike }).L;
 
@@ -139,7 +148,7 @@ export default function DispatchPage() {
         color: '#C1440E',
         weight: 1,
         opacity: 0.4
-      }).addTo(layerGroup).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
+      }).addTo(layerGroup).bindPopup(`<b>Locality Hotspot</b><br>${htmlText(h.locality)}<br>Complaints: ${htmlText(h.count)}`);
     });
 
     const zoneIcon = L.divIcon({
@@ -153,7 +162,7 @@ export default function DispatchPage() {
       if (prediction.lat && prediction.lon) {
         L.marker([prediction.lat, prediction.lon], { icon: zoneIcon })
           .addTo(layerGroup)
-          .bindPopup(`<b>${prediction.zone}</b><br>${prediction.action}<br>Priority: ${prediction.priority_score}<br><small>${prediction.reason || ''}</small>`);
+          .bindPopup(`<b>${htmlText(prediction.zone)}</b><br>${htmlText(prediction.action)}<br>Priority: ${htmlText(prediction.priority_score)}<br><small>${htmlText(prediction.reason || '')}</small>`);
       }
     });
 
@@ -175,7 +184,7 @@ export default function DispatchPage() {
 
       L.marker([truck.lat, truck.lon], { icon: truckIcon })
         .addTo(layerGroup)
-        .bindPopup(`<b>${truck.name}</b><br>Type: ${truck.truck_type_label}<br>Status: ${truck.status}`);
+        .bindPopup(`<b>${htmlText(truck.name)}</b><br>Type: ${htmlText(truck.truck_type_label)}<br>Status: ${htmlText(truck.status)}`);
 
       if (isEnRoute) {
         const targetZone = truck.status.replace('en_route_to_', '');
@@ -211,6 +220,7 @@ export default function DispatchPage() {
       }
       
       try {
+        setMapUnavailable(false);
         mapInstanceRef.current = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '&copy; OSM &copy; CARTO',
@@ -229,8 +239,8 @@ export default function DispatchPage() {
   const loadData = useCallback(async () => {
     try {
       const [dashboardResponse, dispatchResponse] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/dashboard`),
-        fetch(`${BACKEND_URL}/api/dispatch`),
+        apiFetch(`${BACKEND_URL}/api/dashboard`),
+        apiFetch(`${BACKEND_URL}/api/dispatch`),
       ]);
 
       if (!dashboardResponse.ok || !dispatchResponse.ok) {
@@ -258,11 +268,12 @@ export default function DispatchPage() {
         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
         script.async = true;
         script.onload = () => ensureMap(nextVehicles, nextPredictions);
+        script.onerror = () => setMapUnavailable(true);
         document.head.appendChild(script);
       }
 
       // Fetch Hotspots separately
-      const hotspotsRes = await fetch(`${BACKEND_URL}/api/hotspots`);
+      const hotspotsRes = await apiFetch(`${BACKEND_URL}/api/hotspots`);
       if (hotspotsRes.ok) {
         setHotspots(await hotspotsRes.json());
       }
@@ -283,9 +294,11 @@ export default function DispatchPage() {
 
     loadData();
     const intervalId = window.setInterval(loadData, 4000);
+    window.addEventListener('nagarflow-dispatch-changed', loadData);
 
     return () => {
       window.clearInterval(intervalId);
+      window.removeEventListener('nagarflow-dispatch-changed', loadData);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -296,25 +309,14 @@ export default function DispatchPage() {
 
   const handleAccept = async (suggestion: SuggestionRecord) => {
     setActiveTruckId(suggestion.truck_id);
+    setMutationError('');
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/dispatch/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          truck_id: suggestion.truck_id,
-          zone: suggestion.zone,
-        }),
-      });
+      await acceptDispatch(suggestion);
 
-      if (!response.ok) {
-        throw new Error('Dispatch accept failed');
-      }
-
-      setDismissedSuggestionKeys((current: string[]) => [...current, getSuggestionKey(suggestion)]);
       await loadData();
-    } catch {
-      setErrorText('The route could not be accepted. Please try again.');
+    } catch (error) {
+      setMutationError(error instanceof Error ? error.message : 'The route could not be accepted. Please retry.');
     } finally {
       setActiveTruckId(null);
     }
@@ -337,7 +339,7 @@ export default function DispatchPage() {
     <DashboardShell
       title="Dispatch"
       badges={[
-        { type: 'live', text: 'PPO Active' },
+        { type: 'live', text: 'Fleet operations' },
         { type: 'alert', text: `${suggestions.length} Pending` },
       ]}
     >
@@ -346,6 +348,9 @@ export default function DispatchPage() {
         <p className="page-header__sub">Live dispatch suggestions with direct route acceptance and en-route truck tracking.</p>
       </div>
 
+      {mutationError && <p role="alert">{mutationError}</p>}
+      <FleetRegistration />
+      <ActiveDispatches />
       <div className="stat-grid">
         <div className="card">
           <div className="card__label">Trucks Active</div>
@@ -360,7 +365,7 @@ export default function DispatchPage() {
         <div className="card">
           <div className="card__label">En Route</div>
           <div className="card__value">{enRouteVehicles}</div>
-          <div className="card__sub">accepted trucks moving now</div>
+          <div className="card__sub">awaiting operator arrival confirmation</div>
         </div>
         <div className="card">
           <div className="card__label">Avg Response</div>
@@ -391,6 +396,7 @@ export default function DispatchPage() {
               <div className="card__title">Live Fleet GPS Tracker</div>
               <div className="badge badge--low" style={{ marginLeft: 'auto' }}>GEOMETRY ACTIVE</div>
             </div>
+            {mapUnavailable && <p role="status">The map provider is unavailable. Fleet and assignment controls remain available below.</p>}
             <div className="map-container map-container--lg" ref={mapRef} style={{ height: '500px', border: 'none', borderRadius: '0' }}></div>
           </div>
 
@@ -474,7 +480,9 @@ export default function DispatchPage() {
 
             return (
               <motion.div 
-                key={suggestionKey} 
+                key={suggestionKey}
+                role="article"
+                aria-label={`Dispatch suggestion for ${suggestion.zone}`}
                 whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(193,68,14,0.1)' }}
                 style={{ 
                   background: 'var(--dark-surface)', 

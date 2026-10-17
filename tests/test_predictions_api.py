@@ -1,3 +1,4 @@
+from auth_helpers import authenticate
 import os
 import sqlite3
 import tempfile
@@ -112,6 +113,7 @@ class PredictionsApiTest(unittest.TestCase):
         app_module.DB_PATH = self.temp_db.name
         greedy_dispatcher.DB_PATH = self.temp_db.name
         self.client = app_module.app.test_client()
+        authenticate(self)
 
     def tearDown(self):
         app_module.DB_PATH = self.original_app_db_path
@@ -151,7 +153,8 @@ class PredictionsApiTest(unittest.TestCase):
         payload = response.get_json()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([item["zone"] for item in payload], ["Andheri", "Dharavi", "Kurla", "Bandra", "Santacruz"])
+        self.assertEqual([item["zone"] for item in payload], ["Dharavi", "Kurla", "Bandra"])
+        self.assertTrue(all(item["truck_type"] == item["preferred_truck_type"] for item in payload))
         self.assertEqual(len({item["zone"] for item in payload}), len(payload))
 
     @patch.object(app_module, "get_agency_registry", return_value={"agencies": []})

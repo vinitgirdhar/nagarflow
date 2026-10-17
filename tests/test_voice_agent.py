@@ -1,3 +1,4 @@
+from auth_helpers import authenticate
 import io
 import os
 import sqlite3
@@ -54,6 +55,7 @@ class VoiceAgentRoutesTest(unittest.TestCase):
         self.original_db_path = app_module.DB_PATH
         app_module.DB_PATH = self.temp_db.name
         self.client = app_module.app.test_client()
+        authenticate(self)
 
     def tearDown(self):
         app_module.DB_PATH = self.original_db_path
@@ -96,7 +98,7 @@ class VoiceAgentRoutesTest(unittest.TestCase):
         self.assertEqual(payload["voice_mode"], "browser")
 
     @patch.object(app_module, "text_to_speech", return_value="base64-audio")
-    @patch.object(app_module, "speech_to_text", return_value="Dharavi mein kachra nahi utha")
+    @patch.object(app_module, "speech_to_text", return_value="Dharavi mein urgent kachra nahi utha")
     def test_agent_respond_logs_known_complaint(self, mocked_stt, mocked_tts):
         response = self.client.post(
             "/api/agent/respond",
@@ -109,7 +111,7 @@ class VoiceAgentRoutesTest(unittest.TestCase):
         self.assertTrue(payload["success"])
         self.assertTrue(payload["complaint_logged"])
         self.assertFalse(payload["call_ended"])
-        self.assertEqual(payload["transcript"], "Dharavi mein kachra nahi utha")
+        self.assertEqual(payload["transcript"], "Dharavi mein urgent kachra nahi utha")
         self.assertEqual(payload["extracted"]["zone"], "Dharavi")
         self.assertEqual(payload["extracted"]["issue_type"], "Garbage")
         self.assertEqual(payload["extracted"]["severity"], "High")
@@ -118,7 +120,7 @@ class VoiceAgentRoutesTest(unittest.TestCase):
         mocked_tts.assert_called_once_with(app_module.AGENT_CONFIRMATION_TEXT)
 
     @patch.object(app_module, "text_to_speech", return_value="base64-audio")
-    @patch.object(app_module, "speech_to_text", return_value="Dharavi mein kachra nahi utha")
+    @patch.object(app_module, "speech_to_text", return_value="Dharavi mein urgent kachra nahi utha")
     def test_voice_complaints_are_visible_in_complaints_feed(self, _mocked_stt, _mocked_tts):
         self.client.post(
             "/api/agent/respond",
@@ -216,14 +218,14 @@ class VoiceAgentRoutesTest(unittest.TestCase):
     def test_agent_respond_text_logs_complaint_without_sarvam_stt(self, _mocked_tts):
         response = self.client.post(
             "/api/agent/respond-text",
-            json={"transcript": "Dharavi mein kachra nahi utha"},
+            json={"transcript": "Dharavi mein urgent kachra nahi utha"},
         )
         payload = response.get_json()
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(payload["success"])
         self.assertTrue(payload["complaint_logged"])
-        self.assertEqual(payload["transcript"], "Dharavi mein kachra nahi utha")
+        self.assertEqual(payload["transcript"], "Dharavi mein urgent kachra nahi utha")
         self.assertEqual(payload["extracted"]["zone"], "Dharavi")
         self.assertEqual(payload["extracted"]["issue_type"], "Garbage")
         self.assertEqual(payload["extracted"]["severity"], "High")

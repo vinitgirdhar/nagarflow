@@ -335,6 +335,15 @@ def _build_payload() -> dict[str, Any]:
     }
 
 
+def get_seed_registry() -> dict[str, Any]:
+    agencies = [{**seed, 'source_status': 'offline', 'source_status_code': None,
+                 'source_title': seed['source_label'], 'source_description': seed['description'],
+                 'last_checked': None} for seed in OFFICIAL_AGENCY_SEEDS]
+    return {'agencies': agencies, 'generated_at': None, 'stats': {
+        'agency_count': len(agencies), 'city_count': len({a['city'] for a in agencies}),
+        'category_count': len({a['category'] for a in agencies}), 'online_sources': 0}}
+
+
 def get_agency_registry(force_refresh: bool = False) -> dict[str, Any]:
     now = dt.datetime.utcnow()
 

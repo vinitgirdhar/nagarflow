@@ -1,6 +1,7 @@
 'use client';
+import { apiFetch } from '../lib/api';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useUser } from './AuthBoundary';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,6 +48,10 @@ const ADMIN_LINKS: NavItem[] = [
   { href: '/emergency', icon: AlertTriangle, label: 'Emergency' },
   { href: '/simulation', icon: Dna, label: 'Simulation' },
   { href: '/agencies', icon: Network, label: 'Agencies' },
+  { href: '/knowledge', icon: FileText, label: 'Grounded knowledge' },
+  { href: '/operations', icon: Network, label: 'Intake operations' },
+  { href: '/accounts', icon: HardHat, label: 'Accounts & teams' },
+  { href: '/maintenance', icon: Truck, label: 'Field operations' },
   { href: '/reports', icon: FileText, label: 'Reports' },
 ];
 
@@ -70,25 +75,11 @@ interface SidebarProps {
 
 export default function DashboardShell({ title, badges, children }: SidebarProps & { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [role, setRole] = useState('admin');
+  const user = useUser();
+  const role = user?.role || 'worker';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(['Complaints']);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem('nagarflow_role') || 'admin';
-    setRole(stored);
-    if (stored === 'maintenance' && pathname !== '/maintenance' && pathname !== '/login') {
-      router.push('/maintenance');
-    }
-    if (stored === 'worker' && !pathname.startsWith('/worker-portal') && pathname !== '/login') {
-      router.push('/worker-portal');
-    }
-    if (stored === 'admin' && pathname === '/maintenance') {
-      router.push('/dashboard');
-    }
-  }, [pathname, router]);
 
   // Auto-open group if current path is one of its children
   useEffect(() => {
@@ -202,10 +193,11 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
           })}
         </nav>
         <div className="sidebar__footer">
+          <button className="btn" onClick={async () => { const r = await apiFetch('/api/auth/logout', {method:'POST'}); if(r.ok) window.location.assign('/login'); }}>Sign out</button>
           <div className="sidebar__footer-content">
             <div style={{ marginBottom: '8px' }}>Role: <span style={{ color: 'var(--text-heading)' }}>{roleLabel}</span></div>
-            <Link href="/login" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <ArrowLeftRight size={12} /> Switch Role
+            <Link href="/account" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ArrowLeftRight size={12} /> Account
             </Link>
             <Link href="/" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <ChevronLeft size={12} /> Landing Page

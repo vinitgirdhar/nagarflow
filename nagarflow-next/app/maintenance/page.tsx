@@ -1,7 +1,9 @@
 'use client';
+import { apiFetch } from '../lib/api';
+import CreateMaintenanceTask from '../components/CreateMaintenanceTask';
 
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useIsPresent } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
 import { 
   Users, 
@@ -78,11 +80,17 @@ const getBadgeColor = (type: string) => {
   }
 };
 
+function TaskCard({children, ...props}: React.ComponentProps<typeof motion.div>) {
+  const present = useIsPresent();
+  return <motion.div {...props} aria-hidden={!present} inert={!present}>{children}</motion.div>;
+}
+
 export default function MaintenancePage() {
   const [stats, setStats] = useState<Stats>({ total_teams: 0, active: 0, idle: 0, pending: 0 });
   const [teams, setTeams] = useState<Team[]>([]);
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState('');
   const [assigningTask, setAssigningTask] = useState<MaintenanceTask | null>(null);
   const [photoPreview, setPhotoPreview] = useState<{ url: string; task: MaintenanceTask } | null>(null);
 
@@ -94,7 +102,7 @@ export default function MaintenancePage() {
 
   const fetchData = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/maintenance/data');
+      const res = await apiFetch('/api/maintenance/data');
       if (res.ok) {
         const d = await res.json();
         setStats(d.stats);
@@ -102,7 +110,7 @@ export default function MaintenancePage() {
         setTasks(d.tasks);
       }
     } catch (e) {
-      console.error('Maintenance API error');
+      setActionError('Unable to load field operations. Please retry.');
     } finally {
       setLoading(false);
     }
@@ -111,32 +119,34 @@ export default function MaintenancePage() {
   const handleAssign = async (teamId: string) => {
     if (!assigningTask) return;
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/maintenance/assign', {
+      const res = await apiFetch('/api/maintenance/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: assigningTask.id, team_id: teamId })
       });
       if (res.ok) {
         setAssigningTask(null);
+        setActionError('');
         fetchData();
-      }
+      } else { throw new Error((await res.json()).error || 'The action could not be completed.'); }
     } catch (e) {
-      console.error('Assignment failed');
+      setActionError(e instanceof Error ? e.message : 'Assignment failed. Please retry.');
     }
   };
 
   const handleComplete = async (taskId: string) => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/maintenance/complete', {
+      const res = await apiFetch('/api/maintenance/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId })
       });
       if (res.ok) {
+        setActionError('');
         fetchData();
-      }
+      } else { throw new Error((await res.json()).error || 'The action could not be completed.'); }
     } catch (e) {
-      console.error('Completion failed');
+      setActionError(e instanceof Error ? e.message : 'Completion failed. Please retry.');
     }
   };
 
@@ -147,6 +157,13 @@ export default function MaintenancePage() {
         <p className="page-header__sub">Managing municipal squads and ground-level infrastructure projects across Ward districts.</p>
       </div>
 
+      <button className="btn" onClick={async () => {
+        setActionError('');
+        try { const r = await apiFetch('/api/maintenance/generate', {method: 'POST'}); if (!r.ok) throw new Error((await r.json()).error || 'Could not generate tasks.'); await fetchData(); }
+        catch (e) { setActionError(e instanceof Error ? e.message : 'Please retry.'); }
+      }}>Generate tasks from high-priority predictions</button>
+      {actionError && <p role="alert">{actionError}</p>}
+      <CreateMaintenanceTask onCreated={fetchData} />
       {/* Section 1: Team Overview */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         {[
@@ -195,8 +212,10 @@ export default function MaintenancePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <AnimatePresence mode="popLayout">
                   {tasks?.filter(t => t.status === status).map((task) => (
-                    <motion.div
+                    <TaskCard
                       key={task.id}
+                      role="article"
+                      aria-label={`Maintenance task ${task.id}`}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
@@ -249,15 +268,7 @@ export default function MaintenancePage() {
                           </button>
                         )}
 
-                        {status === 'ON GROUND' && (
-                          <button
-                            className="btn btn--outline"
-                            onClick={() => handleComplete(task.id)}
-                            style={{ padding: '10px 20px', fontSize: '12px', height: 'auto', borderRadius: '8px', borderColor: 'var(--glow)', color: 'var(--glow)' }}
-                          >
-                            <CheckCircle size={16} /> Mark Done
-                          </button>
-                        )}
+                        {status === 'ON GROUND' && <p>Awaiting worker evidence</p>}
 
                         {status === 'COMPLETED_UNVERIFIED' && (
                           <button
@@ -269,7 +280,7 @@ export default function MaintenancePage() {
                           </button>
                         )}
                       </div>
-                    </motion.div>
+                    </TaskCard>
                   ))}
                 </AnimatePresence>
               </div>

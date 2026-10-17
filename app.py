@@ -10,26 +10,71 @@ from typing import Optional, List, Dict, Any
 
 import threading
 import time
-from fleet_manager import get_zone_coordinates
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 import requests
 from dotenv import load_dotenv
 
 # Explicitly load .env from current directory to ensure keys are picked up
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=env_path)
+from database import data_path, DEFAULT_DB_PATH
+from fleet_manager import get_zone_coordinates
 
 from agencies_scraper import get_agency_registry
 from greedy_dispatcher import generate_dispatch_suggestions
 from prediction_store import deduplicate_predictions_table, fetch_canonical_predictions
+from dispatch_service import DispatchError
+from mfa import SecurityUnavailable
 from sarvam import SarvamError, speech_to_text, text_to_speech, translate_to_english
 from complaint_parser import extract_complaint_details
 from localities import find_zone_and_locality
 
 app = Flask(__name__)
-DB_PATH = 'nagarflow.db'
+from observability import install_observability
+install_observability(app)
+from auth_service import install_auth
+install_auth(app)
+from product_api import product
+app.register_blueprint(product)
+app.config['MAX_CONTENT_LENGTH'] = 12 * 1024 * 1024
+DB_PATH = DEFAULT_DB_PATH
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+@app.errorhandler(SecurityUnavailable)
+def security_unavailable(error):
+    app.logger.error('Authenticator verification unavailable: host-key configuration')
+    return jsonify({'error':'Authenticator verification is unavailable. Use a recovery code or contact your administrator.'}),503
+
+
+@app.errorhandler(sqlite3.Error)
+def database_unavailable(error):
+    app.logger.exception('Database request failed: %s', type(error).__name__)
+    return jsonify({'error': 'The data service could not complete this request.'}), 503
+
+
+@app.errorhandler(413)
+def request_too_large(_error):
+    return jsonify({'error': 'The upload exceeds the 12 MB request limit.'}), 413
+
+
+@app.get('/api/health')
+def health():
+    if not os.path.isfile(data_path(DB_PATH)):
+        return jsonify({'status': 'unavailable'}), 503
+    try:
+        with sqlite3.connect(data_path(DB_PATH)) as conn:
+            conn.execute('SELECT id FROM complaints LIMIT 1')
+        from auth_service import auth_connection
+        with auth_connection() as conn:
+            conn.execute('SELECT id FROM municipalities LIMIT 1')
+            if conn.execute('SELECT 1 FROM auth_users WHERE mfa_enabled=1 LIMIT 1').fetchone():
+                from mfa import _master
+                _master(conn)
+        return jsonify({'status': 'ok'})
+    except (sqlite3.Error,SecurityUnavailable):
+        return jsonify({'status': 'unavailable'}), 503
 
 # Optimized Professional Voice Scripts (Pure Hindi/English - Rahul Persona)
 AGENT_GREETING_TEXT = (
@@ -184,9 +229,17 @@ ISSUE_KEYWORDS = {
         "नल",
     ],
 }
-def ensure_tables_exist():
+def ensure_tables_exist(seed_demo=False):
+    from schema import initialize_database
+    initialize_database(data_path(DB_PATH))
+    if seed_demo:
+        _initialize_demo_data()
+        initialize_database(data_path(DB_PATH))
+
+
+def _initialize_demo_data():
     """Ensure all required database tables exist with correct schema."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     # Complaints Table
@@ -468,17 +521,19 @@ def ensure_tables_exist():
         cursor.executemany("INSERT INTO teams (id, name, member_count, type, status, current_zone) VALUES (?, ?, ?, ?, ?, ?)", teams)
         print(f"👷  BMC Workforce Initialized: {len(teams)} teams registered.")
 
-    # Check if agencies are seeded, if not, do initial sync
+    conn.commit()
+    # Startup must not contact external providers while initializing the schema.
     cursor.execute("SELECT count(*) FROM agencies")
     if cursor.fetchone()[0] == 0:
         print("📥  Initial Agency Sync: Building local Municipal Registry...")
         try:
             # We will use a local function to avoid circular imports if needed, 
             # but agencies_scraper is already imported at top
-            payload = get_agency_registry(force_refresh=True)
+            from agencies_scraper import get_seed_registry
+            payload = get_seed_registry()
             _persist_agencies_to_db(payload.get('agencies', []))
         except Exception as e:
-            print(f"⚠️  Initial Agency Sync failed: {e}")
+            print(f"⚠️  Initial Agency Sync failed: {type(e).__name__}")
 
     conn.commit()
     conn.close()
@@ -486,7 +541,7 @@ def ensure_tables_exist():
 
 def _persist_agencies_to_db(agencies: List[Dict[str, Any]]):
     """Save scraped agency records into the SQLite database."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     for a in agencies:
         cursor.execute('''
@@ -602,17 +657,21 @@ def _infer_default_truck_type(seed_value: Any, name: Optional[str] = None) -> st
 # Simple CORS setup to completely allow the frontend Next.js queries
 @app.after_request
 def add_cors_headers(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    origin = request.headers.get('Origin')
+    if origin in app.config['AUTH_TRUSTED_ORIGINS']:
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers.add('Vary', 'Origin')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,X-CSRF-Token,Idempotency-Key')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,PATCH,DELETE,OPTIONS')
     return response
 
 @app.route('/api/predictions', methods=['GET'])
 def get_predictions():
-    if not os.path.exists(DB_PATH):
+    if not os.path.exists(data_path(DB_PATH)):
         return jsonify({"error": "Database not initialized"}), 500
         
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -639,54 +698,15 @@ def get_predictions():
 
 @app.route('/api/weather/zones', methods=['GET'])
 def get_weather_zones():
-    from fleet_manager import get_zone_coordinates
-    zones = list(ZONE_ALIAS_MAP.keys())
-    weather_data = []
-    
-    import hashlib
-    for zone in zones:
-        lat, lon = get_zone_coordinates(zone)
-        # Deterministic but varied values for the demo
-        h = int(hashlib.md5(zone.encode()).hexdigest(), 16)
-        
-        # Temp: 27-36 (Coastal cooler, Inland hotter)
-        # Simple heuristic: if lon < 72.84 (Western coastal), it's cooler
-        is_coastal = lon < 72.84
-        base_temp = 28 if is_coastal else 32
-        temp = base_temp + (h % 5)
-        
-        # AQI: 50-320 (Industrial identifiers like Dharavi/Kurla/Chembur higher)
-        base_aqi = 60
-        if any(ind in zone.lower() for ind in ['dharavi', 'kurla', 'chembur', 'vikhroli', 'parel']):
-            base_aqi = 180
-        aqi = base_aqi + (h % 140)
-        
-        # Wind: 10-45 km/h (Coastal windier)
-        wind = (15 if is_coastal else 5) + (h % 25)
-        
-        weather_data.append({
-            "name": zone,
-            "lat": lat,
-            "lon": lon,
-            "temperature": temp,
-            "aqi": aqi,
-            "wind": wind,
-            "condition": "Humid" if is_coastal else "Clear"
-        })
-        
-    return jsonify(weather_data)
+    return jsonify([])  # No verified per-zone observations are configured.
 
 @app.route('/api/dispatch', methods=['GET'])
 def get_dispatch():
-    try:
-        suggestions = generate_dispatch_suggestions()
-        return jsonify(suggestions)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify(generate_dispatch_suggestions())
 
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT id, name, status, lat, lon, truck_type FROM trucks")
@@ -712,87 +732,48 @@ def get_dashboard():
     conn.close()
     return jsonify({"trucks": trucks, "predictions": dashboard_predictions})
 
-@app.route('/api/dispatch/accept', methods=['POST'])
-def accept_dispatch():
-    data = request.json
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE trucks SET status = ? WHERE id = ?", (f"en_route_to_{data.get('zone')}", data.get('truck_id')))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+@app.errorhandler(DispatchError)
+def dispatch_error(error):
+    return jsonify({'error': str(error), 'code': error.code}), error.status
 
-@app.route('/api/dispatch/arrive', methods=['POST'])
+
+@app.get('/api/dispatch/assignments')
+def get_dispatch_assignments():
+    from dispatch_service import list_dispatches
+    return jsonify({'dispatches': list_dispatches(data_path(DB_PATH))})
+
+
+@app.post('/api/dispatch/accept')
+def accept_dispatch():
+    from dispatch_service import accept
+    return jsonify(accept(data_path(DB_PATH), request.get_json(silent=True),
+                          request.headers.get('Idempotency-Key'), g.user['id']))
+
+
+@app.post('/api/dispatch/arrive')
 def arrive_dispatch():
-    data = request.json
-    truck_id = data.get('truck_id')
-    zone = data.get('zone')
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE trucks SET status = 'idle' WHERE id = ?", (truck_id,))
-    
-    from datetime import datetime
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cursor.execute("UPDATE zone_coverage SET last_visited = ?, status = 'OK' WHERE zone = ?", (now_str, zone))
-    
-    # FEEDBACK LOOP: Calculate LLM Prediction Error vs Physical Math
-    predictions = fetch_canonical_predictions(cursor)
-    prediction = next((entry for entry in predictions if entry["zone"] == zone), None)
-    predicted = prediction["priority_score"] if prediction else 50
-    import random
-    actual = max(0, min(100, predicted + random.randint(-15, 20))) 
-    error = abs(predicted - actual)
-    
-    try:
-        cursor.execute("ALTER TABLE prediction_outcomes ADD COLUMN timestamp TEXT")
-    except:
-        pass
-        
-    cursor.execute("INSERT INTO prediction_outcomes (prediction_id, actual_demand, error_margin, timestamp) VALUES (?, ?, ?, ?)", (0, actual, error, now_str))
-    
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+    from dispatch_service import finish
+    return jsonify(finish(data_path(DB_PATH), request.get_json(silent=True),
+                          request.headers.get('Idempotency-Key'), g.user['id']))
+
+
+@app.post('/api/dispatch/cancel')
+def cancel_dispatch():
+    from dispatch_service import finish
+    return jsonify(finish(data_path(DB_PATH), request.get_json(silent=True),
+                          request.headers.get('Idempotency-Key'), g.user['id'], cancel=True))
+
+
+@app.post('/api/dispatch/observation')
+def correct_dispatch_observation():
+    from dispatch_service import correct_observation
+    return jsonify(correct_observation(data_path(DB_PATH),request.get_json(silent=True),request.headers.get('Idempotency-Key'),g.user['id']))
+
 
 @app.route('/api/reports', methods=['GET'])
 def get_reports():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    try: cursor.execute("ALTER TABLE prediction_outcomes ADD COLUMN timestamp TEXT")
-    except: pass
-    
-    cursor.execute("SELECT count(*) FROM zone_coverage WHERE status = 'OK'")
-    covered = cursor.fetchone()[0]
-    cursor.execute("SELECT count(*) FROM zone_coverage")
-    total = cursor.fetchone()[0]
-    coverage_pct = round((covered / total) * 100, 1) if total > 0 else 0
-    
-    cursor.execute("SELECT AVG(error_margin) FROM prediction_outcomes")
-    avg_row = cursor.fetchone()
-    avg_error = avg_row[0] if avg_row and avg_row[0] is not None else 5.0
-    accuracy = round(100 - avg_error, 1)
-    
-    cursor.execute("SELECT AVG(error_margin) FROM (SELECT error_margin FROM prediction_outcomes ORDER BY id DESC LIMIT 20)")
-    recent_err_row = cursor.fetchone()
-    recent_error = recent_err_row[0] if recent_err_row and recent_err_row[0] is not None else 5.0
-    trigger_retrain = recent_error > 25.0
-    
-    cursor.execute("SELECT error_margin FROM prediction_outcomes ORDER BY id ASC")
-    all_errs = [row[0] for row in cursor.fetchall()]
-    
-    acc_array = [90, 92, 91, 93, 94, 91, accuracy]
-    if len(all_errs) >= 70:
-        chunk = len(all_errs) // 7
-        acc_array = [round(100 - (sum(all_errs[i*chunk:(i+1)*chunk])/len(all_errs[i*chunk:(i+1)*chunk])), 1) for i in range(7)]
-
-    conn.close()
-    return jsonify({
-        "kpis": {"accuracy": accuracy, "coverage": coverage_pct, "equity": 91.0, "efficiency": 84.5 },
-        "trigger_retrain": trigger_retrain,
-        "recent_error_margin": recent_error,
-        "chart_data": {"accuracy_trend": acc_array, "coverage_trend": [80, 82, 85, 84, 87, 85, coverage_pct]}
-    })
+    from reporting import operations_report
+    return jsonify(operations_report(data_path(DB_PATH)))
 
 
 @app.route('/api/agencies', methods=['GET'])
@@ -804,10 +785,10 @@ def get_agencies():
             payload = get_agency_registry(force_refresh=True)
             _persist_agencies_to_db(payload.get('agencies', []))
         except Exception as e:
-            print(f"⚠️  Manual Agency Refresh failed: {e}")
+            print(f"⚠️  Manual Agency Refresh failed: {type(e).__name__}")
 
     # Serving from Database (Fast Path)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     rows = cursor.execute("SELECT * FROM agencies").fetchall()
@@ -853,7 +834,7 @@ def get_agencies():
 
 @app.route('/api/simulation/baseline', methods=['GET'])
 def get_simulation_baseline():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     rows = [
@@ -869,58 +850,14 @@ def get_simulation_baseline():
 
 @app.route('/api/simulation/run', methods=['POST'])
 def run_simulation():
-    data = request.json
-    demand_inc = data.get('demand', 0)
-    failures = data.get('failures', 0)
-    weather = data.get('weather', 0)
-    
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    baseline = [
-        {
-            "zone": row["zone"],
-            "priority_score": row["priority_score"],
-            "category": row["category"],
-        }
-        for row in fetch_canonical_predictions(cursor)
-    ]
-    
-    # Simulation Logic
-    simulated = []
-    overloaded_count = 0
-    import random
-    
-    for b in baseline:
-        # Impact math
-        base = b['priority_score']
-        # Demand increase and weather impact
-        increase = (base * (demand_inc / 100.0)) + (weather * 8) + random.uniform(-2, 5)
-        new_score = min(100, max(0, int(base + increase)))
-        if new_score >= 75: overloaded_count += 1
-        simulated.append({"zone": b['zone'], "priority_score": new_score, "category": b.get('category', 'General')})
-        
-    # KPI Math
-    # Coverage drops as failures increase and demand rises
-    coverage = max(15, 87 - (demand_inc * 0.3) - (failures * 1.2) - (weather * 5))
-    response_time = int(18 + (demand_inc * 0.2) + (failures * 0.5) + (weather * 3))
-    missed = min(100, 2.1 + (demand_inc * 0.15) + (failures * 0.8))
-    
-    conn.close()
-    return jsonify({
-        "before": baseline,
-        "after": simulated,
-        "stats": {
-            "coverage": round(coverage, 1),
-            "response_time": response_time,
-            "overloaded": overloaded_count,
-            "missed": round(missed, 1)
-        }
-    })
+    from workflows import simulate
+    return jsonify(simulate(data_path(DB_PATH),request.get_json(silent=True)))
 
 @app.route('/api/simulate-surge', methods=['POST'])
 def simulate_surge():
-    conn = sqlite3.connect(DB_PATH)
+    if not app.config.get('ENABLE_DEMO_ACTIONS', False):
+        return jsonify({'error': 'Demo mutations are disabled for this workspace.'}), 403
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     cursor.execute("UPDATE predictions SET priority_score = priority_score + 35 WHERE id IN (SELECT id FROM predictions ORDER BY RANDOM() LIMIT 1)")
     cursor.execute("UPDATE predictions SET priority_score = 100 WHERE priority_score > 100")
@@ -932,27 +869,9 @@ def simulate_surge():
 
 @app.route('/api/maintenance/data', methods=['GET'])
 def get_maintenance_data():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    
-    # Auto-generate tasks for high-priority zones if they don't exist
-    high_zones = [
-        row
-        for row in fetch_canonical_predictions(cursor)
-        if float(row.get("priority_score") or 0) > 80
-    ]
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    for row in high_zones:
-        # Check if task already exists for this zone that is not completed
-        cursor.execute("SELECT count(*) FROM maintenance_tasks WHERE zone = ? AND status != 'COMPLETED'", (row['zone'],))
-        if cursor.fetchone()[0] == 0:
-            task_id = f"T-{uuid.uuid4().hex[:4].upper()}"
-            cursor.execute('''INSERT INTO maintenance_tasks 
-                             (id, zone, type, priority, status, reported_time) 
-                             VALUES (?, ?, ?, ?, ?, ?)''', 
-                             (task_id, row['zone'], row['category'], 'HIGH', 'PENDING', now_str))
 
     cursor.execute("SELECT * FROM teams")
     teams = [dict(r) for r in cursor.fetchall()]
@@ -980,153 +899,198 @@ def get_maintenance_data():
         "tasks": tasks
     })
 
+@app.post('/api/maintenance/generate')
+def generate_maintenance_tasks():
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute('BEGIN IMMEDIATE')
+        cursor = conn.cursor()
+        # Auto-generate tasks for high-priority zones if they don't exist
+        high_zones = [
+            row
+            for row in fetch_canonical_predictions(cursor)
+            if float(row.get("priority_score") or 0) > 80
+        ]
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        for row in high_zones:
+            # Check if task already exists for this zone that is not completed
+            cursor.execute("SELECT count(*) FROM maintenance_tasks WHERE zone = ? AND status != 'COMPLETED'", (row['zone'],))
+            if cursor.fetchone()[0] == 0:
+                task_id = f"T-{uuid.uuid4().hex[:4].upper()}"
+                cursor.execute('''INSERT INTO maintenance_tasks
+                                 (id, zone, type, priority, status, reported_time)
+                                 VALUES (?, ?, ?, ?, ?, ?)''',
+                                 (task_id, row['zone'], row['category'], 'HIGH', 'PENDING', now_str))
+
+    return jsonify({'success': True})
+
+
 @app.route('/api/maintenance/assign', methods=['POST'])
 def assign_maintenance():
-    data = request.json
-    task_id = data.get('task_id')
-    team_id = data.get('team_id')
+    data = request.get_json(silent=True) or {}
+    task_id, team_id = data.get('task_id'), data.get('team_id')
+    if not isinstance(task_id,str) or not isinstance(team_id,str):
+        return jsonify({'error': 'task_id and team_id are required.'}), 400
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        task = conn.execute('SELECT zone,status,type FROM maintenance_tasks WHERE id=?', (task_id,)).fetchone()
+        team = conn.execute('SELECT status,type FROM teams WHERE id=?', (team_id,)).fetchone()
+        if not task or not team:
+            return jsonify({'error': 'Task or team not found.'}), 404
+        if task[1]!='PENDING' or team[0]!='Idle' or conn.execute("SELECT 1 FROM maintenance_tasks WHERE assigned_team_id=? AND status IN ('ON GROUND','COMPLETED_UNVERIFIED')",(team_id,)).fetchone():
+            return jsonify({'error': 'Only pending tasks and idle teams can be assigned.'}), 409
+        task_type={'Garbage Collection':'Garbage','Water Tanker Demand':'Water','Road Maintenance':'Road','Drainage Maintenance':'Drain'}.get(task[2],task[2])
+        if team[1] not in (task_type,'General'):raise DispatchError('The team specialty does not match this work order.','team_type_conflict',409)
+        conn.execute("UPDATE maintenance_tasks SET status='ON GROUND',assigned_team_id=? WHERE id=?", (team_id,task_id))
+        conn.execute("UPDATE teams SET status='On Field',current_zone=? WHERE id=?", (task[0],team_id))
+    return jsonify({'success': True})
     
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
     
-    # Update task
-    cursor.execute("UPDATE maintenance_tasks SET status = 'ON GROUND', assigned_team_id = ? WHERE id = ?", (team_id, task_id))
+def _task_for_actor(conn, task_id):
+    conn.row_factory = sqlite3.Row
+    row = conn.execute('SELECT * FROM maintenance_tasks WHERE id=?', (task_id,)).fetchone()
+    if not row:
+        return None
+    if g.user['role']=='worker' and row['assigned_team_id'] != g.user['team_id']:
+        return None
+    return row
     
-    # Get zone name for team update
-    cursor.execute("SELECT zone FROM maintenance_tasks WHERE id = ?", (task_id,))
-    zone_row = cursor.fetchone()
-    zone = zone_row[0] if zone_row else None
-    
-    # Update team
-    cursor.execute("UPDATE teams SET status = 'On Field', current_zone = ? WHERE id = ?", (zone, team_id))
-    
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
 
 @app.route('/api/worker/teams', methods=['GET'])
 def worker_teams():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, type, status FROM teams")
-    teams = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return jsonify(teams)
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        query, params = 'SELECT id,name,type,status FROM teams', ()
+        if g.user['role']=='worker':
+            query += ' WHERE id=?'
+            params = (g.user['team_id'],)
+        rows = conn.execute(query, params).fetchall()
+    return jsonify([dict(row) for row in rows])
 
 
 @app.route('/api/worker/tasks', methods=['GET'])
 def worker_tasks():
     team_id = request.args.get('team_id', '').strip()
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    if team_id:
-        cursor.execute(
-            "SELECT * FROM maintenance_tasks WHERE assigned_team_id = ? AND status != 'COMPLETED' ORDER BY reported_time DESC",
-            (team_id,)
-        )
-    else:
-        cursor.execute(
-            "SELECT * FROM maintenance_tasks WHERE status != 'COMPLETED' ORDER BY reported_time DESC"
-        )
-    tasks = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-    return jsonify(tasks)
+    if g.user['role']=='worker':
+        if team_id and team_id != g.user['team_id']:
+            return jsonify({'error': 'You can only access your assigned team.'}), 403
+        team_id = g.user['team_id']
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        query = "SELECT * FROM maintenance_tasks WHERE status != 'COMPLETED'"
+        params = ()
+        if team_id:
+            query += ' AND assigned_team_id=?'
+            params = (team_id,)
+        rows = conn.execute(query+' ORDER BY reported_time DESC', params).fetchall()
+    return jsonify([dict(row) for row in rows])
 
 
 @app.route('/api/worker/upload', methods=['POST'])
 def worker_upload():
-    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
-    os.makedirs(upload_dir, exist_ok=True)
-    if 'file' not in request.files:
-        return jsonify({"error": "No file provided"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "Empty filename"}), 400
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in {'.jpg', '.jpeg', '.png', '.webp', '.gif'}:
-        return jsonify({"error": "Unsupported file type"}), 400
-    filename = f"{uuid.uuid4().hex}{ext}"
-    file.save(os.path.join(upload_dir, filename))
-    url = f"http://127.0.0.1:5000/uploads/{filename}"
-    return jsonify({"success": True, "url": url})
+    from PIL import Image, UnidentifiedImageError
+    from database import upload_directory
+    task_id = request.form.get('task_id', '')
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        task = _task_for_actor(conn, task_id)
+    if not task:
+        return jsonify({'error': 'Task not found.'}), 404
+    if task['status'] not in ('PENDING','ON GROUND'):
+        return jsonify({'error': 'This task no longer accepts evidence.'}), 409
+    upload = request.files.get('file')
+    if not upload or not upload.filename:
+        return jsonify({'error': 'An image file is required.'}), 400
+    try:
+        with Image.open(upload.stream) as image:
+            if image.format not in {'JPEG','PNG','WEBP','GIF'}:
+                return jsonify({'error': 'Unsupported image format.'}), 400
+            extension = {'JPEG': '.jpg','PNG': '.png','WEBP': '.webp','GIF': '.gif'}[image.format]
+            image.verify()
+        upload.stream.seek(0)
+    except (UnidentifiedImageError, OSError, ValueError, SyntaxError, Image.DecompressionBombError):
+        return jsonify({'error': 'Upload must contain a valid image.'}), 400
+    directory = upload_directory()
+    directory.mkdir(parents=True, exist_ok=True)
+    filename = uuid.uuid4().hex+extension
+    target = directory/filename
+    upload.save(target)
+    try:
+        with sqlite3.connect(data_path(DB_PATH)) as conn:
+            conn.execute('INSERT INTO uploaded_evidence VALUES (?,?,?,?)',
+                         (filename,task_id,g.user['id'],datetime.datetime.now(datetime.timezone.utc).isoformat()))
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+    return jsonify({'success': True, 'url': '/uploads/'+filename})
 
 
 @app.route('/uploads/<path:filename>', methods=['GET'])
 def serve_upload(filename):
     from flask import send_from_directory
-    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
-    return send_from_directory(upload_dir, filename)
+    from pathlib import Path
+    from database import upload_directory
+    if filename != Path(filename).name:
+        return jsonify({'error': 'Image not found.'}), 404
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        record = conn.execute('SELECT task_id FROM uploaded_evidence WHERE filename=?', (filename,)).fetchone()
+        task = _task_for_actor(conn, record[0]) if record else None
+    if not task and g.user['role']!='admin':
+        return jsonify({'error': 'Image not found.'}), 404
+    return send_from_directory(upload_directory(), filename)
 
 
 @app.route('/api/worker/update-status', methods=['POST'])
 def worker_update_status():
     data = request.get_json(silent=True) or {}
-    task_id = data.get('task_id', '').strip()
-    status = data.get('status', '').strip()
-    image_url = data.get('image_url', '').strip()
-    worker_notes = data.get('worker_notes', '').strip()
-
-    if not task_id or status not in ('IN_PROGRESS', 'COMPLETED_UNVERIFIED'):
-        return jsonify({"error": "task_id and valid status required"}), 400
-    if status == 'COMPLETED_UNVERIFIED' and not image_url:
-        return jsonify({"error": "image_url is required to mark task complete"}), 400
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, assigned_team_id FROM maintenance_tasks WHERE id = ?", (task_id,))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        return jsonify({"error": "Task not found"}), 404
-
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    if status == 'IN_PROGRESS':
-        cursor.execute(
-            "UPDATE maintenance_tasks SET status = 'ON GROUND', image_url = ?, worker_notes = ? WHERE id = ?",
-            (image_url or None, worker_notes or None, task_id)
-        )
-    else:
-        cursor.execute(
-            "UPDATE maintenance_tasks SET status = 'COMPLETED_UNVERIFIED', completed_time = ?, image_url = ?, worker_notes = ? WHERE id = ?",
-            (now_str, image_url, worker_notes or None, task_id)
-        )
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+    if any(not isinstance(data.get(key,''),str) for key in ('task_id','status','image_url','worker_notes')):
+        return jsonify({'error': 'Task fields must be strings.'}), 400
+    task_id, status = data.get('task_id','').strip(), data.get('status','').strip()
+    image_url, notes = data.get('image_url','').strip(), data.get('worker_notes','').strip()
+    if not task_id or status not in ('IN_PROGRESS','COMPLETED_UNVERIFIED') or len(notes)>2000:
+        return jsonify({'error': 'A task, valid status, and notes under 2000 characters are required.'}), 400
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = _task_for_actor(conn, task_id)
+        if not row:
+            return jsonify({'error': 'Task not found.'}), 404
+        if not row['assigned_team_id'] or row['status'] not in ('PENDING','ON GROUND'):
+            return jsonify({'error': 'Task is unassigned or already submitted.'}), 409
+        if status=='IN_PROGRESS':
+            conn.execute("UPDATE maintenance_tasks SET status='ON GROUND',worker_notes=? WHERE id=?", (notes,task_id))
+        else:
+            if row['status']!='ON GROUND':
+                return jsonify({'error': 'Start the task before submitting completion.'}), 409
+            filename = image_url.removeprefix('/uploads/')
+            evidence = conn.execute('SELECT 1 FROM uploaded_evidence WHERE filename=? AND task_id=?', (filename,task_id)).fetchone()
+            if not image_url.startswith('/uploads/') or not evidence:
+                return jsonify({'error': 'Upload evidence for this task before submitting.'}), 400
+            conn.execute("UPDATE maintenance_tasks SET status='COMPLETED_UNVERIFIED',completed_time=?,image_url=?,worker_notes=? WHERE id=?", (datetime.datetime.now(datetime.timezone.utc).isoformat(),image_url,notes,task_id))
+    return jsonify({'success': True})
 
 
 @app.route('/api/maintenance/complete', methods=['POST'])
 def complete_maintenance():
-    data = request.json
-    task_id = data.get('task_id')
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Get task details
-    cursor.execute("SELECT zone, assigned_team_id FROM maintenance_tasks WHERE id = ?", (task_id,))
-    task_row = cursor.fetchone()
-    if not task_row:
-        return jsonify({"error": "Task not found"}), 404
-        
-    zone, team_id = task_row
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    # Update task
-    cursor.execute("UPDATE maintenance_tasks SET status = 'COMPLETED', completed_time = ? WHERE id = ?", (now_str, task_id))
-    
-    # Reset team
-    if team_id:
-        cursor.execute("UPDATE teams SET status = 'Idle', current_zone = NULL WHERE id = ?", (team_id,))
-    
-    # Update zone coverage
-    cursor.execute("UPDATE zone_coverage SET last_visited = ?, status = 'Recently Visited' WHERE zone = ?", (now_str, zone))
-    
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+    task_id = (request.get_json(silent=True) or {}).get('task_id')
+    if not isinstance(task_id,str):
+        return jsonify({'error': 'task_id is required.'}), 400
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        row = _task_for_actor(conn, task_id)
+        if not row:
+            return jsonify({'error': 'Task not found.'}), 404
+        if row['status']!='COMPLETED_UNVERIFIED':
+            return jsonify({'error': 'Completion evidence must be submitted before approval.'}), 409
+        filename = (row['image_url'] or '').removeprefix('/uploads/')
+        if not conn.execute('SELECT 1 FROM uploaded_evidence WHERE filename=? AND task_id=?', (filename,task_id)).fetchone():
+            return jsonify({'error': 'Verified upload evidence is required.'}), 409
+        stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        conn.execute("UPDATE maintenance_tasks SET status='COMPLETED',completed_time=? WHERE id=?", (stamp,task_id))
+        remaining = conn.execute("SELECT COUNT(*) FROM maintenance_tasks WHERE assigned_team_id=? AND status IN ('ON GROUND','COMPLETED_UNVERIFIED')", (row['assigned_team_id'],)).fetchone()[0]
+        if row['assigned_team_id'] and not remaining:
+            conn.execute("UPDATE teams SET status='Idle',current_zone=NULL WHERE id=?", (row['assigned_team_id'],))
+        conn.execute("INSERT INTO zone_coverage (zone,last_visited,status) VALUES (?,?,'OK') ON CONFLICT(zone) DO UPDATE SET last_visited=excluded.last_visited,status='OK'", (row['zone'],stamp))
+    return jsonify({'success': True})
 
 
 def _normalize_text(text: str) -> str:
@@ -1146,10 +1110,10 @@ def _phrase_in_text(text: str, phrase: str) -> bool:
 
 
 def _fetch_known_zones() -> list[str]:
-    if not os.path.exists(DB_PATH):
+    if not os.path.exists(data_path(DB_PATH)):
         return []
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     zones: list[str] = []
     try:
@@ -1287,7 +1251,7 @@ def _normalize_complaint_source(source: str) -> str:
 
 
 def _insert_complaint(zone, issue_type, severity='High', summary=None, source='text_chat', locality=None):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     normalized_source = _normalize_complaint_source(source)
     c_id = f"{SOURCE_ID_PREFIXES[normalized_source]}-" + str(uuid.uuid4())[:8]
@@ -1296,6 +1260,8 @@ def _insert_complaint(zone, issue_type, severity='High', summary=None, source='t
     final_locality = locality or zone
     complaint_text = summary or f"Complaint reported in {final_locality} for {issue_type}."
 
+    from privacy import redact
+    complaint_text=redact(complaint_text)
     cursor.execute('''
         INSERT INTO complaints (id, zone, locality, issue_type, complaint_count, weather, timestamp, severity, description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1353,7 +1319,7 @@ def _build_agent_response_from_transcript(transcript: str, complaint_source: str
             try:
                 translated_transcript = translate_to_english(transcript)
             except Exception as e:
-                _safe_log(f"Sarvam translation fallback failed: {e}")
+                _safe_log(f"Sarvam translation fallback failed: {type(e).__name__}")
                 translated_transcript = transcript
 
     # Smart Filing: Log if we have EITHER a recognized zone OR a specific locality, as long as issue exists
@@ -1457,124 +1423,36 @@ def get_severity(complaint_count):
 
 @app.route("/api/whatsapp-complaint", methods=["POST"])
 def whatsapp_complaint():
-    # Accept both JSON body and form data (Twilio sends form, N8n may send JSON)
-    if request.is_json:
-        data = request.json or {}
-    else:
-        data = request.form.to_dict() or {}
-
-    # Log exactly what N8n/Twilio sends for debugging
-    print(f"[WHATSAPP] Incoming payload keys: {list(data.keys())}")
-    print(f"[WHATSAPP] Raw body: {str(data)[:300]}")
-
-    # Support multiple field name conventions from N8n / Twilio
-    user_msg = (
-        data.get("user_message")
-        or data.get("message")
-        or data.get("Body")        # Twilio sends "Body"
-        or data.get("body")
-        or data.get("text")
-        or ""
-    )
-    phone = data.get("phone") or data.get("From") or data.get("from") or ""
-    source = data.get("source", "whatsapp")
-
-    # Extract zone/locality/type using regex heuristics as initial values
-    zone, locality = find_zone_and_locality(user_msg)
-    complaint_type = extract_issue_from_text(user_msg)
-
-    # Try Gemini FIRST — it understands natural language locations like "Seawoods, Nerul"
-    # that the regex map won't catch. Gate runs AFTER Gemini enrichment.
-    translated_description = user_msg
-    try:
-        gemini_data = extract_complaint_details(user_msg)
-        if "error" not in gemini_data and gemini_data.get("translated_input_en"):
-            translated_description = gemini_data["translated_input_en"]
-            if gemini_data.get("zone") and gemini_data["zone"] != "Unknown":
-                zone = gemini_data["zone"]
-            if gemini_data.get("specific_location"):
-                locality = gemini_data["specific_location"]
-            if gemini_data.get("issue_type") and gemini_data["issue_type"] != "General":
-                complaint_type = gemini_data["issue_type"]
-        else:
-            translated_description = translate_to_english(user_msg)
-    except Exception as e:
-        print(f"[WHATSAPP] Gemini failed, trying Sarvam translation: {e}")
-        try:
-            translated_description = translate_to_english(user_msg)
-        except Exception as e2:
-            print(f"[WHATSAPP] Sarvam translation also failed, storing original: {e2}")
-
-    # GATE: reject greetings, acks, and messages without a real zone + issue
-    # Runs after Gemini so natural-language locations are resolved before checking
-    is_valid_zone = zone != "Unknown"
-    is_valid_issue = complaint_type not in ("General", None, "")
-    if not is_valid_zone or not is_valid_issue:
-        print(f"[WHATSAPP] SKIPPED (not a valid complaint) zone={zone!r} issue={complaint_type!r} msg={user_msg[:80]!r}")
-        return jsonify({
-            "status": "skipped",
-            "reason": "Message does not contain a identifiable zone and issue type. Not saved.",
-            "zone": zone,
-            "issue_type": complaint_type
-        }), 200
-
-    # Generate complaint ID matching MMR-XXXXX
-    complaint_id = f"MMR-{uuid.uuid4().hex[:8].upper()}"
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    # Get existing count for severity logic
-    existing = cursor.execute("SELECT COUNT(*) FROM complaints WHERE zone = ?", (zone,)).fetchone()
-    previous_complaints = existing[0] if existing else 0
-    severity = get_severity(previous_complaints)
-
-    # Insert using existing schema (lowercase columns)
-    cursor.execute("""
-        INSERT INTO complaints (id, zone, locality, issue_type, complaint_count, weather, timestamp, severity, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (complaint_id, zone, locality, complaint_type, 1, 'no', timestamp, severity, translated_description))
-
-    # Update zone_coverage
-    cursor.execute("""
-        UPDATE zone_coverage 
-        SET complaint_count = COALESCE(complaint_count, 0) + 1 
-        WHERE zone = ?
-    """, (zone,))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({
-        "status": "ok",
-        "complaint_id": complaint_id,
-        "area": zone,
-        "locality": locality,
-        "type": complaint_type,
-        "severity": severity,
-        "timestamp": timestamp
-    })
+    from product_api import intake
+    return intake('whatsapp')
 
 
 @app.route('/api/complaints', methods=['GET'])
 def get_complaints():
-    if not os.path.exists(DB_PATH):
+    if not os.path.exists(data_path(DB_PATH)):
         return jsonify({"success": False, "error": "Database not initialized"}), 500
 
     area = request.args.get("area", None)
     c_type = request.args.get("type", None)
     severity = request.args.get("severity", None)
-    limit = request.args.get("limit", 100)
+    try:limit=int(request.args.get('limit',100))
+    except ValueError:raise DispatchError('limit must be an integer from 1 to 500.')
+    if not 1<=limit<=500:raise DispatchError('limit must be an integer from 1 to 500.')
+    search=request.args.get('q','')
+    if len(search)>200:raise DispatchError('Search text is too long.')
+    if any(value and len(value)>200 for value in (area,c_type,severity)):raise DispatchError('Filter is too long.')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     try:
-        query = "SELECT id, zone, locality, issue_type, complaint_count, timestamp, severity, description FROM complaints WHERE 1=1"
+        query = "SELECT id, zone, locality, issue_type, complaint_count, timestamp, severity, description,revision FROM complaints WHERE 1=1"
         params = []
 
+        if search:
+            query += " AND (description LIKE ? OR id LIKE ?)"
+            params.extend(['%'+search+'%','%'+search+'%'])
         if area:
             query += " AND (LOWER(zone) LIKE LOWER(?) OR LOWER(locality) LIKE LOWER(?))"
             params.append(f"%{area}%")
@@ -1604,15 +1482,16 @@ def get_complaints():
             FROM complaints
             '''
         ).fetchone()
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         conn.close()
-        return jsonify({"success": False, "error": str(e)}), 500
+        raise
 
     complaints = []
     for row in complaint_rows:
         source = _infer_complaint_source(row["id"])
         complaints.append({
             "id": row["id"],
+            "revision":row["revision"],
             "text": row["description"] or f"{row['issue_type']} in {row['locality'] or row['zone']}",
             "urgency": _severity_to_urgency(row["severity"]),
             "category": _issue_type_to_category(row["issue_type"]),
@@ -1644,7 +1523,7 @@ def get_complaints():
 @app.route('/api/hotspots', methods=['GET'])
 def get_hotspots():
     """Returns locality-level density clusters with generated coordinates."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -1660,10 +1539,12 @@ def get_hotspots():
     
     hotspots = []
     for row in rows:
-        lat, lon = get_locality_coordinates(row['zone'], row['locality'])
+        if not row['zone']:
+            continue
+        lat, lon = get_locality_coordinates(row['zone'], row['locality']) if row['locality'] else get_zone_coordinates(row['zone'])
         hotspots.append({
             "zone": row['zone'],
-            "locality": row['locality'],
+            "locality": row['locality'] or "Unspecified locality",
             "count": row['count'],
             "lat": lat,
             "lon": lon
@@ -1674,18 +1555,9 @@ def get_hotspots():
 
 @app.route('/api/webhooks/vapi', methods=['POST'])
 def vapi_webhook():
-    req_data = request.json
-    message = req_data.get('message', {})
-    if message.get('type') == 'tool-calls':
-        calls = message.get('toolCalls', [])
-        for call in calls:
-            args = call.get('function', {}).get('arguments', {})
-            _insert_voice_complaint(
-                zone=args.get('zone', 'Unknown'),
-                issue_type=args.get('issue', 'Voice Report')
-            )
-        return jsonify({"results": [{"toolCallId": calls[0]['id'], "result": "Success"}]})
-    return jsonify({"success": True})
+    from product_api import intake
+    return intake('vapi')
+
 
 @app.route('/api/agent/greet', methods=['GET'])
 def agent_greet():
@@ -1723,7 +1595,7 @@ def agent_respond():
     try:
         result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
     except Exception as exc:
-        _safe_log(f"Agent voice response failed: {exc}")
+        _safe_log(f"Agent voice response failed: {type(exc).__name__}")
         return jsonify({"success": False, "error": "The complaint agent could not process this voice input."}), 500
 
     try:
@@ -1753,7 +1625,7 @@ def agent_respond_text():
     try:
         result = _build_agent_response_from_transcript(transcript, complaint_source='voice_call')
     except Exception as exc:
-        _safe_log(f"Agent text response failed: {exc}")
+        _safe_log(f"Agent text response failed: {type(exc).__name__}")
         return jsonify({"success": False, "error": "The complaint agent could not process this text input."}), 500
 
     try:
@@ -1783,7 +1655,7 @@ def agent_respond_chat():
     try:
         result = _build_agent_response_from_transcript(transcript, complaint_source='text_chat')
     except Exception as exc:
-        _safe_log(f"Agent chat response failed: {exc}")
+        _safe_log(f"Agent chat response failed: {type(exc).__name__}")
         return jsonify({"success": False, "error": "The complaint chatbot could not process this message."}), 500
 
     return jsonify({
@@ -1892,121 +1764,32 @@ def get_upcoming_events():
 
 
 def simulate_fleet_movement():
-    """Background thread that nudges en-route trucks towards their targets."""
-    print("🚚 Fleet Movement Simulation Heartbeat Started...")
+    """Optional development-only position animation; arrival always needs confirmation."""
+    from dispatch_service import transaction
     while True:
         try:
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-            # Find any truck that is currently in motion
-            cursor.execute("SELECT id, status, lat, lon FROM trucks WHERE status LIKE 'en_route_to_%'")
-            moving_trucks = cursor.fetchall()
-            
-            if not moving_trucks:
-                conn.close()
-                time.sleep(3)
-                continue
-
-            for t_id, status, cur_lat, cur_lon in moving_trucks:
-                target_zone = status.replace('en_route_to_', '')
-                dest_lat, dest_lon = get_zone_coordinates(target_zone)
-                
-                # Vector math: determine distance and direction
-                d_lat = dest_lat - cur_lat
-                d_lon = dest_lon - cur_lon
-                dist = (d_lat**2 + d_lon**2)**0.5
-                
-                # Demo Mode Speed: ~0.002 units per heartbeat (Visible movement)
-                step = 0.0025
-                
-                if dist < step:
-                    # Arrived at destination
-                    cursor.execute("UPDATE trucks SET status = 'idle', lat = ?, lon = ? WHERE id = ?", (dest_lat, dest_lon, t_id))
-                    # Also update coverage as if it arrived
-                    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    cursor.execute("UPDATE zone_coverage SET last_visited = ?, status = 'OK' WHERE zone = ?", (now_str, target_zone))
-                    print(f"✅ Truck {t_id} arrived at {target_zone}")
-                else:
-                    # Move one step towards goal
-                    new_lat = cur_lat + (d_lat / dist) * step
-                    new_lon = cur_lon + (d_lon / dist) * step
-                    cursor.execute("UPDATE trucks SET lat = ?, lon = ? WHERE id = ?", (new_lat, new_lon, t_id))
-            
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"Simulation Error: {e}")
-        
-        time.sleep(2) # 2-second simulation tick
+            with transaction(data_path(DB_PATH)) as conn:
+                rows = conn.execute("""SELECT t.id,t.lat,t.lon,d.destination_lat,d.destination_lon
+                    FROM trucks t JOIN dispatches d ON d.truck_id=t.id
+                    WHERE d.status='EN_ROUTE' AND t.status='en_route_to_'||d.zone""").fetchall()
+                from dispatch_contract import valid_coordinates
+                for row in rows:
+                    if not valid_coordinates(row['lat'],row['lon']) or not valid_coordinates(row['destination_lat'],row['destination_lon']):
+                        continue
+                    delta_lat, delta_lon = row['destination_lat']-row['lat'], row['destination_lon']-row['lon']
+                    distance = (delta_lat**2+delta_lon**2)**0.5
+                    scale = min(1,0.0025/distance) if distance else 0
+                    conn.execute('UPDATE trucks SET lat=?,lon=? WHERE id=?',
+                                 (row['lat']+delta_lat*scale,row['lon']+delta_lon*scale,row['id']))
+        except sqlite3.Error:
+            app.logger.exception('Development fleet animation failed')
+        time.sleep(2)
 
 
 @app.route("/api/image-complaint", methods=["POST"])
 def image_complaint():
-    data = request.json or {}
-    print(f"[IMAGE] Incoming keys: {list(data.keys())}")
-    print(f"[IMAGE] Payload: {str(data)[:400]}")
-
-    chat_id = str(data.get("chat_id") or data.get("chatId") or data.get("from_id") or "")
-    file_id = data.get("file_id") or data.get("fileId") or data.get("photo_file_id") or ""
-    caption = data.get("caption") or data.get("text") or data.get("message") or "No caption"
-    raw_text = data.get("raw_text") or caption  # raw_text is the full caption for NLU
-    timestamp = data.get("timestamp") or datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    image_url = ""
-    if bot_token and file_id:
-        try:
-            resp = requests.get(
-                f"https://api.telegram.org/bot{bot_token}/getFile",
-                params={"file_id": file_id},
-                timeout=5
-            ).json()
-            file_path = resp.get("result", {}).get("file_path", "")
-            if file_path:
-                image_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
-                print(f"[IMAGE] Resolved URL: {image_url}")
-            else:
-                print(f"[IMAGE] getFile failed: {resp}")
-        except Exception as e:
-            print(f"[IMAGE] Could not resolve image URL: {e}")
-
-    complaint_id = f"IMG-{uuid.uuid4().hex[:8].upper()}"
-
-    # Step 1: regex-based extraction as baseline
-    zone, locality = find_zone_and_locality(raw_text)
-    issue_type = extract_issue_from_text(raw_text) or "General"
-
-    # Step 2: Gemini refines zone/locality/issue if caption is meaningful
-    if raw_text and raw_text not in ("No caption", ""):
-        try:
-            gemini_data = extract_complaint_details(raw_text)
-            if "error" not in gemini_data:
-                if gemini_data.get("zone") and gemini_data["zone"] != "Unknown":
-                    zone = gemini_data["zone"]
-                if gemini_data.get("specific_location"):
-                    locality = gemini_data["specific_location"]
-                if gemini_data.get("issue_type") and gemini_data["issue_type"] != "General":
-                    issue_type = gemini_data["issue_type"]
-        except Exception as e:
-            print(f"[IMAGE] Gemini extraction failed: {e}")
-
-    print(f"[IMAGE] Extracted — zone={zone!r} locality={locality!r} issue={issue_type!r}")
-
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    try:
-        conn.execute("""
-            INSERT INTO image_complaints (id, file_id, image_url, caption, chat_id, zone, locality, issue_type, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (complaint_id, file_id, image_url, caption, chat_id, zone, locality, issue_type, timestamp))
-        conn.commit()
-        return jsonify({"status": "ok", "complaint_id": complaint_id})
-    except Exception as e:
-        conn.rollback()
-        print(f"[IMAGE] DB error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        conn.close()
+    from product_api import intake
+    return intake('image')
 
 
 @app.route("/api/image-complaints", methods=["GET", "POST"])
@@ -2015,46 +1798,91 @@ def get_image_complaints():
         # Delegate to the same logic as /api/image-complaint
         return image_complaint()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
         "SELECT * FROM image_complaints ORDER BY timestamp DESC LIMIT 200"
     ).fetchall()
     conn.close()
-    return jsonify({"success": True, "complaints": [dict(r) for r in rows]})
+    complaints = []
+    for row in rows:
+        item = dict(row)
+        item['image_url'] = '/api/image-media/'+item['id'] if item.get('file_id') else ''
+        item.pop('chat_id', None)
+        item.pop('file_id', None)
+        complaints.append(item)
+    return jsonify({"success": True, "complaints": complaints})
 
 
 @app.route("/api/image-complaint/<complaint_id>", methods=["PATCH"])
 def update_image_complaint(complaint_id):
-    data = request.json or {}
-    zone = data.get("zone")
-    locality = data.get("locality")
-    issue_type = data.get("issue_type")
-    priority = data.get("priority")
-    status = data.get("status")
+    data=request.get_json(silent=True) or {}
+    fields={'zone','locality','issue_type','priority','status'}
+    if not isinstance(data,dict) or set(data)!=fields or any(not isinstance(data[k],str) for k in fields):raise DispatchError('Supply valid image classification fields.')
+    from fleet_manager import ZONE_COORDS
+    if data['zone'] not in ZONE_COORDS and data['zone']!='Unknown':raise DispatchError('Unknown zone.')
+    if len(data['locality'])>200 or data['issue_type'] not in ('General','Garbage','Water','Roads','Drainage','Electricity','Other') or data['priority'] not in ('pending','low','medium','high','critical') or data['status'] not in ('new','under_review','in_progress','resolved'):raise DispatchError('Invalid classification, priority or status.')
+    from dispatch_service import transaction,timestamp
+    with transaction(data_path(DB_PATH)) as conn:
+        if not conn.execute('SELECT 1 FROM image_complaints WHERE id=?',(complaint_id,)).fetchone():raise DispatchError('Complaint not found.','not_found',404)
+        conn.execute('UPDATE image_complaints SET zone=?,locality=?,issue_type=?,priority=?,status=? WHERE id=?',tuple(data[k] for k in ['zone','locality','issue_type','priority','status'])+(complaint_id,))
+        if data['zone'] in ZONE_COORDS and data['issue_type']!='General':
+            for event in conn.execute("SELECT id,result_json FROM ingestion_events WHERE kind='image' AND status='REVIEW'").fetchall():
+                if any(item.get('complaint_id')==complaint_id for item in json.loads(event['result_json'])):
+                    conn.execute("UPDATE ingestion_events SET status='COMPLETED' WHERE id=?",(event['id'],))
+        conn.execute('INSERT INTO operation_events (actor_id,event,target_id,created_at) VALUES (?,?,?,?)',(g.user['id'],'image_classified',complaint_id,timestamp()))
+    return jsonify({'status':'ok'})
 
-    conn = sqlite3.connect(DB_PATH)
+
+@app.get('/api/image-media/<complaint_id>')
+def image_media(complaint_id):
+    from flask import Response
+    with sqlite3.connect(data_path(DB_PATH)) as conn:
+        row = conn.execute('SELECT file_id FROM image_complaints WHERE id=?', (complaint_id,)).fetchone()
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    if not row or not row[0] or not token:
+        return jsonify({'error': 'Image unavailable.'}), 404
     try:
-        conn.execute(
-            "UPDATE image_complaints SET zone=?, locality=?, issue_type=?, priority=?, status=? WHERE id=?",
-            (zone, locality, issue_type, priority, status, complaint_id)
-        )
-        conn.commit()
-        return jsonify({"status": "ok"})
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        conn.close()
+        metadata = requests.get(f'https://api.telegram.org/bot{token}/getFile', params={'file_id': row[0]}, timeout=5).json()
+        path = metadata.get('result', {}).get('file_path', '')
+        if not re.fullmatch(r'[A-Za-z0-9_./-]+',path) or '..' in path:
+            return jsonify({'error': 'Image unavailable.'}), 502
+        with requests.get(f'https://api.telegram.org/file/bot{token}/{path}', timeout=10, stream=True, allow_redirects=False) as upstream:
+            if upstream.status_code != 200:
+                return jsonify({'error': 'Image unavailable.'}), 502
+            kind = upstream.headers.get('Content-Type','').split(';')[0]
+            if kind not in {'image/jpeg','image/png','image/webp','image/gif'}:
+                return jsonify({'error': 'Unsupported image.'}), 502
+            content = bytearray()
+            for chunk in upstream.iter_content(65536):
+                content.extend(chunk)
+                if len(content)>12*1024*1024:
+                    return jsonify({'error': 'Image too large.'}), 413
+        return Response(bytes(content),content_type=kind)
+    except (requests.RequestException,ValueError):
+        return jsonify({'error': 'Image unavailable.'}), 502
 
 
 if __name__ == '__main__':
-    # Initialize database schemas before starting simulation
-    ensure_tables_exist()
+    # Every provisioned store must be migrated before the worker accepts jobs.
+    from schema import initialize_all
+    initialize_all(app)
+
+    # Dev worker uses the same atomic jobs as the separate production worker.
+    if os.getenv('NAGARFLOW_INGEST_WORKER', 'true') == 'true':
+        def inbox_loop():
+            from worker import run_cycle
+            while True:
+                try:run_cycle(app)
+                except Exception as error:app.logger.error('Inbox worker failed: %s', type(error).__name__)
+                time.sleep(5)
+        threading.Thread(target=inbox_loop,daemon=True).start()
 
     # Start the fleet simulation in a background daemon thread
-    sim_thread = threading.Thread(target=simulate_fleet_movement, daemon=True)
-    sim_thread.start()
+    if os.getenv('NAGARFLOW_SIMULATE_FLEET') == 'true':
+        sim_thread = threading.Thread(target=simulate_fleet_movement, daemon=True)
+        sim_thread.start()
 
     # Ensure this runs on 5000 to not conflict with Next.js
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=True)
+    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG') == '1', use_reloader=False)

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../lib/api';
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -78,7 +79,7 @@ export default function VisualComplaintsPage() {
 
   const load = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/image-complaints');
+      const res = await apiFetch('/api/image-complaints');
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error('failed');
       setComplaints(data.complaints || []);
@@ -107,7 +108,7 @@ export default function VisualComplaintsPage() {
     if (!patch) return;
     setSaving(id);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/image-complaint/${id}`, {
+      const res = await apiFetch(`/api/image-complaint/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),

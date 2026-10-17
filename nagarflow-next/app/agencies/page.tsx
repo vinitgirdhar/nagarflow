@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../lib/api';
 
 import { useEffect, useMemo, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
@@ -52,7 +53,7 @@ type AgenciesPayload = {
   success: boolean;
 };
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = '';
 
 function getCategoryIcon(category: string) {
   switch (category) {
@@ -101,7 +102,7 @@ export default function AgenciesPage() {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/agencies${forceRefresh ? '?refresh=1' : ''}`);
+      const response = await apiFetch(`${BACKEND_URL}/api/agencies${forceRefresh ? '?refresh=1' : ''}`);
       const data = (await response.json()) as AgenciesPayload & { error?: string };
 
       if (!response.ok || !data.success) {

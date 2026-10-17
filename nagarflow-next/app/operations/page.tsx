@@ -1,0 +1,14 @@
+'use client';
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import DashboardShell from '../components/DashboardShell';
+import {apiFetch} from '../lib/api';
+type Receipt={id:string;kind:string;status:string;attempts:number;received_at:string;last_error_code:string|null;results:{complaint_id:string}[]};
+type Overview={events:Receipt[];counts:Record<string,number>;worker_heartbeat:string|null};
+export default function Operations(){
+ const [data,setData]=useState<Overview|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState('');
+ useEffect(()=>{let active=true;async function load(){try{const r=await apiFetch('/api/operations');if(!r.ok)throw new Error('Operations unavailable.');const d=await r.json();if(active)setData(d);}catch(e){if(active)setError(String(e));}}load();const id=setInterval(load,5000);return()=>{active=false;clearInterval(id);};},[]);
+ async function retry(id:string){setBusy(id);setError('');try{const r=await apiFetch('/api/operations/receipts/'+id+'/retry',{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.error);const response=await apiFetch('/api/operations');if(response.ok)setData(await response.json());}catch(e){setError(e instanceof Error?e.message:'Retry failed.');}finally{setBusy('');}}
+ const healthy=data?.worker_heartbeat && Date.now()-Date.parse(data.worker_heartbeat)<60000;
+ return <DashboardShell title="Ingestion operations"><h1>Complaint intake</h1><p>Deliveries are acknowledged after durable storage. Failed processing retries with backoff; completed deliveries never create duplicate complaints.</p>{error&&<p role="alert">{error}</p>}{!data?<p>Loading…</p>:<><p style={{margin:'1rem 0'}} role="status">Worker: {healthy?'Running':'No recent heartbeat. Start the inbox worker.'}</p><div className="stat-grid">{['PENDING','RETRY','DEAD','REVIEW','COMPLETED'].map(s=><div className="card" key={s}><div className="card__label">{s}</div><div className="card__value">{data.counts[s]||0}</div></div>)}</div><section className="card" style={{padding:20,overflowX:'auto',marginTop:20}}><h2>Recent receipts</h2>{!data.events.length?<p>No deliveries received yet.</p>:<table style={{width:'100%',textAlign:'left'}}><thead><tr><th>Channel</th><th>Received</th><th>Status</th><th>Attempts</th><th>Action</th></tr></thead><tbody>{data.events.map(e=><tr key={e.id}><td>{e.kind}</td><td>{new Date(e.received_at).toLocaleString()}</td><td>{e.status}{e.last_error_code?' · '+e.last_error_code:''}</td><td>{e.attempts}</td><td>{['DEAD','RETRY'].includes(e.status)?<button className="btn" disabled={busy===e.id} onClick={()=>retry(e.id)}>Retry processing</button>:e.results.length?<Link href={e.kind==='image'?'/visual-complaints':'/complaints'}>Review complaints</Link>:null}</td></tr>)}</tbody></table>}</section></> }</DashboardShell>;
+}

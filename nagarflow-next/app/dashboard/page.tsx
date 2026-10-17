@@ -1,4 +1,8 @@
 'use client';
+import { apiFetch } from '../lib/api';
+import { htmlText } from '../lib/html';
+import { acceptDispatch, type DispatchSuggestion } from '../lib/dispatch';
+import ActiveDispatches from '../components/ActiveDispatches';
 import { useEffect, useRef, useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
@@ -24,15 +28,18 @@ function getColor(v: number) {
 
 export default function DashboardPage() {
   const mapRef = useRef<HTMLDivElement>(null);
+  const [mapUnavailable,setMapUnavailable]=useState(false);
   
   // Live State
   const [zonesLive, setZonesLive] = useState<any[]>([]);
   const [trucksLive, setTrucksLive] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [hotspots, setHotspots] = useState<any[]>([]);
-  const [alerts, setAlerts] = useState<string[]>(['[NOMINAL] System initialized. Routing logic operational.']);
+  const [alerts, setAlerts] = useState<string[]>([]);
+  const [connected, setConnected] = useState<boolean|null>(null);
   const [mounted, setMounted] = useState(false);
-  const [kpis, setKpis] = useState<any>({ accuracy: 94.1, coverage: 87, equity: 0.91, efficiency: 84.5 });
+  const [kpis, setKpis] = useState<{accuracy:number|null;coverage:number|null;equity:number|null}>({accuracy:null,coverage:null,equity:null});
+  const [dispatching, setDispatching] = useState<number|null>(null);
 
   const mapObjRef = useRef<any>(null);
   const layerGroupRef = useRef<any>(null);
@@ -80,18 +87,26 @@ export default function DashboardPage() {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.onload = initMap;
+      script.onerror = () => setMapUnavailable(true);
       document.head.appendChild(script);
     }
 
+    fetchDashboardData();
+    fetchDispatchSuggestions();
+    fetchHotspots();
+    const refresh = () => { fetchDashboardData(); fetchDispatchSuggestions(); };
+    window.addEventListener('nagarflow-dispatch-changed', refresh);
     // Dynamic 4-Second Polling Interval (Matches Dispatch Page sync)
     const pollId = setInterval(() => {
       fetchDashboardData();
+      fetchDispatchSuggestions();
     }, 4000);
 
     // Cleanup: destroy map instance & stop polling on unmount
     return () => {
       destroyed = true;
       clearInterval(pollId);
+      window.removeEventListener('nagarflow-dispatch-changed', refresh);
       if (mapObjRef.current) {
         mapObjRef.current.remove();
         mapObjRef.current = null;
@@ -102,50 +117,38 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/dashboard');
+      const res = await apiFetch('/api/dashboard');
+      if (!res.ok) throw new Error('Dashboard data unavailable.');
+      setConnected(true);
       if (res.ok) {
         const data = await res.json();
         const rawPredictions: any[] = data.predictions || [];
 
-        // Remap priority_score into a realistic distribution (same logic as predictions page).
-        // Backend clusters everything at 80-90 due to dense dataset — we preserve ranking
-        // but redistribute across 8-88% with a power curve so most zones sit 15-55%.
-        const remapped = (() => {
-          if (rawPredictions.length === 0) return rawPredictions;
-          const sorted = [...rawPredictions].sort((a, b) => b.priority_score - a.priority_score);
-          const n = sorted.length;
-          return sorted.map((z, i) => {
-            const rank = i / Math.max(n - 1, 1);
-            const curved = Math.pow(1 - rank, 1.8);
-            return { ...z, priority_score: Math.round(8 + curved * 80) };
-          });
-        })();
-
-        setZonesLive(remapped);
+        setZonesLive(rawPredictions);
         setTrucksLive(data.trucks || []);
-        redrawMap(remapped, data.trucks || []);
+        redrawMap(rawPredictions, data.trucks || []);
       }
       
-      const reportRes = await fetch('http://127.0.0.1:5000/api/reports');
+      const reportRes = await apiFetch('/api/reports');
       if (reportRes.ok) {
         const reportData = await reportRes.json();
         if (reportData.kpis) setKpis(reportData.kpis);
       }
     } catch (e) {
-        console.warn('Backend disconnected. Check app.py polling.');
+        setConnected(false);
     }
   };
 
   const fetchDispatchSuggestions = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/dispatch');
+      const res = await apiFetch('/api/dispatch');
       if (res.ok) setSuggestions(await res.json());
     } catch (e) {}
   };
 
   const fetchHotspots = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/hotspots');
+      const res = await apiFetch('/api/hotspots');
       if (res.ok) {
         const data = await res.json();
         setHotspots(data || []);
@@ -176,7 +179,7 @@ export default function DashboardPage() {
           color,
           weight: 1,
           opacity: 0.6,
-        }).addTo(layerGroupRef.current).bindPopup(`<b>Locality Hotspot</b><br>${h.locality}<br>Complaints: ${h.count}`);
+        }).addTo(layerGroupRef.current).bindPopup(`<b>Locality Hotspot</b><br>${htmlText(h.locality)}<br>Complaints: ${htmlText(h.count)}`);
       });
     }
     
@@ -190,7 +193,7 @@ export default function DashboardPage() {
         color: getColor(val),
         weight: 2,
         opacity: 0.8
-      }).addTo(layerGroupRef.current).bindPopup(`<b>${z.zone}</b><br>Priority Score: ${z.priority_score}%<br><small>${z.reason || ''}</small>`);
+      }).addTo(layerGroupRef.current).bindPopup(`<b>${htmlText(z.zone)}</b><br>Priority Score: ${htmlText(z.priority_score)}%<br><small>${htmlText(z.reason || '')}</small>`);
     });
 
     // 2. Draw Active Trucks and Dynamic Route Lines
@@ -209,7 +212,7 @@ export default function DashboardPage() {
       const isBusy = t.status.startsWith('en_route_to_');
       L.marker([t.lat, t.lon], { icon: isBusy ? busyIcon : truckIcon })
         .addTo(layerGroupRef.current)
-        .bindPopup(`<b>${t.name}</b><br>Status: ${t.status}`);
+        .bindPopup(`<b>${htmlText(t.name)}</b><br>Status: ${htmlText(t.status)}`);
 
       // Draw dashed geometry lines exactly when accepted
       if (isBusy) {
@@ -225,86 +228,15 @@ export default function DashboardPage() {
   };
 
   // --- Core Logistics Mutators --- 
-  const handleAccept = async (truckId: number, zoneName: string, e?: any) => {
-    const L = (window as any).L;
-    if (!L || !mapObjRef.current || !layerGroupRef.current) return;
-
-    // 1. Locate Source (Truck) and Destination (Zone)
-    const truck = trucksLive.find(t => t.id === truckId);
-    const zInfo = zonesLive.find(z => z.zone === zoneName);
-
-    if (truck && zInfo && e) {
-      e.target.innerHTML = "Dispatching...";
-      
-      // 2. Setup Animation Layer
-      const start = [truck.lat, truck.lon];
-      const end = [zInfo.lat, zInfo.lon];
-      
-      const truckIcon = L.divIcon({ 
-        className: 'dispatch-anim-truck', 
-        html: '<div style="font-size:26px; line-height:26px; text-shadow:0 0 15px rgba(193,68,14,1); transition:transform 0.1s linear">🚛</div>', 
-        iconSize: [26, 26], iconAnchor: [13, 13] 
-      });
-      
-      const animMarker = L.marker(start, { icon: truckIcon }).addTo(layerGroupRef.current);
-      const animLine = L.polyline([start, start], { color: '#C1440E', weight: 4, dashArray: '6, 6', opacity: 0.6 }).addTo(layerGroupRef.current);
-      
-      // 3. Kick off Linear Interpolation (2 seconds)
-      const duration = 2000;
-      const startTime = performance.now();
-      
-      const animate = (now: number) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        const currentLat = start[0] + (end[0] - start[0]) * progress;
-        const currentLon = start[1] + (end[1] - start[1]) * progress;
-        
-        animMarker.setLatLng([currentLat, currentLon]);
-        animLine.setLatLngs([start, [currentLat, currentLon]]);
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          // Finish animation and sync with backend
-          setTimeout(async () => {
-             try {
-                await fetch('http://127.0.0.1:5000/api/dispatch/accept', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ truck_id: truckId, zone: zoneName })
-                });
-                setAlerts(prev => [`[LOGISTICS] Locked. Truck-${truckId} routed to ${zoneName}`, ...prev].slice(0, 3));
-                await fetchDashboardData(); 
-                await fetchDispatchSuggestions(); 
-             } catch(err) {}
-          }, 200);
-        }
-      };
-      
-      requestAnimationFrame(animate);
-    }
-  };
-
-  const handleArrive = async (truckId: number, zone: string, e?: any) => {
-    if(e) e.target.innerHTML = "Logging...";
+  const handleAccept = async (suggestion: DispatchSuggestion) => {
+    setDispatching(suggestion.truck_id);
     try {
-      await fetch('http://127.0.0.1:5000/api/dispatch/arrive', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ truck_id: truckId, zone: zone })
-      });
-      setAlerts(prev => [`[RESOLVED] Truck-${truckId} confirmed arrival. Zone timestamp reset.`, ...prev].slice(0, 3));
-      await fetchDashboardData();
-      await fetchDispatchSuggestions();
-    } catch(e) {}
-  };
-  
-  const handleSurgeOverride = async () => {
-    try {
-      await fetch('http://127.0.0.1:5000/api/simulate-surge', {method: 'POST'});
-      setAlerts(prev => ['[WARNING] Operator Force Override: Unknown region flooded with +35% anomaly.', ...prev].slice(0, 3));
-      await fetchDashboardData(); // Force map to explode
-      await fetchDispatchSuggestions(); // Generate emergency routing
-    } catch(e) {}
+      await acceptDispatch(suggestion);
+      setAlerts(prev => [`[LOGISTICS] Vehicle ${suggestion.truck_id} assigned to ${suggestion.zone}.`, ...prev].slice(0,3));
+      await fetchDashboardData(); await fetchDispatchSuggestions();
+    } catch (error) {
+      setAlerts(prev => [error instanceof Error ? error.message : 'Dispatch failed. Please retry.', ...prev].slice(0,3));
+    } finally { setDispatching(null); }
   };
 
   return (
@@ -314,16 +246,16 @@ export default function DashboardPage() {
            <h1 className="page-header__title">City Logistics & Action Grid</h1>
            <p className="page-header__sub">Full interactive dispatch layout rendering geometry straight from your 311 SQLite cluster.</p>
         </div>
-        <button onClick={handleSurgeOverride} className="btn btn--primary" style={{ background: 'var(--danger)', borderColor: 'var(--danger)', color: 'white', fontWeight: 600}}>⚡ Inject +35% System Surge</button>
+
       </motion.div>
 
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
           { label: 'Trucks Active', value: trucksLive.filter(t => t.status !== 'idle').length.toString(), sub: `of ${trucksLive.length} deployed` },
-          { label: 'Zones Covered', value: `${kpis.coverage}%`, sub: 'MMR Grid Matrix' },
-          { label: 'Prediction Acc.', value: `${kpis.accuracy}%`, sub: 'AiRLLM Core Active' },
-          { label: 'Equity Score', value: kpis.equity.toString(), sub: 'bias-corrected' },
-          { label: 'Network State', value: trucksLive.length > 0 ? 'NOMINAL' : 'DISCONNECTED', sub: 'Polling Port 5000' },
+          { label: 'Zones Covered', value: kpis.coverage === null ? 'No data' : `${kpis.coverage}%`, sub: 'Confirmed visits within 48 hours' },
+          { label: 'Prediction Acc.', value: kpis.accuracy === null ? 'Not evaluated' : `${kpis.accuracy}%`, sub: 'Requires validated observations' },
+          { label: 'Equity Score', value: kpis.equity === null ? 'Not evaluated' : kpis.equity.toString(), sub: 'Requires an agreed metric' },
+          { label: 'Data service', value: connected === null ? 'Connecting' : connected ? 'Available' : 'Unavailable', sub: 'Dashboard API connection' },
         ].map((s, i) => (
           <motion.div key={i} className="card" variants={FADE_UP} whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }} transition={{ duration: 0.2 }}>
             <div className="card__label">{s.label}</div>
@@ -333,9 +265,11 @@ export default function DashboardPage() {
         ))}
       </motion.div>
 
+      <ActiveDispatches />
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" className="grid-2-1">
         <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="map-container map-container--lg" ref={mapRef} style={{height: '520px'}}></div>
+          {mapUnavailable && <p role="status">The map provider is unavailable. Use the assignment controls to continue.</p>}
+            <div className="map-container map-container--lg" ref={mapRef} style={{height: '520px'}}></div>
           
           {/* Shifted: Live Operator Log now sits at the bottom of the map */}
           <motion.div variants={FADE_UP} className="card card--glass" style={{ flexShrink: 0, padding: '1rem 1.5rem' }}>
@@ -427,8 +361,8 @@ export default function DashboardPage() {
                     </div>
 
                     <div style={{display: 'flex', gap: '.5rem' }}>
-                      <button onClick={(e) => handleAccept(s.truck_id, s.zone, e)} className="btn btn--sm btn--primary" style={{flex: 1.5, borderRadius: '4px', fontWeight: 700}}>DISPATCH</button>
-                      <button onClick={(e) => handleArrive(s.truck_id, s.zone, e)} className="btn btn--sm btn--outline" style={{flex: 1, borderRadius: '4px', padding: '.3rem', background: 'var(--surface)', fontSize: '10px'}}>LOG ARRIVAL</button>
+                      <button disabled={dispatching !== null} onClick={() => handleAccept(s)} className="btn btn--sm btn--primary" style={{flex: 1.5, borderRadius: '4px', fontWeight: 700}}>DISPATCH</button>
+
                     </div>
                   </div>
                  ))

@@ -1,3 +1,4 @@
+from database import data_path, DEFAULT_DB_PATH
 import json
 import math
 import random
@@ -8,7 +9,7 @@ import os
 import requests
 from prediction_store import collapse_prediction_records
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 # Configure your endpoint or keep blank to use the local smart simulator fallback
 AIRLLM_API_ENDPOINT = os.getenv("AIRLLM_API_ENDPOINT", "")
 
@@ -117,7 +118,7 @@ def simulate_llm_inference(prompt_data):
 
 def run_airllm_engine():
     import sqlite3
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     cursor.execute('DELETE FROM predictions')

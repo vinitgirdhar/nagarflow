@@ -1,7 +1,8 @@
+from database import data_path, DEFAULT_DB_PATH
 import sqlite3
 from datetime import datetime
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 
 def get_current_weather(cursor):
     """Retrieve the global rain status from the database."""
@@ -31,7 +32,7 @@ def get_zone_coverage(cursor):
 
 def build_llm_payloads():
     """Aggregate data and build the exact text block for the LLM prompt."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     rain_status = get_current_weather(cursor)

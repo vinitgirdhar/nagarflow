@@ -1,77 +1,35 @@
-import sqlite3
+"""Optional Open-Meteo observations. Failures remain unknown, never fabricated clear weather."""
+import datetime as dt
+import json
 import requests
-import time
-from datetime import datetime
+from database import data_path,DEFAULT_DB_PATH
+from dispatch_contract import valid_coordinates
+from dispatch_service import transaction
+WEATHER_API_URL='https://api.open-meteo.com/v1/forecast'
+DB_PATH=DEFAULT_DB_PATH
+LATITUDE,LONGITUDE=19.076,72.8777
+RAIN_CODES={61,63,65,66,67,80,81,82,95,96,99}
 
-# Open-Meteo allows free access to NOAA / global forecast models without an API key
-WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast"
-DB_PATH = "nagarflow.db"
-
-# Coordinates for Mumbai (Central point used for MVP logic)
-LATITUDE = 19.0760
-LONGITUDE = 72.8777
+def poll_once(path,latitude,longitude):
+    if not valid_coordinates(latitude,longitude):raise ValueError('Invalid weather location')
+    response=requests.get(WEATHER_API_URL,params={'latitude':latitude,'longitude':longitude,'current_weather':True,'timezone':'UTC'},timeout=10)
+    response.raise_for_status();current=response.json().get('current_weather',{})
+    for key in ['temperature','windspeed','weathercode','time']:
+        if key not in current:raise ValueError('Provider response lacks required observations')
+    import math
+    for key in ['temperature','windspeed','weathercode']:
+        if isinstance(current[key],bool) or not isinstance(current[key],(int,float)) or not math.isfinite(current[key]):raise ValueError('Invalid provider observation')
+    observed=dt.datetime.fromisoformat(current['time']).replace(tzinfo=dt.timezone.utc)
+    snapshot={'temperature':current['temperature'],'wind_speed':current['windspeed'],'weather_code':current['weathercode'],
+              'observed_at':observed.isoformat(),'latitude':latitude,'longitude':longitude,'source':'Open-Meteo'}
+    with transaction(path) as conn:
+        for key,value in [('weather_snapshot',json.dumps(snapshot)),('current_rain_status','Yes' if current['weathercode'] in RAIN_CODES else 'No')]:
+            conn.execute('INSERT INTO global_status (key,value,last_updated) VALUES (?,?,CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value,last_updated=excluded.last_updated',(key,value))
+    return snapshot
 
 def check_heavy_rain():
-    """Ping weather API to check if it's currently raining."""
-    try:
-        response = requests.get(WEATHER_API_URL, params={
-            "latitude": LATITUDE,
-            "longitude": LONGITUDE,
-            "current_weather": True
-        })
-        data = response.json()
-        current = data.get("current_weather", {})
-        
-        # WMO Weather interpretation codes indicating rain/showers/thunderstorm
-        # 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99 indicate precipitation
-        weather_code = current.get("weathercode", 0)
-        rain_codes = [61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99]
-        
-        is_raining = weather_code in rain_codes
-        
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weather Code: {weather_code} | Rain Detected: {is_raining}")
-        return 'Yes' if is_raining else 'No'
-    except Exception as e:
-        print(f"Error fetching weather data: {e}")
-        return 'Unknown'
+    try:return 'Yes' if poll_once(data_path(DB_PATH),LATITUDE,LONGITUDE)['weather_code'] in RAIN_CODES else 'No'
+    except (requests.RequestException,ValueError,KeyError):return 'Unknown'
 
-def update_weather_db(weather_status):
-    """Save the global weather status to the database for AiRLLM preprocessing."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Ensure a global_status table exists to hold the live weather state
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS global_status (
-            key TEXT PRIMARY KEY,
-            value TEXT,
-            last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        INSERT OR REPLACE INTO global_status (key, value, last_updated)
-        VALUES ('current_rain_status', ?, CURRENT_TIMESTAMP)
-    ''', (weather_status,))
-    
-    conn.commit()
-    conn.close()
-
-def start_polling(interval_minutes=15):
-    print(f"Starting NOAA/Open-Meteo Weather Poller. Polling every {interval_minutes} minutes...")
-    # First instant execution so we don't have to wait 15 minutes
-    weather_status = check_heavy_rain()
-    update_weather_db(weather_status)
-    print(f"Local Database Updated with global weather state: Rain = {weather_status}")
-    print("Waiting for next polling cycle...\n")
-    
-    # Then loop (temporarily disabled for safe script execution so terminal doesn't lock up)
-    # To run permanently, uncomment the loop below:
-    # while True:
-    #     time.sleep(interval_minutes * 60)
-    #     weather_status = check_heavy_rain()
-    #     update_weather_db(weather_status)
-    #     print("Database updated. Waiting for next polling cycle...\n")
-
-if __name__ == "__main__":
-    start_polling(interval_minutes=15)
+if __name__=='__main__':
+    print('Provider observation saved.' if check_heavy_rain()!='Unknown' else 'Weather unavailable; existing snapshot was preserved.')

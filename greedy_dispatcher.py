@@ -1,9 +1,12 @@
+from database import data_path, DEFAULT_DB_PATH
 import sqlite3
 import math
-from fleet_manager import get_zone_coordinates
+from contextlib import closing
+from fleet_manager import get_zone_coordinates, ZONE_COORDS
+from dispatch_contract import prediction_version, valid_coordinates, valid_score
 from prediction_store import fetch_canonical_predictions
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 TRUCK_TYPE_LABELS = {
     "garbage": "Garbage Truck",
     "water": "Water Tanker",
@@ -18,13 +21,9 @@ def normalize_truck_type(truck_type):
 
 
 def issue_type_to_truck_type(issue_type):
-    mapping = {
-        "Water": "water",
-        "Drainage": "water",
-        "Garbage": "garbage",
-        "Roads": "garbage",
-    }
-    return mapping.get(issue_type, "garbage")
+    # Road and drainage work require maintenance crews, not water tankers or garbage trucks.
+    mapping = {'water': 'water', 'garbage': 'garbage'}
+    return mapping.get(str(issue_type or '').strip().casefold())
 
 
 def resolve_zone_truck_type(cursor, zone_name):
@@ -42,7 +41,7 @@ def resolve_zone_truck_type(cursor, zone_name):
 
     issue_type = row["issue_type"] if row else None
     truck_type = issue_type_to_truck_type(issue_type)
-    return truck_type, TRUCK_TYPE_LABELS[truck_type]
+    return truck_type, TRUCK_TYPE_LABELS.get(truck_type, "Maintenance crew / unclassified")
 
 
 def get_truck_marker_html(truck_type, is_busy=False):
@@ -91,72 +90,75 @@ def haversine(lat1, lon1, lat2, lon2):
 
 def generate_dispatch_suggestions():
     """Maps highest AiRLLM priority predictions directly to closest idle trucks."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    with closing(sqlite3.connect(data_path(DB_PATH))) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute('BEGIN')
+        cursor = conn.cursor()
     
-    # Pull Top 5 Critical Surge zones marked by AiRLLM
-    top_zones = fetch_canonical_predictions(cursor, limit=5)
+        # Pull Top 5 Critical Surge zones marked by AiRLLM
+        active_zones = {row['zone'] for row in cursor.execute("SELECT zone FROM dispatches WHERE status='EN_ROUTE'")}
+        serviced_versions = {row['prediction_version'] for row in cursor.execute("SELECT prediction_version FROM dispatches WHERE status!='CANCELLED' AND prediction_version IS NOT NULL")}
+        top_zones = [p for p in fetch_canonical_predictions(cursor)
+                     if p['zone'] in ZONE_COORDS and p['zone'] not in active_zones
+                     and valid_score(p['priority_score']) and prediction_version(p) not in serviced_versions]
     
-    # Grab all Trucks tracking as 'idle' right now
-    cursor.execute("SELECT id, name, lat, lon, truck_type FROM trucks WHERE status = 'idle'")
-    unassigned_trucks = []
-    for truck in cursor.fetchall():
-        truck_data = dict(truck)
-        truck_data["truck_type"] = normalize_truck_type(truck_data.get("truck_type"))
-        unassigned_trucks.append(truck_data)
+        # Grab all Trucks tracking as 'idle' right now
+        cursor.execute("SELECT id, name, lat, lon, truck_type FROM trucks WHERE status = 'idle'")
+        unassigned_trucks = []
+        for truck in cursor.fetchall():
+            truck_data = dict(truck)
+            if truck_data.get("truck_type") not in TRUCK_TYPE_LABELS:
+                continue
+            if valid_coordinates(truck_data['lat'], truck_data['lon']):
+                unassigned_trucks.append(truck_data)
     
-    suggestions = []
+        suggestions = []
     
-    # Greedy Pairing Mechanism loop
-    for tz in top_zones:
-        if not unassigned_trucks:
-            break # Network is fully active; no trucks available to route
+        # Greedy Pairing Mechanism loop
+        for tz in top_zones:
+            if not unassigned_trucks or len(suggestions) >= 5:
+                break # Network is fully active; no trucks available to route
             
-        z_name = tz['zone']
-        z_lat, z_lon = get_zone_coordinates(z_name)
-        preferred_truck_type, preferred_truck_type_label = resolve_zone_truck_type(cursor, z_name)
-        if preferred_truck_type != "water" and any(truck["truck_type"] == "water" for truck in unassigned_trucks):
-            if len(suggestions) % 3 == 2:
-                preferred_truck_type = "water"
-                preferred_truck_type_label = TRUCK_TYPE_LABELS[preferred_truck_type]
+            z_name = tz['zone']
+            z_lat, z_lon = get_zone_coordinates(z_name)
+            preferred_truck_type, preferred_truck_type_label = resolve_zone_truck_type(cursor, z_name)
+            if preferred_truck_type is None:
+                continue
+            candidate_trucks = [truck for truck in unassigned_trucks if truck['truck_type'] == preferred_truck_type]
 
-        candidate_trucks = [
-            truck for truck in unassigned_trucks if truck["truck_type"] == preferred_truck_type
-        ] or unassigned_trucks
+            best_truck = None
+            min_dist = float('inf')
         
-        best_truck = None
-        min_dist = float('inf')
-        
-        for tr in candidate_trucks:
-            dist = haversine(tr['lat'], tr['lon'], z_lat, z_lon)
-            if dist < min_dist:
-                min_dist = dist
-                best_truck = tr
+            for tr in candidate_trucks:
+                dist = haversine(tr['lat'], tr['lon'], z_lat, z_lon)
+                if dist < min_dist:
+                    min_dist = dist
+                    best_truck = tr
                 
-        if best_truck:
-            # 30km/h realistic street traffic multiplier
-            eta_mins = max(1, int((min_dist / 30.0) * 60)) 
+            if best_truck:
+                # 30km/h realistic street traffic multiplier
+                eta_mins = max(1, int((min_dist / 30.0) * 60))
             
-            suggestions.append({
-                "zone": z_name,
-                "priority_score": tz['priority_score'],
-                "reason": tz['reason'],
-                "action": tz['action'],
-                "truck_id": best_truck['id'],
-                "truck_name": best_truck['name'],
-                "truck_type": best_truck['truck_type'],
-                "truck_type_label": TRUCK_TYPE_LABELS[best_truck['truck_type']],
-                "preferred_truck_type": preferred_truck_type,
-                "preferred_truck_type_label": preferred_truck_type_label,
-                "distance_km": round(min_dist, 2),
-                "eta_mins": eta_mins
-            })
-            # Remove from pool once deployed to block overlap
-            unassigned_trucks.remove(best_truck)
+                suggestions.append({
+                    "zone": z_name,
+                    "prediction_id": tz["id"],
+                    "prediction_version": prediction_version(tz),
+                    "priority_score": tz['priority_score'],
+                    "reason": tz['reason'],
+                    "action": tz['action'],
+                    "truck_id": best_truck['id'],
+                    "truck_name": best_truck['name'],
+                    "truck_type": best_truck['truck_type'],
+                    "truck_type_label": TRUCK_TYPE_LABELS[best_truck['truck_type']],
+                    "preferred_truck_type": preferred_truck_type,
+                    "preferred_truck_type_label": preferred_truck_type_label,
+                    "distance_km": round(min_dist, 2),
+                    "eta_mins": eta_mins
+                })
+                # Remove from pool once deployed to block overlap
+                unassigned_trucks.remove(best_truck)
             
-    conn.close()
-    return suggestions
+        return suggestions
 
 if __name__ == '__main__':
     sg = generate_dispatch_suggestions()

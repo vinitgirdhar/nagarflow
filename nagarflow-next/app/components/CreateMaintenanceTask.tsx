@@ -1,0 +1,8 @@
+'use client';
+import {useState} from 'react';
+import {apiFetch} from '../lib/api';
+export default function CreateMaintenanceTask({onCreated}:{onCreated:()=>void}){
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false);
+ async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const form=e.currentTarget,f=new FormData(form);setBusy(true);setError('');try{const r=await apiFetch('/api/maintenance/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({zone:f.get('zone'),type:f.get('type'),priority:f.get('priority'),complaint_id:f.get('complaint')||null})});const d=await r.json();if(!r.ok)throw new Error(d.error);form.reset();onCreated();}catch(e){setError(e instanceof Error?e.message:'Task creation failed.');}finally{setBusy(false);}}
+ return <details className="card" style={{padding:20,marginBottom:20}}><summary>Create a work order</summary><form onSubmit={submit} className="account-form" style={{maxWidth:520,marginTop:16}}><label>Exact zone<input className="input" name="zone" required maxLength={120}/></label><label>Work type<select className="input" name="type">{['Garbage','Water','Road','Drain','General'].map(t=><option key={t}>{t}</option>)}</select></label><label>Priority<select className="input" name="priority">{['MEDIUM','HIGH','LOW'].map(t=><option key={t}>{t}</option>)}</select></label><label>Source complaint ID (optional)<input className="input" name="complaint" maxLength={100}/></label><button className="btn btn--primary" disabled={busy}>Create work order</button></form>{error&&<p role="alert">{error}</p>}</details>;
+}

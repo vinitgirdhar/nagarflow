@@ -1,3 +1,5 @@
+> Historical architecture notes. Current supported workflows and setup are documented in README.md, OPERATIONS.md and DEPLOYMENT.md; prototype claims below are not a production contract.
+
 <div align="center">
 
 # ⚛️ NagarFlow — Frontend Documentation

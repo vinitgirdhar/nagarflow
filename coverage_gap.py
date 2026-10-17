@@ -1,11 +1,12 @@
+from database import data_path, DEFAULT_DB_PATH
 import sqlite3
 from datetime import datetime, timedelta
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 
 def setup_coverage_table():
     """Create the zone_coverage table to track when a truck last visited each area."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -46,7 +47,7 @@ def setup_coverage_table():
 
 def compute_coverage_gaps():
     """Scan all zones to identify and flag those neglected for > 48 hours."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     # 48-hour silent zone threshold

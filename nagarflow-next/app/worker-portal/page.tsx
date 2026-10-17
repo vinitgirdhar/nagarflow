@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../lib/api';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
@@ -89,21 +90,20 @@ export default function WorkerPortalPage() {
 
   useEffect(() => {
     loadTeams();
-    const stored = sessionStorage.getItem('worker_team_id') || '';
-    if (stored) setTeamId(stored);
+
   }, []);
 
   useEffect(() => {
     if (teamId) {
-      sessionStorage.setItem('worker_team_id', teamId);
+
       loadTasks();
     }
   }, [teamId]);
 
   const loadTeams = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/worker/teams');
-      if (res.ok) setTeams(await res.json());
+      const res = await apiFetch('/api/worker/teams');
+      if (res.ok) { const teams = await res.json(); setTeams(teams); if (teams.length === 1) setTeamId(teams[0].id); }
     } catch { /* offline */ }
   };
 
@@ -111,7 +111,7 @@ export default function WorkerPortalPage() {
     if (!teamId) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/worker/tasks?team_id=${encodeURIComponent(teamId)}`);
+      const res = await apiFetch(`/api/worker/tasks?team_id=${encodeURIComponent(teamId)}`);
       if (res.ok) { setTasks(await res.json()); setLastRefresh(new Date()); }
     } catch { /* offline */ }
     setLoading(false);
@@ -146,7 +146,8 @@ export default function WorkerPortalPage() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('http://127.0.0.1:5000/api/worker/upload', { method: 'POST', body: fd });
+      fd.append('task_id', activeTask!.id);
+      const res = await apiFetch('/api/worker/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) setUploadedUrl(data.url);
       else setError(data.error || 'Upload failed');
@@ -162,7 +163,7 @@ export default function WorkerPortalPage() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/worker/update-status', {
+      const res = await apiFetch('/api/worker/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: activeTask!.id, status: newStatus, image_url: uploadedUrl || '', worker_notes: notes }),

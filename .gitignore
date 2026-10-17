@@ -42,3 +42,13 @@ yarn-error.log*
 .netlify
 *.tsbuildinfo
 next-env.d.ts
+
+# Local media and browser test artifacts
+uploads/
+static/uploads/
+test-results/
+playwright-report/
+
+# Private authenticator keys and operational backups
+*.mfa-key
+backups/

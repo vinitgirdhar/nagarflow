@@ -1,12 +1,13 @@
+from database import data_path, DEFAULT_DB_PATH
 import sqlite3
 import csv
 import os
 import glob
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 
 def setup_database():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     
     # 1. Complaints Table (Ingesting 311 Data)
@@ -73,12 +74,14 @@ def ingest_all_csvs(conn):
         
     total_count = 0
     # Clear existing data for fresh start as requested
-    cursor.execute("DELETE FROM complaints")
+    # Preserve existing operational records on repeated setup.
     
     for file_path in csv_files:
         print(f"Ingesting 50k records from {file_path}...")
         with open(file_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
+            if not {'Complaint_ID','Area','Complaint_Type'}.issubset(reader.fieldnames or []):
+                continue
             batch = []
             for row in reader:
                 try:
@@ -96,7 +99,7 @@ def ingest_all_csvs(conn):
                     ))
                     if len(batch) >= 1000:
                         cursor.executemany('''
-                            INSERT OR REPLACE INTO complaints 
+                            INSERT OR IGNORE INTO complaints
                             (id, zone, locality, issue_type, complaint_count, population, weather, timestamp, severity, description)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ''', batch)
@@ -106,7 +109,7 @@ def ingest_all_csvs(conn):
                     pass
             if batch:
                 cursor.executemany('''
-                    INSERT OR REPLACE INTO complaints 
+                    INSERT OR IGNORE INTO complaints
                     (id, zone, locality, issue_type, complaint_count, population, weather, timestamp, severity, description)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', batch)

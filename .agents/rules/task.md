@@ -1,3 +1,5 @@
+> Historical checklist. Current completion and remaining launch gates: PRODUCT_ROADMAP.md and IMPLEMENTATION_REPORT.md.
+
 ---
 trigger: always_on
 ---

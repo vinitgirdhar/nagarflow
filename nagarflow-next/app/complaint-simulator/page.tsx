@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../lib/api';
 
 import { FormEvent, useMemo, useState } from 'react';
 import {
@@ -12,7 +13,7 @@ import {
 import DashboardShell from '../components/DashboardShell';
 import VoiceConversation from '../components/VoiceConversation';
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = '';
 
 const SAMPLE_SMS = [
   'Hi, I am from Andheri West near the subway and the drains are overflowing since morning. Please register a complaint.',
@@ -64,7 +65,7 @@ export default function ComplaintSimulatorPage() {
     setChatMessages((current) => [...current, { speaker: 'user', text: trimmed }]);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/agent/respond-chat`, {
+      const response = await apiFetch(`${BACKEND_URL}/api/agent/respond-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: trimmed }),

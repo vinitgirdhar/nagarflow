@@ -1,0 +1,37 @@
+name: Application checks
+on:
+  pull_request:
+  push:
+    branches: [main, verison-updation]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: nagarflow-next/package-lock.json
+      - run: python -m venv venv
+      - run: venv/bin/python -m pip install -r requirements.txt
+      - run: npm ci
+        working-directory: nagarflow-next
+      - run: venv/bin/python -m unittest discover -s tests
+      - run: venv/bin/python scripts/evaluate_intelligence.py
+      - run: npm run build
+        working-directory: nagarflow-next
+      - run: npx playwright install --with-deps chromium
+        working-directory: nagarflow-next
+      - run: npm run test:e2e
+        working-directory: nagarflow-next
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: synthetic-browser-failures
+          path: nagarflow-next/test-results
+          retention-days: 7

@@ -112,6 +112,7 @@ def extract_complaint_details(transcript: str) -> dict:
             text = text.split("```")[1].split("```")[0].strip()
 
         data = json.loads(text)
+        if not isinstance(data,dict):return {"error":"invalid_provider_result"}
 
         # Post-process: if Groq couldn't resolve zone/locality, run local lookup
         if data.get("zone", "Unknown") == "Unknown" or not data.get("specific_location"):
@@ -122,16 +123,12 @@ def extract_complaint_details(transcript: str) -> dict:
                 if not data.get("specific_location"):
                     data["specific_location"] = local_locality
 
-        _safe_log(
-            f"Groq Extraction: [{data.get('input_language')}] "
-            f"{data.get('zone')} / {data.get('specific_location')} → "
-            f"{data.get('translated_input_en')}"
-        )
+        _safe_log('Provider extraction completed.')
         return data
 
     except Exception as e:
-        _safe_log(f"Groq Extraction Failed: {e}")
-        return {"error": str(e)}
+        _safe_log(f"Provider extraction failed: {type(e).__name__}")
+        return {"error": "provider_extraction_unavailable"}
 
 
 if __name__ == "__main__":

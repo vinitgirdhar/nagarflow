@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../lib/api';
 
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -59,7 +60,7 @@ interface AgentResponse {
   voice_mode?: 'sarvam' | 'browser';
 }
 
-const BACKEND_URL = 'http://127.0.0.1:5000';
+const BACKEND_URL = '';
 
 export default function VoiceConversation({
   onTranscribed,
@@ -237,7 +238,7 @@ export default function VoiceConversation({
     setPhase('greeting');
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/agent/greet`);
+      const response = await apiFetch(`${BACKEND_URL}/api/agent/greet`);
       const data = await readAgentResponse(response);
 
       if (!response.ok || !data.success || !data.reply_text) {
@@ -263,7 +264,7 @@ export default function VoiceConversation({
     setErrorText('');
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/agent/respond`, {
+      const response = await apiFetch(`${BACKEND_URL}/api/agent/respond`, {
         method: 'POST',
         body: formData,
       });
@@ -303,7 +304,7 @@ export default function VoiceConversation({
     setErrorText('');
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/agent/respond-text`, {
+      const response = await apiFetch(`${BACKEND_URL}/api/agent/respond-text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transcript }),

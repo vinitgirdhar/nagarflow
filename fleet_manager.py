@@ -1,8 +1,9 @@
+from database import data_path, DEFAULT_DB_PATH
 import sqlite3
 import random
 import hashlib
 
-DB_PATH = 'nagarflow.db'
+DB_PATH = DEFAULT_DB_PATH
 TRUCK_TYPE_SEQUENCE = ['garbage', 'garbage', 'water']
 
 # Verified land-only coordinates for every zone in ZONE_ALIAS_MAP.
@@ -150,7 +151,7 @@ def get_locality_coordinates(zone_name, locality_name):
 
 def initialize_fleet(num_trucks=15):
     """Generates the idle truck fleet scattered across the operation grid."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path(DB_PATH))
     cursor = conn.cursor()
     cursor.execute("DELETE FROM trucks")
     
