@@ -21,6 +21,10 @@ The app does not claim validated live forecast accuracy, autonomous emergency re
 
 The included Blueprint runs the frontend, API and worker on one service with persistent storage. It uses a paid Starter instance and a 1 GB disk; review current pricing in Render. See [Render setup](RENDER.md) for administrator provisioning and optional integrations.
 
+## Deploy with Netlify
+
+Use [Netlify setup](NETLIFY.md) to serve the frontend on Netlify and connect it to the persistent Render backend. The root `netlify.toml` builds `main` with the Next.js runtime; set the real backend HTTPS origin before building. A frontend deployment also needs a healthy backend for sign-in and application features. Repository configuration alone does not create either live service.
+
 ## Run on your computer
 
 Requires Python 3.12, Node.js 22 (with npm), Git and SQLite with FTS5. Use macOS/Linux Bash, or WSL on Windows. Keep the backend and frontend terminals running.
@@ -77,6 +81,7 @@ venv/bin/python -m unittest discover -s tests
 venv/bin/python scripts/evaluate_intelligence.py
 venv/bin/python scripts/preflight.py
 cd nagarflow-next
+npm run test:deployment
 npm run build
 npx playwright install chromium
 CI=1 npm run test:e2e
@@ -90,6 +95,7 @@ Tests use isolated databases and synthetic accounts. The CI workflow runs backen
 - [Durable dispatch and observation handling](DISPATCH.md)
 - [Intake, retrieval, forecasting and operations](OPERATIONS.md)
 - [Deployment and backup runbook](DEPLOYMENT.md)
+- [Netlify frontend and Render backend](NETLIFY.md)
 - [Evaluation methodology/results](EVALUATION.md)
 - [Roadmap and remaining external gates](PRODUCT_ROADMAP.md)
 - [Implementation/verification record](IMPLEMENTATION_REPORT.md)

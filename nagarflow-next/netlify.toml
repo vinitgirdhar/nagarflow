@@ -1,5 +1,0 @@
-[build]
-command = "npm run build"
-publish = ".next"
-
-# Requires the Netlify Next.js runtime; static export cannot proxy authenticated APIs.

@@ -2,6 +2,8 @@
 
 Local development and verification are described in README.md. For the full Render deployment, use [RENDER.md](RENDER.md) and the root `render.yaml` Blueprint. Repository configuration alone does not create a live service.
 
+For a Netlify frontend, follow [NETLIFY.md](NETLIFY.md). Keep the persistent Render service for the API, worker, databases, media and MFA key. Configure the real backend HTTPS origin at Netlify build time and allow the exact Netlify production origin in Render; verify secure sessions and CSRF through the deployed proxy before launch.
+
 1. Install with `bash scripts/setup_cloud.sh`. Provision the initial administrator privately using `venv/bin/python scripts/manage_users.py create --email YOUR_ADDRESS --name YOUR_NAME`; finish password change and MFA at first sign-in.
 2. Set absolute persistent `NAGARFLOW_AUTH_DB`, `NAGARFLOW_DB_PATH` and `NAGARFLOW_TENANT_DATA_DIR` paths; run `venv/bin/python scripts/prepare_dev.py` with these same settings. Preserve uploads and the control database `.mfa-key` file. Do not seed synthetic records into production.
 3. Set exact HTTPS `NAGARFLOW_TRUSTED_ORIGINS`, backend URL for the Next server, and production environment. Run `venv/bin/python scripts/preflight.py --production`. Review warnings, including enrollment. Secure cookies are mandatory in production.

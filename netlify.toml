@@ -1,0 +1,12 @@
+[build]
+  base = "nagarflow-next"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Netlify automatically installs its Next.js runtime. Set the real backend HTTPS
+# origin as NAGARFLOW_BACKEND_URL in Netlify before building; see NETLIFY.md.
+# Do not add SPA redirects or publish a static export: sessions need the proxy.
