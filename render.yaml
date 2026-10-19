@@ -1,0 +1,28 @@
+# Full application on one service so SQLite, uploads and the worker share a disk.
+services:
+  - type: web
+    name: nagarflow
+    runtime: docker
+    repo: https://github.com/vinitgirdhar/nagarflow
+    branch: main
+    region: singapore
+    plan: starter
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    disk:
+      name: nagarflow-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NAGARFLOW_ENV
+        value: production
+      - key: NAGARFLOW_STORAGE_DIR
+        value: /var/data/nagarflow
+      - key: NAGARFLOW_REQUIRE_ADMIN_MFA
+        value: "true"
+      - key: NAGARFLOW_WEBHOOK_SECRET
+        generateValue: true
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"

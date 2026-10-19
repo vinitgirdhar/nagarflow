@@ -1,6 +1,6 @@
 # Deployment runbook
 
-Local development and verification are described in README.md. Production is not deployed by this checkout.
+Local development and verification are described in README.md. For the full Render deployment, use [RENDER.md](RENDER.md) and the root `render.yaml` Blueprint. Repository configuration alone does not create a live service.
 
 1. Install with `bash scripts/setup_cloud.sh`. Provision the initial administrator privately using `venv/bin/python scripts/manage_users.py create --email YOUR_ADDRESS --name YOUR_NAME`; finish password change and MFA at first sign-in.
 2. Set absolute persistent `NAGARFLOW_AUTH_DB`, `NAGARFLOW_DB_PATH` and `NAGARFLOW_TENANT_DATA_DIR` paths; run `venv/bin/python scripts/prepare_dev.py` with these same settings. Preserve uploads and the control database `.mfa-key` file. Do not seed synthetic records into production.

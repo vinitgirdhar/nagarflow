@@ -35,3 +35,6 @@ PageTransition uses a scoped stylesheet and IntersectionObserver/MutationObserve
 
 ## Plain language and mobile length
 Use short task labels and explain the problem before features. Prefer Report, Assign, Verify to vague slogans or internal algorithm/database language. Keep routine actions visible; put optional setup and methodology behind native details, with meaningful summaries. Preserve safety and data-freshness notices. When adding UI, check mobile page height as well as horizontal overflow. Do not turn forecasts into dozens of expanded zone cards; use the zone selector.
+
+## Persistent Render service
+Use the root Dockerfile/render.yaml and scripts/render_service.py for hosted startup. Never run scripts/setup_cloud.sh as a production entrypoint or seed demo data. Next standalone forwards same-origin APIs to loopback5000; launcher supervises Next, Gunicorn and worker, handling failure/signals as a unit. Keep persistent data and private .mfa-key on the mounted disk. Administrator CLI mode must use the same bootstrap/permissions as server startup. Validate process cleanup and container restart persistence when changing this path.

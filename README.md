@@ -15,6 +15,12 @@ The app does not claim validated live forecast accuracy, autonomous emergency re
 
 `main` is the default and current development branch. It includes the previous `master` and `verison-updation` history. Pull `main` for the latest supported setup.
 
+## Deploy on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vinitgirdhar/nagarflow)
+
+The included Blueprint runs the frontend, API and worker on one service with persistent storage. It uses a paid Starter instance and a 1 GB disk; review current pricing in Render. See [Render setup](RENDER.md) for administrator provisioning and optional integrations.
+
 ## Run on your computer
 
 Requires Python 3.12, Node.js 22 (with npm), Git and SQLite with FTS5. Use macOS/Linux Bash, or WSL on Windows. Keep the backend and frontend terminals running.
