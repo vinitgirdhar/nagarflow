@@ -70,3 +70,12 @@
     translate: none;
   }
 }
+
+/* Show the task first; keep supporting detail nearby and out of the way. */
+.workspace>h1{font-size:28px;line-height:1.2;margin-bottom:8px}
+.workspace>p{font-size:14px;line-height:1.6;max-width:68ch}
+.workspace :global(.page-header){margin-bottom:24px}
+.workspace details>summary{cursor:pointer;font-size:13px;font-weight:600;min-height:32px;padding:5px 0}
+.workspace details[open]>summary{margin-bottom:12px}
+.workspace details>p{font-size:13px;line-height:1.6;margin:10px 0}
+@media(max-width:700px){.workspace>h1{font-size:24px}.workspace>p{font-size:13px}.workspace :global(.page-header){margin-bottom:20px}}

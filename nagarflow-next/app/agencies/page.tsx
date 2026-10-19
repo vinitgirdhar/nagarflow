@@ -3,6 +3,7 @@ import { apiFetch } from '../lib/api';
 
 import { useEffect, useMemo, useState } from 'react';
 import DashboardShell from '../components/DashboardShell';
+import layout from '../components/operational-layout.module.css';
 import {
   Building2,
   ClipboardList,
@@ -178,10 +179,10 @@ export default function AgenciesPage() {
 
   const cards = payload
     ? [
-        { label: 'Active Agencies', value: String(payload.stats.agency_count), sub: 'official BMC + NMMC registry' },
-        { label: 'Cities Covered', value: String(payload.stats.city_count), sub: 'Mumbai and Navi Mumbai' },
-        { label: 'Service Groups', value: String(payload.stats.category_count), sub: 'waste, water, drains, roads' },
-        { label: 'Live Sources', value: String(payload.stats.online_sources), sub: 'official links checked live' },
+        { label: 'Agencies', value: String(payload.stats.agency_count), sub: 'BMC and NMMC directory' },
+        { label: 'Cities', value: String(payload.stats.city_count), sub: 'Mumbai and Navi Mumbai' },
+        { label: 'Services', value: String(payload.stats.category_count), sub: 'waste, water, drains, roads' },
+        { label: 'Websites reachable', value: String(payload.stats.online_sources), sub: 'At the last check' },
       ]
     : [];
 
@@ -189,14 +190,14 @@ export default function AgenciesPage() {
     <DashboardShell
       title="Agencies"
       badges={[
-        { type: 'live', text: payload ? `${payload.stats.online_sources} Sources Online` : 'Loading Directory' },
-        { type: 'alert', text: payload ? `${visibleAgencies.length} Agencies` : 'Agency Feed' },
+        { type: 'live', text: payload ? `${payload.stats.online_sources} websites reachable` : 'Loading Directory' },
+        { type: 'alert', text: payload ? `${visibleAgencies.length} Agencies` : 'Directory' },
       ]}
     >
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
-          <h1 className="page-header__title">Multi-Agency Coordination</h1>
-          <p className="page-header__sub">Official BMC and NMMC operations directory for garbage pickup, water supply, drainage, sewerage, and engineering services.</p>
+          <h1 className="page-header__title">Agency directory</h1>
+          <p className="page-header__sub">Find the right municipal service and its contact details.</p>
         </div>
         <button 
           className="btn btn--outline" 
@@ -211,7 +212,7 @@ export default function AgenciesPage() {
       </div>
 
       {cards.length > 0 ? (
-        <div className="stat-grid">
+        <div className={`stat-grid ${layout.compactStats}`}>
           {cards.map((card) => (
             <div key={card.label} className="card">
               <div className="card__label">{card.label}</div>
@@ -265,15 +266,15 @@ export default function AgenciesPage() {
 
       {isLoading ? (
         <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-          <div className="card__title">Loading official agencies...</div>
-          <div className="card__sub" style={{ marginTop: '.5rem' }}>Fetching BMC and NMMC sources.</div>
+          <div className="card__title">Loading agencies...</div>
+          <div className="card__sub" style={{ marginTop: '.5rem' }}>Checking official websites.</div>
         </div>
       ) : null}
 
       {!isLoading && visibleAgencies.length === 0 ? (
         <div className="card" style={{ padding: '2rem', textAlign: 'center' }}>
-          <div className="card__title">No agencies match the current filters.</div>
-          <div className="card__sub" style={{ marginTop: '.5rem' }}>Try clearing the search or switching city/service filters.</div>
+          <div className="card__title">No agencies found.</div>
+          <div className="card__sub" style={{ marginTop: '.5rem' }}>Try another city, service or search.</div>
         </div>
       ) : null}
 
@@ -285,13 +286,13 @@ export default function AgenciesPage() {
                 <Building2 size={18} color="var(--primary)" /> {city}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
                 {agencies.map((agency) => {
                   const Icon = getCategoryIcon(agency.category);
                   const statusColor = agency.source_status === 'online' ? 'var(--accent)' : agency.source_status === 'degraded' ? 'var(--glow)' : 'var(--danger)';
 
                   return (
-                    <div key={agency.id} className="card" style={{ padding: '1.1rem', display: 'grid', gap: '.8rem' }}>
+                    <div key={agency.id} className={`card ${layout.agencyCard}`} style={{ padding: '1.1rem', display: 'grid', gap: '.8rem' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '.75rem' }}>
                         <div style={{ display: 'flex', gap: '.75rem', alignItems: 'flex-start' }}>
                           <div style={{ width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(193,68,14,0.08)', color: 'var(--primary)', flexShrink: 0 }}>
@@ -363,8 +364,8 @@ export default function AgenciesPage() {
             </section>
           ))}
 
-          <div style={{ marginTop: '.5rem' }}>
-            <div className="card__title" style={{ marginBottom: '.75rem' }}>Live Source Registry</div>
+          <details style={{ marginTop: '.5rem' }}>
+            <summary className="card__title" style={{ marginBottom: '.75rem', cursor: 'pointer' }}>Website check details</summary>
             <div className="table-wrap">
               <table>
                 <thead>
@@ -399,7 +400,7 @@ export default function AgenciesPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </details>
         </div>
       ) : null}
     </DashboardShell>

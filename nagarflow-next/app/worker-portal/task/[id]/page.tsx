@@ -161,8 +161,8 @@ export default function TaskDetailPage() {
           <ArrowLeft size={22} />
         </button>
         <div>
-          <div style={{ fontWeight: 700, fontSize: '16px', lineHeight: 1 }}>Task {task.id}</div>
-          <div style={{ fontSize: '11px', color: 'var(--secondary)', fontFamily: "'Space Mono', monospace", marginTop: 2 }}>FIELD DETAIL VIEW</div>
+          <h1 style={{ fontWeight: 700, fontSize: '16px', lineHeight: 1, margin: 0 }}>Task {task.id}</h1>
+          <div style={{ fontSize: '11px', color: 'var(--secondary)', fontFamily: "'Space Mono', monospace", marginTop: 2 }}>Task details</div>
         </div>
       </div>
 
@@ -200,7 +200,7 @@ export default function TaskDetailPage() {
               <div style={{ fontSize: '12px', fontFamily: "'Space Mono', monospace" }}>{task.reported_time?.slice(0, 16) || '—'}</div>
             </div>
             <div style={{ background: 'rgba(255,255,255,.03)', borderRadius: '8px', padding: '10px 12px' }}>
-              <div style={{ fontSize: '9px', fontFamily: "'Space Mono', monospace", color: 'var(--secondary)', marginBottom: 4 }}>SQUAD</div>
+              <div style={{ fontSize: '9px', fontFamily: "'Space Mono', monospace", color: 'var(--secondary)', marginBottom: 4 }}>TEAM</div>
               <div style={{ fontSize: '12px', fontFamily: "'Space Mono', monospace" }}>{task.assigned_team_id || '—'}</div>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function TaskDetailPage() {
         {/* Proof of Work */}
         {!isCompleted && (
           <div style={{ background: 'var(--dark-surface)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '1.25rem', marginBottom: '1.25rem' }}>
-            <div style={{ fontSize: '11px', fontFamily: "'Space Mono', monospace", color: 'var(--secondary)', marginBottom: '12px', letterSpacing: '0.06em' }}>PROOF OF WORK</div>
+            <div style={{ fontSize: '11px', fontFamily: "'Space Mono', monospace", color: 'var(--secondary)', marginBottom: '12px', letterSpacing: '0.06em' }}>COMPLETION PHOTO</div>
 
             {/* Photo Capture */}
             <input
@@ -256,7 +256,7 @@ export default function TaskDetailPage() {
               >
                 <Camera size={32} color="var(--secondary)" />
                 <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-heading)' }}>Capture Completion Photo</span>
-                <span style={{ fontSize: '11px', color: 'var(--secondary)', fontFamily: "'Space Mono', monospace" }}>TAP TO OPEN CAMERA</span>
+                <span style={{ fontSize: '11px', color: 'var(--secondary)', fontFamily: "'Space Mono', monospace" }}>Take a photo or choose a file</span>
               </button>
             )}
 
@@ -347,7 +347,7 @@ export default function TaskDetailPage() {
           <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(52,211,153,.08)', border: '1px solid rgba(52,211,153,.25)', borderRadius: '14px' }}>
             <CheckCircle2 size={36} color="#34d399" style={{ marginBottom: 10 }} />
             <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: 4 }}>Submitted for Verification</div>
-            <div style={{ fontSize: '13px', color: 'var(--secondary)' }}>Supervisor will review your proof of work</div>
+            <div style={{ fontSize: '13px', color: 'var(--secondary)' }}>Your supervisor will review the completion photo.</div>
           </div>
         )}
       </div>

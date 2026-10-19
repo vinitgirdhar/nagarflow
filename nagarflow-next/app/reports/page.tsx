@@ -143,7 +143,7 @@ export default function ReportsPage() {
     }
   }
   return (
-    <DashboardShell title="Operational reports">
+    <DashboardShell title="Reports">
       <div
         className="page-header"
         style={{
@@ -154,10 +154,9 @@ export default function ReportsPage() {
         }}
       >
         <div>
-          <h1 className="page-header__title">Operational reports</h1>
+          <h1 className="page-header__title">Reports</h1>
           <p className="page-header__sub">
-            Confirmed dispatch activity, operator observations, and documented
-            data sources.
+            See completed visits, active dispatches and zone coverage.
           </p>
         </div>
         <button
@@ -175,8 +174,7 @@ export default function ReportsPage() {
       ) : (
         <>
           <p style={{ marginBottom: "1rem" }}>
-            Updated {new Date(data.generated_at).toLocaleString()}. Refreshes
-            every 10 seconds.
+            Updated {new Date(data.generated_at).toLocaleString()}. Auto-refreshes.
           </p>
           <div className="stat-grid">
             {[
@@ -223,9 +221,12 @@ export default function ReportsPage() {
               or simulated outcomes excluded.
             </p>
             <p style={{ margin: ".75rem 0" }}>
-              {data.definitions.score_comparison}
+              Score differences compare operator observations with the recorded priority at dispatch. They do not measure forecast accuracy.
             </p>
-            <p>{data.definitions.unavailable_kpis}</p>
+            <details><summary>Sources and limitations</summary>
+              <p>{data.definitions.score_comparison}</p>
+              <p>{data.definitions.unavailable_kpis}</p>
+            </details>
           </section>
           <section
             className="card"
@@ -261,7 +262,8 @@ export default function ReportsPage() {
             style={{ padding: "1.5rem", overflowX: "auto" }}
           >
             <h2>Confirmed zone coverage</h2>
-            <p style={{ margin: ".75rem 0" }}>{data.definitions.coverage}</p>
+            <p style={{ margin: ".75rem 0" }}>Zones with a confirmed visit in the past 48 hours.</p>
+            <details style={{ marginBottom: 12 }}><summary>How coverage is counted</summary><p>{data.definitions.coverage}</p></details>
             {!data.zone_coverage.length ? (
               <p>No zones are available yet.</p>
             ) : (

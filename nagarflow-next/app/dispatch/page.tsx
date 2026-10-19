@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bot, Check, Truck, X, MapPin, Activity } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+import layout from '../components/operational-layout.module.css';
 
 const STAGGER_CONTAINER: Variants = {
   hidden: { opacity: 0 },
@@ -344,39 +345,39 @@ export default function DispatchPage() {
       ]}
     >
       <div className="page-header">
-        <h1 className="page-header__title">Dispatch & Routing</h1>
-        <p className="page-header__sub">Live dispatch suggestions with direct route acceptance and en-route truck tracking.</p>
+        <h1 className="page-header__title">Vehicle dispatch</h1>
+        <p className="page-header__sub">Assign a vehicle, confirm arrival and track each trip.</p>
       </div>
 
       {mutationError && <p role="alert">{mutationError}</p>}
       <FleetRegistration />
       <ActiveDispatches />
-      <div className="stat-grid">
+      <div className={`stat-grid ${layout.compactStats}`}>
         <div className="card">
-          <div className="card__label">Trucks Active</div>
+          <div className="card__label">Vehicles on duty</div>
           <div className="card__value">{activeVehicles}</div>
-          <div className="card__sub">of {vehicles.length} fleet</div>
+          <div className="card__sub">of {vehicles.length} registered</div>
         </div>
         <div className="card">
-          <div className="card__label">Routes Pending</div>
+          <div className="card__label">Suggested assignments</div>
           <div className="card__value">{suggestions.length}</div>
-          <div className="card__sub">live RL-generated suggestions</div>
+          <div className="card__sub">Waiting for your review</div>
         </div>
         <div className="card">
           <div className="card__label">En Route</div>
           <div className="card__value">{enRouteVehicles}</div>
-          <div className="card__sub">awaiting operator arrival confirmation</div>
+          <div className="card__sub">Arrival not yet confirmed</div>
         </div>
         <div className="card">
-          <div className="card__label">Avg Response</div>
+          <div className="card__label">Est. travel time</div>
           <div className="card__value">{avgEta}</div>
-          <div className="card__sub">average ETA across pending routes</div>
+          <div className="card__sub">Average for suggested trips</div>
         </div>
       </div>
 
       {errorText ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--danger)' }}>
-          <div className="card__title" style={{ color: 'var(--danger)' }}>Dispatch Status Error</div>
+          <div className="card__title" style={{ color: 'var(--danger)' }}>Could not load dispatch data</div>
           <p className="card__sub" style={{ marginTop: '.5rem' }}>{errorText}</p>
         </motion.div>
       ) : null}
@@ -385,7 +386,7 @@ export default function DispatchPage() {
         variants={STAGGER_CONTAINER} 
         initial="hidden" 
         animate="show" 
-        style={{ display: 'grid', gridTemplateColumns: '1.6fr 1.1fr', gap: '2rem', alignItems: 'flex-start' }}
+        className={layout.dispatchColumns}
       >
         {/* Left Column: Primary Operations */}
         <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -393,17 +394,17 @@ export default function DispatchPage() {
           <div className="card card--glass" style={{ padding: '0', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <MapPin size={18} color="var(--primary)" />
-              <div className="card__title">Live Fleet GPS Tracker</div>
-              <div className="badge badge--low" style={{ marginLeft: 'auto' }}>GEOMETRY ACTIVE</div>
+              <div className="card__title">Vehicle map</div>
+              <div className="badge badge--low" style={{ marginLeft: 'auto' }}>Stored positions</div>
             </div>
-            {mapUnavailable && <p role="status">The map provider is unavailable. Fleet and assignment controls remain available below.</p>}
+            {mapUnavailable && <p role="status">Map unavailable. You can still assign vehicles below.</p>}
             <div className="map-container map-container--lg" ref={mapRef} style={{ height: '500px', border: 'none', borderRadius: '0' }}></div>
           </div>
 
           <div className="card card--glass" style={{ padding: '0', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <Activity size={18} color="var(--accent)" />
-              <div className="card__title">Vehicles Stream</div>
+              <div className="card__title">Registered vehicles</div>
             </div>
             <div className="table-wrap" style={{ maxHeight: '500px', overflowY: 'auto' }}>
               <table style={{ borderCollapse: 'collapse' }}>
@@ -459,18 +460,18 @@ export default function DispatchPage() {
         <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>
             <Bot size={22} color="var(--primary)" /> 
-            <div className="card__title" style={{ fontSize: '18px' }}>AiRLLM Matcher</div>
+            <div className="card__title" style={{ fontSize: '18px' }}>Suggested assignments</div>
           </div>
 
           {!loading && suggestions.length === 0 ? (
             <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px', background: 'rgba(255,255,255,0.02)' }}>
-              All high-priority zones are currently handled. <br/> Fleet is synchronized.
+              No assignments suggested right now.
             </div>
           ) : null}
 
           {loading ? (
             <div style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--secondary)', border: '1px dashed var(--border-subtle)', borderRadius: '12px', fontSize: '13px' }}>
-              Loading live dispatch suggestions...
+              Loading suggestions...
             </div>
           ) : null}
 
@@ -503,13 +504,13 @@ export default function DispatchPage() {
 
                 <div style={{ marginBottom: '1.25rem' }}>
                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-heading)' }}>{suggestion.truck_name}</div>
-                   <div style={{ fontSize: '12px', color: 'var(--secondary)', marginTop: '2px' }}>Target Ward: <b style={{ color: 'var(--text-heading)' }}>{suggestion.zone}</b></div>
+                   <div style={{ fontSize: '12px', color: 'var(--secondary)', marginTop: '2px' }}>Zone: <b style={{ color: 'var(--text-heading)' }}>{suggestion.zone}</b></div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                   <span className="badge badge--dark" style={{ background: 'rgba(255,255,255,0.05)', fontSize: '9px' }}>{suggestion.truck_type_label}</span>
                   <span className="badge badge--low" style={{ fontSize: '9px' }}>ETA: {suggestion.eta_mins}m</span>
-                  <span className="badge badge--low" style={{ fontSize: '9px' }}>DIST: {suggestion.distance_km}km</span>
+                  <span className="badge badge--low" style={{ fontSize: '9px' }}>Distance: {suggestion.distance_km}km</span>
                 </div>
 
                 <div style={{ fontSize: '12px', color: 'var(--secondary)', lineHeight: 1.5, marginBottom: '1.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }}>

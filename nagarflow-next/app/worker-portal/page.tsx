@@ -3,6 +3,7 @@ import { apiFetch } from '../lib/api';
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+import layout from '../components/operational-layout.module.css';
 import {
   HardHat, Trash2, Droplets, Construction, ClipboardList,
   Clock, CheckCircle2, Waves, Camera, Loader2, CheckCheck,
@@ -61,7 +62,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     'PENDING':              { label: 'Pending',       cls: 'badge badge--medium' },
     'ON GROUND':            { label: 'In Progress',   cls: 'badge badge--high' },
-    'COMPLETED_UNVERIFIED': { label: 'Awaiting OK',   cls: 'badge badge--active' },
+    'COMPLETED_UNVERIFIED': { label: 'Under review',   cls: 'badge badge--active' },
     'COMPLETED':            { label: 'Completed',     cls: 'badge badge--info' },
   };
   const s = map[status] || { label: status, cls: 'badge' };
@@ -190,15 +191,15 @@ export default function WorkerPortalPage() {
   return (
     <DashboardShell title="Worker Portal" badges={[{ type: 'live', text: 'FIELD WORKER' }]}>
       <div className="page-header">
-        <h1 className="page-header__title">My Task Board</h1>
-        <p className="page-header__sub">View and manage your assigned field tasks for today.</p>
+        <h1 className="page-header__title">My tasks</h1>
+        <p className="page-header__sub">Open a task, complete the work and add a completion photo.</p>
       </div>
 
       {/* Squad Selector + Stats Row */}
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap' }}>
         {/* Selector */}
-        <div className="card" style={{ flex: '0 0 280px', padding: '1.25rem' }}>
-          <div className="card__label" style={{ marginBottom: '10px' }}>Your Squad</div>
+        <div className={`card ${layout.workerSelector}`}>
+          <div className="card__label" style={{ marginBottom: '10px' }}>Your team</div>
           <select
             value={teamId}
             onChange={e => setTeamId(e.target.value)}
@@ -212,7 +213,7 @@ export default function WorkerPortalPage() {
               backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center',
             }}
           >
-            <option value="">— Select Squad —</option>
+            <option value="">— Select team —</option>
             {teams.map(t => <option key={t.id} value={t.id}>{t.name || t.id}</option>)}
           </select>
         </div>
@@ -223,7 +224,7 @@ export default function WorkerPortalPage() {
             {[
               { label: 'Pending',     value: pendingCount, color: 'var(--warning)' },
               { label: 'In Progress', value: activeCount,  color: 'var(--primary)' },
-              { label: 'Awaiting OK', value: doneCount,    color: 'var(--accent)' },
+              { label: 'Under review', value: doneCount,    color: 'var(--accent)' },
             ].map(s => (
               <div key={s.label} className="card" style={{ flex: '1 1 100px', padding: '1.25rem', textAlign: 'center', minWidth: 100 }}>
                 <div style={{ fontSize: '30px', fontWeight: 900, color: s.color, lineHeight: 1, fontFamily: "'Space Mono', monospace" }}>{s.value}</div>
@@ -238,7 +239,7 @@ export default function WorkerPortalPage() {
       {!teamId && (
         <div className="card" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
           <HardHat size={48} color="var(--border-subtle)" style={{ marginBottom: 16 }} />
-          <p className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}>Select your squad above to see assigned tasks</p>
+          <p className="mono" style={{ fontSize: '12px', color: 'var(--secondary)' }}>Choose your team to see its tasks.</p>
         </div>
       )}
 
@@ -266,8 +267,8 @@ export default function WorkerPortalPage() {
           {!loading && tasks.length === 0 && (
             <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
               <CheckCircle2 size={40} color="var(--accent)" style={{ marginBottom: 12 }} />
-              <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: 6 }}>All Clear!</div>
-              <div style={{ fontSize: '13px', color: 'var(--secondary)' }}>No pending tasks for {teamId}</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: 6 }}>No tasks assigned</div>
+              <div style={{ fontSize: '13px', color: 'var(--secondary)' }}>No tasks for {teamId}.</div>
             </div>
           )}
 
@@ -385,7 +386,7 @@ export default function WorkerPortalPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {[
                     { label: 'Reported', value: activeTask.reported_time?.slice(0, 16) || '—' },
-                    { label: 'Squad',    value: activeTask.assigned_team_id || '—' },
+                    { label: 'Team',    value: activeTask.assigned_team_id || '—' },
                   ].map(m => (
                     <div key={m.label} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 14px', border: '1px solid var(--border-subtle)' }}>
                       <div className="card__label" style={{ marginBottom: 4 }}>{m.label}</div>
@@ -396,7 +397,7 @@ export default function WorkerPortalPage() {
 
                 {/* Step checklist */}
                 <div>
-                  <div className="card__label" style={{ marginBottom: '10px' }}>Step Checklist</div>
+                  <div className="card__label" style={{ marginBottom: '10px' }}>Work checklist</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {steps.map((step, i) => (
                       <motion.button
@@ -431,7 +432,7 @@ export default function WorkerPortalPage() {
                 {/* Photo Upload (hidden when already completed) */}
                 {!isCompleted && (
                   <div>
-                    <div className="card__label" style={{ marginBottom: '10px' }}>Proof of Work</div>
+                    <div className="card__label" style={{ marginBottom: '10px' }}>Completion photo</div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -482,7 +483,7 @@ export default function WorkerPortalPage() {
                           <Camera size={24} color="var(--primary)" />
                         </div>
                         <span style={{ fontWeight: 600, fontSize: '15px', color: 'var(--text-heading)' }}>Capture Completion Photo</span>
-                        <span className="mono" style={{ fontSize: '11px', color: 'var(--secondary)' }}>TAP TO OPEN CAMERA / UPLOAD</span>
+                        <span className="mono" style={{ fontSize: '11px', color: 'var(--secondary)' }}>Take a photo or choose a file</span>
                       </motion.button>
                     )}
 

@@ -38,20 +38,20 @@ const ADMIN_LINKS: NavItem[] = [
     icon: MapPin,
     label: 'Complaints',
     children: [
-      { href: '/complaints', icon: MapPin, label: 'All Complaints' },
-      { href: '/visual-complaints', icon: Image, label: 'Visual Complaints' },
+      { href: '/complaints', icon: MapPin, label: 'All complaints' },
+      { href: '/visual-complaints', icon: Image, label: 'Photo complaints' },
     ],
   },
-  { href: '/complaint-simulator', icon: MessagesSquare, label: 'Complaint Simulator' },
-  { href: '/predictions', icon: LineChart, label: 'Predictions' },
+  { href: '/complaint-simulator', icon: MessagesSquare, label: 'Test a complaint' },
+  { href: '/predictions', icon: LineChart, label: 'Forecasts' },
   { href: '/dispatch', icon: Truck, label: 'Dispatch' },
-  { href: '/emergency', icon: AlertTriangle, label: 'Emergency' },
-  { href: '/simulation', icon: Dna, label: 'Simulation' },
+  { href: '/emergency', icon: AlertTriangle, label: 'Risk review' },
+  { href: '/simulation', icon: Dna, label: 'What-if planning' },
   { href: '/agencies', icon: Network, label: 'Agencies' },
-  { href: '/knowledge', icon: FileText, label: 'Grounded knowledge' },
-  { href: '/operations', icon: Network, label: 'Intake operations' },
-  { href: '/accounts', icon: HardHat, label: 'Accounts & teams' },
-  { href: '/maintenance', icon: Truck, label: 'Field operations' },
+  { href: '/knowledge', icon: FileText, label: 'Knowledge' },
+  { href: '/operations', icon: Network, label: 'Intake' },
+  { href: '/accounts', icon: HardHat, label: 'Accounts' },
+  { href: '/maintenance', icon: Truck, label: 'Field work' },
   { href: '/reports', icon: FileText, label: 'Reports' },
 ];
 
@@ -200,7 +200,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
               <ArrowLeftRight size={12} /> Account
             </Link>
             <Link href="/" style={{ color: 'var(--secondary)', textDecoration: 'none', fontSize: '11px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <ChevronLeft size={12} /> Landing Page
+              <ChevronLeft size={12} /> Home
             </Link>
           </div>
         </div>

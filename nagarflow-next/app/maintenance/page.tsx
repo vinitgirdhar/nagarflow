@@ -5,6 +5,7 @@ import CreateMaintenanceTask from '../components/CreateMaintenanceTask';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useIsPresent } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+import layout from '../components/operational-layout.module.css';
 import { 
   Users, 
   Activity, 
@@ -151,10 +152,10 @@ export default function MaintenancePage() {
   };
 
   return (
-    <DashboardShell title="Field Operations" badges={[{ type: 'live', text: 'BMC SUPERVISOR' }]}>
+    <DashboardShell title="Field Operations" badges={[{ type: 'info', text: 'Task management' }]}>
       <div className="page-header">
-        <h1 className="page-header__title">Operational Maintenance Center</h1>
-        <p className="page-header__sub">Managing municipal squads and ground-level infrastructure projects across Ward districts.</p>
+        <h1 className="page-header__title">Field tasks</h1>
+        <p className="page-header__sub">Assign teams, review completion photos and approve finished work.</p>
       </div>
 
       <button className="btn" onClick={async () => {
@@ -165,22 +166,21 @@ export default function MaintenancePage() {
       {actionError && <p role="alert">{actionError}</p>}
       <CreateMaintenanceTask onCreated={fetchData} />
       {/* Section 1: Team Overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      <div className={layout.maintenanceStats}>
         {[
-          { label: 'Teams Total', val: stats.total_teams, icon: <Users size={20} />, color: 'var(--primary)' },
+          { label: 'Teams', val: stats.total_teams, icon: <Users size={20} />, color: 'var(--primary)' },
           { label: 'In Progress', val: stats.active, icon: <Play size={20} />, color: 'var(--glow)' },
-          { label: 'Idle / Ready', val: stats.idle, icon: <Truck size={20} />, color: 'var(--accent)' },
-          { label: 'Tasks Pending', val: stats.pending, icon: <Clock size={20} />, color: 'var(--danger)' },
+          { label: 'Available teams', val: stats.idle, icon: <Truck size={20} />, color: 'var(--accent)' },
+          { label: 'Unassigned tasks', val: stats.pending, icon: <Clock size={20} />, color: 'var(--danger)' },
         ].map((s, i) => (
           <motion.div 
             key={i} 
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06, duration: 0.2, ease: 'easeOut' }}
-            className="card" 
-            style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '2rem' }}
+            className={`card ${layout.statCard}`}
           >
-            <div style={{ background: 'var(--dark-surface)', padding: '1rem', borderRadius: '14px', color: s.color }}>{s.icon}</div>
+            <div className={layout.statIcon} style={{ color: s.color }}>{s.icon}</div>
             <div>
               <div className="card__label" style={{ marginBottom: '.5rem', fontSize: '13px' }}>{s.label}</div>
               <div className="mono" style={{ fontSize: '32px', fontWeight: 900, color: 'var(--text-heading)', lineHeight: 1 }}>{s.val}</div>
@@ -189,17 +189,17 @@ export default function MaintenancePage() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+      <div className={layout.maintenanceWorkspace}>
         
         {/* Section 2: Task Board (Kanban) */}
-        <div style={{ flex: '0 0 65%', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+        <div className={layout.taskBoard}>
           
           {([
             { status: 'PENDING',              label: 'PENDING',    accent: 'var(--danger)' },
             { status: 'ON GROUND',            label: 'IN PROGRESS',accent: 'var(--glow)' },
             { status: 'COMPLETED_UNVERIFIED', label: 'VERIFY ✓',   accent: '#E8933A' },
           ] as const).map(({ status, label, accent }) => (
-            <div key={status} style={{ minHeight: '600px' }}>
+            <div key={status} className={layout.taskColumn}>
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: '1.5rem', padding: '0 .75rem',
@@ -220,7 +220,7 @@ export default function MaintenancePage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.16, ease: 'easeOut' }}
-                      className="card"
+                      className={`card ${layout.taskCard}`}
                       style={{ padding: '1.5rem', border: '1px solid var(--border-subtle)', position: 'relative', background: 'var(--dark-surface)', borderRadius: '12px' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '1rem' }}>
@@ -243,12 +243,12 @@ export default function MaintenancePage() {
                           <img src={task.image_url} alt="Proof" style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }} />
                           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                             <CheckCircle2 size={14} color="#34d399" />
-                            <span style={{ fontSize: '10px', fontFamily: "'Space Mono', monospace", color: '#34d399', fontWeight: 700 }}>PROOF SUBMITTED — CLICK TO VIEW</span>
+                            <span style={{ fontSize: '10px', fontFamily: "'Space Mono', monospace", color: '#34d399', fontWeight: 700 }}>VIEW COMPLETION PHOTO</span>
                           </div>
                         </button>
                       )}
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                      <div className={layout.taskFooter}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Users size={10} color="var(--secondary)" />
@@ -293,7 +293,7 @@ export default function MaintenancePage() {
           <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Users size={18} color="var(--accent)" />
-              <div className="card__title">Field Squads</div>
+              <div className="card__title">Field teams</div>
             </div>
             
             <div style={{ overflowX: 'auto' }}>
@@ -355,8 +355,8 @@ export default function MaintenancePage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                 <div>
-                  <div className="mono" style={{ color: 'var(--primary)', fontSize: '11px', marginBottom: '.5rem' }}>DIRECTIVE CLASSIFICATION</div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-heading)' }}>Assign Field Squad</h2>
+                  <div className="mono" style={{ color: 'var(--primary)', fontSize: '11px', marginBottom: '.5rem' }}>TEAM ASSIGNMENT</div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-heading)' }}>Assign a team</h2>
                 </div>
                 <button onClick={() => setAssigningTask(null)} style={{ background: 'none', border: 'none', color: 'var(--secondary)', cursor: 'pointer' }}>
                   <X size={24} />
@@ -375,7 +375,7 @@ export default function MaintenancePage() {
                 </div>
               </div>
 
-              <div className="card__label" style={{ marginBottom: '1rem' }}>Select Available Squad</div>
+              <div className="card__label" style={{ marginBottom: '1rem' }}>Available teams</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '.5rem' }}>
                 {teams.filter(t => t.status === 'Idle').map(team => (
                   <button 
@@ -388,7 +388,7 @@ export default function MaintenancePage() {
                       <div style={{ padding: '6px', borderRadius: '6px', background: 'var(--dark-surface)' }}>{getIcon(team.type)}</div>
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ fontWeight: 600, fontSize: '13px' }}>Squad {team.id}</div>
-                        <div style={{ fontSize: '10px', opacity: 0.6 }}>{team.type} specialists ({team.member_count} men)</div>
+                        <div style={{ fontSize: '10px', opacity: 0.6 }}>{team.type} specialists ({team.member_count} people)</div>
                       </div>
                     </div>
                     {team.type === assigningTask.type && <span className="badge badge--accent" style={{ fontSize: '9px' }}>MATCH</span>}
@@ -396,7 +396,7 @@ export default function MaintenancePage() {
                 ))}
                 {teams.filter(t => t.status === 'Idle').length === 0 && (
                   <div className="mono" style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)', fontSize: '12px' }}>
-                    NO IDLE SQUADS AVAILABLE.
+                    No teams available.
                   </div>
                 )}
               </div>

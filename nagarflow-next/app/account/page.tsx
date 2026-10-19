@@ -37,11 +37,13 @@ export default function Account() {
   }
   return (
     <main className="auth-page">
-      <section className="auth-card">
+      <section className="auth-card" style={{ minWidth: 0, overflowWrap: "anywhere" }}>
         <h1>Account security</h1>
         <p>
           {user?.display_name} · {user?.email}
         </p>
+        <details open={user?.must_change_password || undefined} style={{ margin: "20px 0" }}>
+        <summary>Update your password</summary>
         <p>
           {user?.must_change_password
             ? "Change your temporary password to enter your workspace."
@@ -89,6 +91,7 @@ export default function Account() {
             {busy ? "Saving…" : "Change password"}
           </button>
         </form>
+        </details>
         {!user?.must_change_password && <MfaSettings initialEnabled={user?.mfa_enabled || false} policyRequired={user?.mfa_policy_required || false} />}
         {!user?.must_change_password && !user?.mfa_required && (
           <Link href={home(user?.role || "")}>Back to workspace</Link>

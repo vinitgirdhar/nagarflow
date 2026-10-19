@@ -32,3 +32,6 @@ Use landing.module.css for public homepage styles. The city is a deterministic i
 
 ## Motion across workspaces
 PageTransition uses a scoped stylesheet and IntersectionObserver/MutationObserver to reveal panels once. Keep content visible without observers; exclude Leaflet/map parents, modal dialogs and nested reveal targets. Never animate live record values or delay form actions. Reduced-motion mode must skip panel entrances and hover translation. Decorative CSS motion on the landing page must remain pauseable, including pseudo-elements; pointer/scroll transforms must also stop when paused.
+
+## Plain language and mobile length
+Use short task labels and explain the problem before features. Prefer Report, Assign, Verify to vague slogans or internal algorithm/database language. Keep routine actions visible; put optional setup and methodology behind native details, with meaningful summaries. Preserve safety and data-freshness notices. When adding UI, check mobile page height as well as horizontal overflow. Do not turn forecasts into dozens of expanded zone cards; use the zone selector.

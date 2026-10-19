@@ -22,6 +22,7 @@ test("admin can create team and account then suspend it", async ({ page }) => {
   await login(page, "admin@example.test");
   await expect(page).toHaveURL(/dashboard$/);
   await page.goto("/accounts");
+  await page.getByText("Create field team", { exact: true }).click();
   await page.getByLabel("Team ID", { exact: true }).fill("browser-team");
   await page
     .getByLabel("Team name", { exact: true })
@@ -73,10 +74,12 @@ test("supervisor enters maintenance workspace", async ({ page }) => {
 test("worker uploads task evidence and submits completion", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await login(page, "worker@example.test");
   await expect(page).toHaveURL(/worker-portal$/);
   await page.goto("/worker-portal/task/test-task");
   await expect(page.getByText("Dharavi", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   const image = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAC0lEQVR4nGNgQAYAAA4AAamRc7EAAAAASUVORK5CYII=",
     "base64",

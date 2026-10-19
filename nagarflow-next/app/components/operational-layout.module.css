@@ -1,0 +1,103 @@
+.dispatchColumns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: 2rem;
+}
+
+.dispatchColumns > *,
+.maintenanceWorkspace > *,
+.taskBoard > * {
+  min-width: 0;
+}
+
+.compactStats > div { min-width: 0; overflow-wrap: anywhere; }
+
+.maintenanceStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.statCard > div { min-width: 0; }
+
+.statIcon {
+  flex-shrink: 0;
+  padding: .65rem;
+  border-radius: 14px;
+  background: var(--dark-surface);
+}
+
+.maintenanceWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 2rem;
+}
+
+.taskBoard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.taskColumn { min-height: 600px; }
+
+.taskFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: auto;
+}
+
+.taskCard,
+.agencyCard {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.agencyCard svg { flex-shrink: 0; }
+
+.workerSelector {
+  flex: 0 1 280px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+@media (max-width: 1200px) {
+  .maintenanceWorkspace { grid-template-columns: minmax(0, 1fr); }
+  .statCard { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 900px) {
+  .dispatchColumns,
+  .maintenanceWorkspace,
+  .taskBoard { grid-template-columns: minmax(0, 1fr); }
+
+  .taskColumn { min-height: 0; }
+  .statCard { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 600px) {
+  .compactStats:global(.stat-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .compactStats > div { padding: 1rem; }
+  .maintenanceStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dispatchColumns,
+  .maintenanceWorkspace { gap: 1.25rem; }
+  .taskBoard { gap: 1.5rem; }
+  .statCard { padding: 1rem; }
+  .statIcon { display: none; }
+}

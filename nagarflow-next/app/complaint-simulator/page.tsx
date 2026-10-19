@@ -42,7 +42,7 @@ export default function ComplaintSimulatorPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       speaker: 'agent',
-      text: 'Complaint desk ready. Paste an SMS, then continue the chat with the resident details like area and issue to register a text complaint.',
+      text: 'Describe the area and issue to register a complaint.',
     },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +50,7 @@ export default function ComplaintSimulatorPage() {
   const [lastLogged, setLastLogged] = useState<LoggedComplaint | null>(null);
 
   const lastLoggedLabel = useMemo(() => {
-    if (!lastLogged) return 'waiting for first complaint';
+    if (!lastLogged) return 'None yet';
     return `${lastLogged.zone} • ${lastLogged.issue_type}`;
   }, [lastLogged]);
 
@@ -78,7 +78,7 @@ export default function ComplaintSimulatorPage() {
 
       setChatMessages((current) => [
         ...current,
-        { speaker: 'agent', text: data.reply_text || 'Complaint simulator acknowledged the message.' },
+        { speaker: 'agent', text: data.reply_text || 'Message received.' },
       ]);
 
       if (data.complaint_logged && data.extracted) {
@@ -107,49 +107,34 @@ export default function ComplaintSimulatorPage() {
     await submitChatMessage(incomingSms);
   };
 
-  const cards = [
-    { label: 'Voice Intake', value: 'LIVE', sub: 'Sarvam call flow moved here' },
-    { label: 'SMS Payload', value: `${incomingSms.trim().length}`, sub: 'characters queued for chat' },
-    { label: 'Chat Turns', value: String(chatMessages.length), sub: 'simulated resident conversation' },
-    { label: 'Last Registered', value: lastLoggedLabel, sub: 'pushed into complaints feed' },
-  ];
 
   return (
     <DashboardShell
-      title="Complaint Simulator"
+      title="Complaint intake"
       badges={[
-        { type: 'live', text: 'VOICE + TEXT' },
-        { type: 'info', text: 'BACKEND CONNECTED' },
+        { type: 'info', text: 'Voice & text' },
       ]}
     >
       <div className="page-header">
-        <h1 className="page-header__title">Complaint Simulator</h1>
+        <h1 className="page-header__title">Register a complaint</h1>
         <p className="page-header__sub">
-          Run the full citizen intake simulation here: voice call handling, SMS intake, and text-chat complaint registration all flowing into the complaints page.
+          Capture the area and issue by text or voice. Saved complaints appear in Complaints.
         </p>
       </div>
 
-      <div className="stat-grid">
-        {cards.map((card) => (
-          <div key={card.label} className="card">
-            <div className="card__label">{card.label}</div>
-            <div className="card__value" style={{ fontSize: card.label === 'Last Registered' ? '1.15rem' : undefined }}>
-              {card.value}
-            </div>
-            <div className="card__sub">{card.sub}</div>
-          </div>
-        ))}
-      </div>
+      <p role="status" className="card__sub" style={{ marginBottom: '1rem' }}>
+        Last saved complaint: <strong>{lastLoggedLabel}</strong>
+      </p>
 
       <div className="grid-2-1" style={{ alignItems: 'start', marginBottom: '1.5rem' }}>
         <div style={{ display: 'grid', gap: '1rem' }}>
-          <div className="card card--glass" style={{ padding: '1.2rem' }}>
-            <div className="card__title" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.4rem' }}>
-              <Radio size={16} />
-              Sarvam Voice Simulation
-            </div>
-            <p className="card__sub" style={{ marginBottom: '1rem', lineHeight: 1.7 }}>
-              Start a live voice complaint call here. Any extracted complaint is stored directly in the shared complaints backend and will appear in the admin complaints feed.
+          <details className="card card--glass" style={{ padding: '1.2rem' }}>
+            <summary className="card__title" style={{ cursor: 'pointer' }}>
+              <Radio size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '.5rem' }} />
+              Voice complaint
+            </summary>
+            <p className="card__sub" style={{ marginTop: '.75rem', marginBottom: '1rem', lineHeight: 1.7 }}>
+              Speak to register a complaint. Requires a configured voice provider.
             </p>
             <VoiceConversation
               onTranscribed={(data) => {
@@ -163,15 +148,15 @@ export default function ComplaintSimulatorPage() {
                 }
               }}
             />
-          </div>
+          </details>
 
           <div className="card card--glass" style={{ padding: '1.2rem' }}>
             <div className="card__title" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.35rem' }}>
               <Bot size={16} />
-              Text Complaint Chatbot
+              Text complaint
             </div>
             <p className="card__sub" style={{ marginBottom: '1rem', lineHeight: 1.7 }}>
-              Continue the resident conversation here. Mention the exact locality and issue to register the complaint from the chat flow.
+              Describe the area and what needs fixing.
             </p>
 
             {errorText ? (
@@ -255,7 +240,7 @@ export default function ComplaintSimulatorPage() {
                   value={chatInput}
                   suppressHydrationWarning
                   onChange={(event) => setChatInput(event.target.value)}
-                  placeholder="Example: Register a complaint for Kurla station road, there is a major pothole and waterlogging."
+                  placeholder="Example: A large pothole on Kurla station road."
                   style={{
                     minHeight: '88px',
                     maxHeight: '140px',
@@ -277,7 +262,7 @@ export default function ComplaintSimulatorPage() {
                   }}
                 >
                   <div className="mono" style={{ fontSize: '10px', color: 'var(--secondary)' }}>
-                    Include area + issue so the complaint can be registered.
+                    Include the area and issue.
                   </div>
                   <button
                     type="submit"
@@ -305,13 +290,13 @@ export default function ComplaintSimulatorPage() {
         </div>
 
         <div style={{ display: 'grid', gap: '1rem' }}>
-          <div className="card" style={{ padding: '1.2rem' }}>
-            <div className="card__title" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.35rem' }}>
-              <MessageSquareText size={16} />
-              SMS Intake Simulator
-            </div>
-            <p className="card__sub" style={{ marginBottom: '1rem', lineHeight: 1.7 }}>
-              Paste the resident SMS here, then inject it into the chat workflow to simulate the complaint desk converting a message into a structured complaint.
+          <details className="card" style={{ padding: '1.2rem' }}>
+            <summary className="card__title" style={{ cursor: 'pointer' }}>
+              <MessageSquareText size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '.5rem' }} />
+              Use an SMS
+            </summary>
+            <p className="card__sub" style={{ marginTop: '.75rem', marginBottom: '1rem', lineHeight: 1.7 }}>
+              Paste a resident message to register it through chat.
             </p>
 
             <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.8rem' }}>
@@ -349,12 +334,12 @@ export default function ComplaintSimulatorPage() {
               <Sparkles size={16} />
               Inject SMS Into Chat
             </button>
-          </div>
+          </details>
 
           <div className="card card--glass" style={{ padding: '1rem 1.1rem' }}>
-            <div className="card__title" style={{ marginBottom: '.5rem' }}>Feed Sync Rule</div>
+            <div className="card__title" style={{ marginBottom: '.5rem' }}>Saved complaint</div>
             <p className="card__sub" style={{ lineHeight: 1.7 }}>
-              Once the chat captures both the area and the issue clearly, the simulator stores it as a <span className="mono">text complaint</span> and it becomes visible on the complaints page.
+              Complaints are saved when the area and issue are clear.
             </p>
             {lastLogged ? (
               <div
@@ -371,7 +356,7 @@ export default function ComplaintSimulatorPage() {
               >
                 <CheckCircle2 size={16} color="var(--success)" />
                 <div style={{ fontSize: '12px', lineHeight: 1.6 }}>
-                  Latest logged via <strong>{lastLogged.source === 'voice_call' ? 'voice call' : 'text chat'}</strong>:
+                  Saved via <strong>{lastLogged.source === 'voice_call' ? 'voice call' : 'text chat'}</strong>:
                   {' '}<strong>{lastLogged.zone}</strong> for <strong>{lastLogged.issue_type}</strong> with{' '}
                   {lastLogged.severity.toLowerCase()} severity.
                 </div>

@@ -232,7 +232,7 @@ export default function DashboardPage() {
     setDispatching(suggestion.truck_id);
     try {
       await acceptDispatch(suggestion);
-      setAlerts(prev => [`[LOGISTICS] Vehicle ${suggestion.truck_id} assigned to ${suggestion.zone}.`, ...prev].slice(0,3));
+      setAlerts(prev => [`Vehicle ${suggestion.truck_id} assigned to ${suggestion.zone}.`, ...prev].slice(0,3));
       await fetchDashboardData(); await fetchDispatchSuggestions();
     } catch (error) {
       setAlerts(prev => [error instanceof Error ? error.message : 'Dispatch failed. Please retry.', ...prev].slice(0,3));
@@ -240,22 +240,20 @@ export default function DashboardPage() {
   };
 
   return (
-    <DashboardShell title="Dashboard" badges={[{ type: 'live', text: 'POLLED 10s' }, { type: 'alert', text: 'Live Commands' }]}>
+    <DashboardShell title="Dashboard" badges={[{ type: 'info', text: 'Refreshes every 4s' }]}>
       <motion.div className="page-header" variants={FADE_UP} initial="hidden" animate="show" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <div>
-           <h1 className="page-header__title">City Logistics & Action Grid</h1>
-           <p className="page-header__sub">Full interactive dispatch layout rendering geometry straight from your 311 SQLite cluster.</p>
+           <h1 className="page-header__title">City overview</h1>
+           <p className="page-header__sub">See priority zones and send vehicles where they are needed.</p>
         </div>
 
       </motion.div>
 
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
-          { label: 'Trucks Active', value: trucksLive.filter(t => t.status !== 'idle').length.toString(), sub: `of ${trucksLive.length} deployed` },
-          { label: 'Zones Covered', value: kpis.coverage === null ? 'No data' : `${kpis.coverage}%`, sub: 'Confirmed visits within 48 hours' },
-          { label: 'Prediction Acc.', value: kpis.accuracy === null ? 'Not evaluated' : `${kpis.accuracy}%`, sub: 'Requires validated observations' },
-          { label: 'Equity Score', value: kpis.equity === null ? 'Not evaluated' : kpis.equity.toString(), sub: 'Requires an agreed metric' },
-          { label: 'Data service', value: connected === null ? 'Connecting' : connected ? 'Available' : 'Unavailable', sub: 'Dashboard API connection' },
+          { label: 'Vehicles on duty', value: trucksLive.filter(t => t.status !== 'idle').length.toString(), sub: `of ${trucksLive.length} registered` },
+          { label: 'Zones visited', value: kpis.coverage === null ? 'No data' : `${kpis.coverage}%`, sub: 'Confirmed in the last 48 hours' },
+          { label: 'Connection', value: connected === null ? 'Connecting' : connected ? 'Available' : 'Unavailable', sub: 'Operations data' },
         ].map((s, i) => (
           <motion.div key={i} className="card" variants={FADE_UP} whileHover={{ y: -5, boxShadow: 'var(--shadow-lg)' }} transition={{ duration: 0.2 }}>
             <div className="card__label">{s.label}</div>
@@ -268,14 +266,14 @@ export default function DashboardPage() {
       <ActiveDispatches />
       <motion.div variants={STAGGER_CONTAINER} initial="hidden" animate="show" className="grid-2-1">
         <motion.div variants={FADE_UP} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {mapUnavailable && <p role="status">The map provider is unavailable. Use the assignment controls to continue.</p>}
+          {mapUnavailable && <p role="status">Map unavailable. You can still assign vehicles below.</p>}
             <div className="map-container map-container--lg" ref={mapRef} style={{height: '520px'}}></div>
           
-          {/* Shifted: Live Operator Log now sits at the bottom of the map */}
+          {/* Shifted: Recent actions now sits at the bottom of the map */}
           <motion.div variants={FADE_UP} className="card card--glass" style={{ flexShrink: 0, padding: '1rem 1.5rem' }}>
              <div className="card__title" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.5rem' }}>
                 <div className="sidebar__logo-dot" style={{ width: '6px', height: '6px' }}></div>
-                Live Operator Log
+                Recent actions
              </div>
              <div className="log-scroll-area" style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
                 {alerts.map((msg, i) => (
@@ -295,7 +293,7 @@ export default function DashboardPage() {
         {/* Dynamic Action Array Sidebar */}
         <motion.div variants={STAGGER_CONTAINER} style={{ display: 'flex', flexDirection: 'column', gap: '1rem'}}>
           <motion.div variants={FADE_UP} className="card" style={{ flexShrink: 0 }}>
-            <div className="card__title">Active Threat DB Log (Top 5)</div>
+            <div className="card__title">Zone priorities</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
               {zonesLive.slice(0, 5).map((z, i) => {
                 const cls = z.priority_score >= 80 ? '--critical' : z.priority_score >= 60 ? '--high' : '--medium';
@@ -312,20 +310,20 @@ export default function DashboardPage() {
           {/* Core Interactive Fleet Haversine Commands - Blends in perfectly */}
           <motion.div variants={FADE_UP} className="card card--glass" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', maxHeight: '550px' }}>
             <div className="card__title" style={{ color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              Haversine Target Array
-              <span className="badge badge--low">Matrix Core Active</span>
+              Suggested assignments
+              <span className="badge badge--low">Review & dispatch</span>
             </div>
             <div className="custom-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '.75rem', marginTop: '.75rem', overflowY: 'auto', paddingRight: '.5rem' }}>
                {suggestions.length === 0 ? (
                  <div className="mono" style={{fontSize: '11px', color: 'var(--secondary)', padding: '1.5rem', textAlign: 'center', opacity: 0.6}}>
-                    // Network balanced. <br/> No active routing suggestions.
+                    No assignments suggested right now.
                  </div>
                ) : (
                  suggestions.map(s => (
                   <div key={`${s.truck_id}-${s.zone}`} className="dispatch-card-premium">
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem'}}>
                       <div style={{ display: 'flex', flexDirection: 'column'}}>
-                        <span className="mono" style={{fontSize: '10px', color: 'var(--secondary)', textTransform: 'uppercase'}}>Fleet Asset</span>
+                        <span className="mono" style={{fontSize: '10px', color: 'var(--secondary)', textTransform: 'uppercase'}}>Vehicle</span>
                         <span style={{fontSize: '13px', fontWeight: 700, color: 'var(--text-heading)'}}>{s.truck_name}</span>
                         <span
                           className="mono"
@@ -347,16 +345,16 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span className="mono" style={{fontSize: '10px', color: 'var(--accent)', display: 'block'}}>EST. REACH</span>
+                        <span className="mono" style={{fontSize: '10px', color: 'var(--accent)', display: 'block'}}>EST. TRAVEL</span>
                         <span style={{fontSize: '13px', fontWeight: 700, color: 'var(--primary)'}}>{s.eta_mins} MIN</span>
                       </div>
                     </div>
                     
                     <div style={{ background: 'rgba(28, 20, 16, 0.03)', borderRadius: '4px', padding: '.5rem', marginBottom: '.75rem', borderLeft: '2px solid var(--primary)'}}>
-                      <div className="mono" style={{fontSize: '9px', color: 'var(--secondary)'}}>TARGET SECTOR</div>
+                      <div className="mono" style={{fontSize: '9px', color: 'var(--secondary)'}}>ZONE</div>
                       <div style={{fontSize: '12px', fontWeight: 600, color: 'var(--text-heading)'}}>{s.zone}</div>
                       <div className="mono" style={{ fontSize: '9px', color: 'var(--accent)', marginTop: '.35rem' }}>
-                        Preferred match: {s.preferred_truck_type_label || s.truck_type_label || 'Garbage Truck'}
+                        Service needed: {s.preferred_truck_type_label || s.truck_type_label || 'Garbage Truck'}
                       </div>
                     </div>
 

@@ -4,6 +4,7 @@ import { apiFetch } from '../lib/api';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardShell from '../components/DashboardShell';
+import layout from '../components/operational-layout.module.css';
 import {
   Camera, CheckCircle, Clock, AlertTriangle, RefreshCw,
   X, MapPin, Tag, Zap, Eye, Save, XCircle
@@ -147,13 +148,13 @@ export default function VisualComplaintsPage() {
       ]}
     >
       <div className="page-header">
-        <h1 className="page-header__title">Visual Complaints</h1>
-        <p className="page-header__sub">Photo evidence submitted via Telegram bot — review, assign priority, and update resolution status.</p>
+        <h1 className="page-header__title">Photo complaints</h1>
+        <p className="page-header__sub">Review submitted photos, set priority and update each complaint.</p>
       </div>
 
       {/* Stats */}
       <motion.div
-        className="stat-grid"
+        className={`stat-grid ${layout.compactStats}`}
         style={{ marginBottom: '1.5rem' }}
         initial="hidden" animate="show" variants={STAGGER}
       >
@@ -208,10 +209,10 @@ export default function VisualComplaintsPage() {
       ) : filtered.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3.5rem', background: '#fff', border: '1px solid #D1C7BC' }}>
           <Camera size={36} style={{ opacity: 0.15, marginBottom: '1.5rem' }} />
-          <p className="card__sub" style={{ fontSize: '13px', fontWeight: 500 }}>No complaints match the current filters.</p>
+          <p className="card__sub" style={{ fontSize: '13px', fontWeight: 500 }}>No matching photo complaints.</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))', gap: '1.75rem' }}>
           <AnimatePresence mode="popLayout">
             {filtered.map((c, i) => {
               const patch   = editing[c.id];
@@ -298,7 +299,7 @@ export default function VisualComplaintsPage() {
                     <div style={{ marginTop: 'auto', paddingTop: '0.4rem' }}>
                       {isEdit ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-                          <input className="input" style={{ fontSize: '12px' }} value={patch.zone ?? c.zone} onChange={e => setEditing(prev => ({ ...prev, [c.id]: { ...prev[c.id], zone: e.target.value } }))} placeholder="Sector/Zone" />
+                          <input className="input" style={{ fontSize: '12px' }} value={patch.zone ?? c.zone} onChange={e => setEditing(prev => ({ ...prev, [c.id]: { ...prev[c.id], zone: e.target.value } }))} placeholder="Zone" />
                           <div style={{ display: 'flex', gap: '.4rem' }}>
                              <select className="input" style={{ fontSize: '12px', flex: 1 }} value={patch.priority ?? c.priority} onChange={e => setEditing(prev => ({ ...prev, [c.id]: { ...prev[c.id], priority: e.target.value } }))}>
                                 {PRIORITY_OPTIONS.map(o => <option key={o} value={o}>{o.toUpperCase()}</option>)}

@@ -74,11 +74,10 @@ export default function Accounts() {
       form.reset();
   }
   return (
-    <DashboardShell title="Accounts & teams">
+    <DashboardShell title="Accounts">
       <h1>Workspace access</h1>
       <p>
-        Create individual accounts and assign workers to a team. Temporary
-        passwords must be changed at first sign-in.
+        Give each person an account and assign workers to a team.
       </p>
       <p role="status">{message}</p>
       <section className="card" style={{ padding: "1.5rem", margin: "1rem 0" }}>
@@ -133,6 +132,7 @@ export default function Accounts() {
               required
             />
           </label>
+          <p>Use 15–128 characters. They must change it at first sign-in.</p>
           <button className="btn btn--primary" disabled={busy}>
             Create account
           </button>
@@ -161,7 +161,7 @@ export default function Accounts() {
                   {u.email}
                 </td>
                 <td>
-                  {u.role} {u.team_id}
+                  {u.role === "admin" ? "Administrator" : u.role === "maintenance" ? "Supervisor" : "Worker"} {teams.find((team) => team.id === u.team_id)?.name || u.team_id}
                 </td>
                 <td>
                   {u.active ? "Active" : "Suspended"}
@@ -193,7 +193,7 @@ export default function Accounts() {
           className="card"
           style={{ padding: "1.5rem", marginTop: "1rem" }}
         >
-          <h2>Manage {selected.display_name}</h2>
+          <h2 style={{ overflowWrap: "anywhere" }}>Manage {selected.display_name}</h2>
           <form
             className="account-form"
             key={selected.id}
@@ -224,9 +224,9 @@ export default function Accounts() {
                 name="role"
                 defaultValue={selected.role}
               >
-                <option>worker</option>
-                <option>maintenance</option>
-                <option>admin</option>
+                <option value="worker">Worker</option>
+                <option value="maintenance">Maintenance supervisor</option>
+                <option value="admin">Administrator</option>
               </select>
             </label>
             <label>
@@ -276,8 +276,9 @@ export default function Accounts() {
                 autoComplete="new-password"
               />
             </label>
+            <p>This signs the person out on every device.</p>
             <button className="btn" disabled={busy}>
-              Reset password and revoke sessions
+              Reset password
             </button>
           </form>
           <button className="btn" onClick={() => setSelected(null)}>
@@ -289,7 +290,8 @@ export default function Accounts() {
         className="card"
         style={{ padding: "1.5rem", marginTop: "1rem" }}
       >
-        <h2>Create field team</h2>
+        <details>
+        <summary>Create field team</summary>
         <form
           className="account-form"
           onSubmit={async (e) => {
@@ -344,6 +346,7 @@ export default function Accounts() {
             Create team
           </button>
         </form>
+        </details>
       </section>
     </DashboardShell>
   );
