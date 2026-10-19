@@ -34,3 +34,6 @@ Use OPERATIONS.md, AUTHENTICATION.md and DEPLOYMENT.md as current contracts. ing
 
 ## Landing page visual direction (2026-10-19)
 The public homepage restores the warm editorial, animated-city direction with a local SVG city, route motion, scroll reveals, moving service strip and keyboard-accessible workflow previews. app/landing.module.css scopes its styles away from dashboard tokens; dark showcase headings must set explicit light colors. Preview states are illustrative, never live municipal telemetry. Respect reduced motion and the background-animation pause button. Keep sign-in/account protections unchanged.
+
+## Website motion system (2026-10-19)
+Landing motion includes CSS offset-path service markers, orbiting hero signals, pointer/scroll city parallax and an illustrative service network through the closing/footer. Every decorative CSS loop and pseudo-element honors the pause control and reduced motion; parallax also stops when paused/reduced. PageTransition scopes route/panel entrances and button feedback across protected pages. Its observers reveal panels once, including async additions, without replaying on data polling; maps/dialogs are excluded. motion.spec.ts checks actual marker movement, pause, reduced motion and responsive overflow; screenshot artifacts are saved under /tmp.

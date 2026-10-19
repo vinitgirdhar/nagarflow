@@ -5,3 +5,68 @@
 .darkSection h2,.darkSection h3{color:#f2ede2}
 
 .motionToggle{display:grid;place-items:center;width:30px;height:30px;background:transparent;border:1px solid #d5cab8;border-radius:50%;cursor:pointer;color:#84715b}.motionToggle:hover{color:var(--rust);border-color:var(--rust)}.landing[data-motion='paused'] *{animation-play-state:paused!important}
+
+/* A continuous visual rhythm from the first city signal to the last handoff. */
+.cityStage{position:absolute;inset:0;z-index:-1;pointer-events:none;will-change:transform}
+.titleWord{display:inline-block;white-space:pre;animation:wordArrive .95s cubic-bezier(.2,.75,.2,1) both}
+.heroRings{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;mask-image:linear-gradient(#0006,#0000 85%)}
+.heroRings i{position:absolute;left:50%;top:30%;width:780px;height:780px;margin:-390px;border:1px solid #bb8b4d25;border-radius:50%;animation:heroOrbit 40s linear infinite}
+.heroRings i:before,.heroRings i:after{content:'';position:absolute;left:16%;top:12%;width:7px;height:7px;background:#b8492550;border-radius:50%;box-shadow:0 0 0 7px #b8492508}
+.heroRings i:after{left:88%;top:74%;background:#7d895f70}
+.heroRings i:nth-child(2){width:1040px;height:1040px;margin:-520px;border-style:dashed;animation-duration:65s;animation-direction:reverse}
+.heroRings i:nth-child(3){width:1300px;height:1300px;margin:-650px;animation-duration:90s}
+.heroParticles{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden}
+.heroParticles span{position:absolute;width:3px;height:3px;border-radius:50%;background:#b88a53;opacity:.25;animation:particleDrift 9s ease-in-out infinite}
+.courier{offset-rotate:0deg;animation:courierTravel 14s linear infinite;filter:drop-shadow(0 2px 3px #96522240)}
+.landing .cityBlocks>g{animation-duration:4.5s}
+.landing .cityRoutes path{animation-duration:8s;stroke-dasharray:3 10}
+.cardSignal{display:flex;align-items:center;gap:4px;position:absolute;right:32px;top:100px;height:34px;opacity:.45}
+.cardSignal i{width:3px;height:11px;background:#b89468;border-radius:2px;transform-origin:bottom;animation:signalBar 2.2s ease-in-out infinite alternate}
+.cardSignal i:nth-child(3n){height:28px;animation-delay:-.8s}.cardSignal i:nth-child(3n+1){height:18px;animation-delay:-1.6s}.cardSignal i:nth-child(2n){animation-delay:-.4s}
+.featureCard:hover .cardTop>svg{transform:rotate(-12deg) scale(1.15);transition:transform .3s}.featureCard .cardLink svg,.primary svg,.textLink svg{transition:transform .3s}.featureCard:hover .cardLink svg,.primary:hover svg,.textLink:hover svg{transform:translate(3px,-3px)}
+.showcaseSweep{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.showcaseSweep:after{content:'';position:absolute;left:-30%;top:0;bottom:0;width:24%;background:linear-gradient(90deg,transparent,#c9bd9010,transparent);transform:skewX(-20deg);animation:showcaseLight 14s ease-in-out infinite}
+.radarSweep{position:absolute;width:270px;height:270px;border-radius:50%;background:conic-gradient(from 0deg,transparent 65%,#d2c5991a 95%,transparent);animation:heroOrbit 10s linear infinite}
+.previewDiagram>span{animation:coreBreathe 4s ease-in-out infinite}.previewRows>div{animation:rowArrive .55s ease-out both}.previewRows svg:last-child{animation:checkArrive .6s .3s both}
+.connectionSection{position:relative;overflow:hidden;padding:75px 32px 45px;border-top:1px solid #e0d6c5;background:radial-gradient(ellipse at 50% 65%,#efe0c3,#f7f4ed 65%)}
+.connectionHeading{text-align:center;position:relative;z-index:1}.connectionHeading .eyebrow{justify-content:center}.connectionHeading>p:last-child{font-size:13px;color:#8d7d66;margin-top:22px}
+.networkStage{position:relative;max-width:1100px;margin:10px auto 0;aspect-ratio:1000 / 360}
+.networkSvg{position:absolute;width:100%;height:100%;inset:0;overflow:visible}
+.networkBeams path{stroke-dasharray:14 100;animation:networkBeam 14s linear infinite}
+.networkPacket{offset-rotate:0deg;animation:courierTravel 10s linear infinite;filter:drop-shadow(0 0 6px #c18b48)}
+.networkHalo{position:absolute;left:50%;top:50%;translate:-50% -50%;width:26%;aspect-ratio:1;border:1px solid #b68d5320;border-radius:50%;box-shadow:0 0 0 45px #b68d5307,0 0 0 90px #b68d5305;animation:networkBreathe 7s ease-in-out infinite}
+.networkNode{position:absolute;top:var(--node-y);translate:-50% -50%;display:flex;flex-direction:column;align-items:center;gap:11px;animation:networkFloat 6s var(--node-delay) ease-in-out infinite}
+.networkNode>span{display:grid;place-items:center;width:65px;height:65px;border-radius:19px;border:1px solid #d8bd94;background:#fffaf0;color:var(--rust);box-shadow:0 7px 22px #9e774919;position:relative}
+.networkNode>span:after{content:'';position:absolute;inset:-7px;border:1px solid #b88e5440;border-radius:25px;animation:nodeSignal 5s var(--node-delay) ease-out infinite}
+.networkNode small{font:9px monospace;letter-spacing:1px;text-transform:uppercase;color:#8c7451;background:#f7f0e2e8;padding:4px 8px;border-radius:3px}
+.networkCaption{text-align:center;font:8px monospace;color:#a18c6f;letter-spacing:1.5px;margin-top:20px}
+.closingOrbit{position:absolute;width:540px;height:540px;left:50%;top:25px;margin-left:-270px;border:1px dashed #b18e5c40;border-radius:50%;animation:heroOrbit 28s linear infinite;z-index:-1;pointer-events:none}
+.closingOrbit i{position:absolute;left:17%;top:11%;width:16px;height:16px;border-radius:50%;background:#cdb48a;border:4px solid #f4ecd9;box-shadow:0 0 0 7px #b18e5c0c}.closingOrbit i:nth-child(2){left:94%;top:40%;width:12px;height:12px;background:#8c9570}.closingOrbit i:nth-child(3){left:30%;top:95%;width:11px;height:11px;background:#b84925}
+.closingWaves{position:absolute;left:-10%;bottom:0;width:120%;height:85%;pointer-events:none;z-index:-1;opacity:.55}.closingWaves path{stroke:#b4925e55;stroke-width:1;stroke-dasharray:6 12;animation:waveFlow 18s linear infinite}
+.footerWordmark{position:relative;overflow:hidden;display:flex;justify-content:center;padding:15px 0 0;background:#f3eddf;border-bottom:1px solid #ddd0b9}
+.footerWordmark>span:first-child{font-family:Georgia,serif;font-size:clamp(90px,20vw,290px);font-weight:400;line-height:1.13;letter-spacing:-.07em;color:#ddd0b9;animation:wordmarkBreathe 9s ease-in-out infinite}
+.wordmarkGlint{position:absolute;inset:0;background:linear-gradient(105deg,transparent 36%,#fff7e880 49%,transparent 62%);transform:translateX(-100%);animation:wordmarkLight 11s ease-in-out infinite;pointer-events:none}
+@keyframes wordArrive{from{opacity:0;transform:translateY(26px) rotateX(18deg);filter:blur(5px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes heroOrbit{to{transform:rotate(360deg)}}
+@keyframes courierTravel{from{offset-distance:0%}to{offset-distance:100%}}
+@keyframes particleDrift{0%,100%{transform:translate(0,0);opacity:.1}50%{transform:translate(15px,-35px);opacity:.6}}
+@keyframes signalBar{to{transform:scaleY(.3);opacity:.4}}
+@keyframes showcaseLight{0%,15%{translate:0 0}85%,100%{translate:650% 0}}
+@keyframes coreBreathe{50%{box-shadow:0 0 0 14px #d6d6b407,0 0 45px #c3c99212}}
+@keyframes rowArrive{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:none}}
+@keyframes checkArrive{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes networkBeam{to{stroke-dashoffset:-456}}
+@keyframes networkBreathe{50%{scale:1.3;opacity:.4}}
+@keyframes networkFloat{50%{transform:translateY(-9px)}}
+@keyframes nodeSignal{0%{scale:.9;opacity:0}25%{opacity:.7}100%{scale:1.45;opacity:0}}
+@keyframes waveFlow{to{stroke-dashoffset:-360}}
+@keyframes wordmarkBreathe{50%{color:#c8b28f}}
+@keyframes wordmarkLight{0%,20%{transform:translateX(-100%)}80%,100%{transform:translateX(100%)}}
+@media(max-width:700px){.heroRings i{scale:.65}.cityStage{inset:0 -15px}.cardSignal{top:73px;right:26px}.connectionSection{padding:60px 15px 35px}.connectionHeading h2{font-size:39px}.connectionHeading>p:last-child{max-width:290px;margin:18px auto 0;font-size:12px}.networkStage{margin:30px 7px 20px;aspect-ratio:1000 / 580}.networkSvg{height:62%;top:19%;width:100%}.networkNode{top:calc(19% + var(--node-y) * .62)}.networkNode>span{width:39px;height:39px;border-radius:12px}.networkNode>span svg{width:18px}.networkNode>span:after{border-radius:16px;inset:-5px}.networkNode small{font-size:6px;letter-spacing:.5px;padding:3px 4px}.networkHalo{width:35%;box-shadow:0 0 0 20px #b68d5307,0 0 0 40px #b68d5305}.closingOrbit{scale:.8}.footerWordmark{padding:20px 12px 5px}}
+@media(prefers-reduced-motion:reduce){.landing *,.landing *:before,.landing *:after{animation:none!important;transition:none!important}.cityStage{will-change:auto}}
+.landing[data-motion='paused'] *,.landing[data-motion='paused'] *:before,.landing[data-motion='paused'] *:after{animation-play-state:paused!important}
+/* Background pause must never strand newly revealed text or tab content. */
+.landing[data-motion='paused'] .titleWord,
+.landing[data-motion='paused'] .previewRows>div,
+.landing[data-motion='paused'] .previewRows svg:last-child{animation:none!important}
+@media(max-width:380px){.nav{padding-left:16px;padding-right:16px}.nav .brand{font-size:18px;gap:7px}.nav .brand>span:first-child{width:28px;height:28px}.nav .brandDot{font-size:8px}.nav nav{gap:10px}.navCta{padding:9px 10px;gap:8px}.motionToggle{width:26px;height:26px;flex-shrink:0}}

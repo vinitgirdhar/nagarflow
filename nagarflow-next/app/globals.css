@@ -686,3 +686,7 @@ input[type="range"]::-webkit-slider-thumb {
 .product-footer a { color: var(--primary); }
 @media(max-width:850px) { .product-hero { grid-template-columns: 1fr; padding-top: 40px; gap: 40px; } .product-feature-grid { grid-template-columns: repeat(2,1fr); } .product-principles { grid-template-columns: 1fr; gap: 12px; } .product-footer { margin-left: 24px; margin-right: 24px; } }
 @media(max-width:560px) { .product-nav { padding: 20px; } .product-nav nav>a:not(.btn) { display: none; } .product-hero,.product-section { padding-left: 20px; padding-right: 20px; } .product-feature-grid { grid-template-columns: 1fr; } .product-flow-card { padding: 24px; } .product-intro { font-size: 16px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

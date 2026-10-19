@@ -29,3 +29,6 @@ jsPDF 4 ships its own types. Do not install legacy @types/jspdf 1.x: its ambient
 
 ## Animated public homepage
 Use landing.module.css for public homepage styles. The city is a deterministic inline SVG, requiring no remote script or rendering dependency. Keep motion decorative, pauseable and disabled for prefers-reduced-motion. Workflow tabs support arrow/Home/End keys with correct tab/panel relationships. Preserve the distinction between illustrative product previews and actual protected records. Verify desktop/mobile overflow, reduced motion, tab interactions and sign-in links after visual edits.
+
+## Motion across workspaces
+PageTransition uses a scoped stylesheet and IntersectionObserver/MutationObserver to reveal panels once. Keep content visible without observers; exclude Leaflet/map parents, modal dialogs and nested reveal targets. Never animate live record values or delay form actions. Reduced-motion mode must skip panel entrances and hover translation. Decorative CSS motion on the landing page must remain pauseable, including pseudo-elements; pointer/scroll transforms must also stop when paused.
