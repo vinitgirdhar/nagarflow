@@ -32,5 +32,28 @@ test('complaint classification is linked to an idempotent work order',async({pag
 });
 
 test('public product page is responsive and its primary action opens real sign-in',async({page})=>{
- await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByRole('heading',{name:/One workspace.*Every service handoff/})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'/tmp/nagarflow-product-home-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/tmp/nagarflow-product-home-desktop.png',fullPage:true});await page.getByRole('link',{name:'Sign in to your workspace',exact:true}).click();await expect(page).toHaveURL(/login$/);await expect(page.getByLabel('Email',{exact:true})).toBeVisible();
+ await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByRole('heading',{name:/A city in motion.*A system in sync/})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();await page.screenshot({path:'/tmp/nagarflow-product-home-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'/tmp/nagarflow-product-home-desktop.png',fullPage:true});await page.getByRole('link',{name:'Sign in to your workspace',exact:true}).click();await expect(page).toHaveURL(/login$/);await expect(page.getByLabel('Email',{exact:true})).toBeVisible();
+});
+
+
+test('landing workflow previews support keyboard navigation and respect motion preferences',async({page})=>{
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.goto('/');
+ const intake=page.getByRole('tab',{name:'Intake'});
+ await intake.scrollIntoViewIfNeeded();
+ await expect(intake).toHaveAttribute('aria-selected','true');
+ await intake.focus();await page.keyboard.press('ArrowRight');
+ await expect(page.getByRole('tab',{name:'Dispatch'})).toBeFocused();
+ await expect(page.getByRole('tabpanel')).toContainText('Give every assignment a destination.');
+ await page.keyboard.press('End');
+ await expect(page.getByRole('tab',{name:'Forecasts'})).toHaveAttribute('aria-selected','true');
+ await expect(page.getByRole('tabpanel')).toContainText('Inspect the reasoning.');
+ await page.getByRole('tab',{name:'Knowledge'}).click();
+ await expect(page.getByRole('tabpanel')).toContainText('Make the source part of the answer.');
+ expect(await page.evaluate(()=>document.getAnimations().some(a=>a.playState==='running'))).toBeTruthy();
+ await page.getByRole('button',{name:'Pause background animations'}).click();
+ await expect(page.getByRole('button',{name:'Resume background animations'})).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'Resume background animations'}).click();
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(a=>a.effect instanceof KeyframeEffect&&getComputedStyle(a.effect.target as Element).animationIterationCount==='infinite').length)).toBe(0);
 });

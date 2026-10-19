@@ -26,3 +26,6 @@ Use OPERATIONS.md, AUTHENTICATION.md and DEPLOYMENT.md as current contracts. ing
 
 ## Dependency reproducibility
 jsPDF 4 ships its own types. Do not install legacy @types/jspdf 1.x: its ambient export assignment masks modern named exports and breaks fresh-checkout production builds. Reproduce CI with npm ci and a fresh .next directory; existing incremental artifacts are insufficient evidence. Keep the PDF browser download journey as runtime validation.
+
+## Animated public homepage
+Use landing.module.css for public homepage styles. The city is a deterministic inline SVG, requiring no remote script or rendering dependency. Keep motion decorative, pauseable and disabled for prefers-reduced-motion. Workflow tabs support arrow/Home/End keys with correct tab/panel relationships. Preserve the distinction between illustrative product previews and actual protected records. Verify desktop/mobile overflow, reduced motion, tab interactions and sign-in links after visual edits.

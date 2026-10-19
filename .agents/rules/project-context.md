@@ -31,3 +31,6 @@ Use OPERATIONS.md, AUTHENTICATION.md and DEPLOYMENT.md as current contracts. ing
 
 ## Main branch publication
 `main` is the GitHub default branch and includes both legacy branch tips (`master`, `verison-updation`). The full remote workflow passed for 62d102d (run 39030290654). Documentation must distinguish verified CI from unverified live-provider and production-host behavior. Preserve legacy branches unless deletion is explicitly requested.
+
+## Landing page visual direction (2026-10-19)
+The public homepage restores the warm editorial, animated-city direction with a local SVG city, route motion, scroll reveals, moving service strip and keyboard-accessible workflow previews. app/landing.module.css scopes its styles away from dashboard tokens; dark showcase headings must set explicit light colors. Preview states are illustrative, never live municipal telemetry. Respect reduced motion and the background-animation pause button. Keep sign-in/account protections unchanged.
