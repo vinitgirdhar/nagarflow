@@ -54,7 +54,7 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
    | Build command | `npm run build` |
    | Publish | `.next` |
    | Node | `22`, from root `netlify.toml` |
-   | Runtime | Netlify Next.js runtime, automatically detected |
+   | Runtime | Netlify Next.js runtime, explicitly loaded by the root plugin config |
 
 6. Build and publish the Git-backed Netlify deployment. Check its own
    `/api/health` and the startup-provisioned initial account. Follow the

@@ -9,7 +9,7 @@ This repository prepares both connections. No live Netlify or Render service has
 ## Connect the services
 
 1. Deploy the root `render.yaml` using [the Render guide](RENDER.md). It uses a Free Python Docker service without a disk. Wait for `https://YOUR_RENDER_HOST/api/health` to return `{"status":"ok"}`.
-2. In Netlify, import `vinitgirdhar/nagarflow` from GitHub and select the **main** production branch. Use the repository-root `netlify.toml`: base `nagarflow-next`, build `npm run build`, publish `.next`, Node.js 22. Keep Netlify's Next.js runtime enabled.
+2. In Netlify, import `vinitgirdhar/nagarflow` from GitHub and select the **main** production branch. Use the repository-root `netlify.toml`: base `nagarflow-next`, build `npm run build`, publish `.next`, Node.js 22. The root config explicitly loads `@netlify/plugin-nextjs`: this existing site otherwise uploads `.next` as static files and returns 404s without server functions or rewrites. Leave the adapter version unpinned for automatic updates.
 3. Before building, set this Netlify environment variable with build availability:
 
    | Variable | Value |
