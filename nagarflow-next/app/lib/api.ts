@@ -1,11 +1,22 @@
 let csrf = "";
 let pendingSession: Promise<Awaited<ReturnType<typeof readSession>>> | null = null;
 async function readSession() {
-  const response = await fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" });
-  if (!response.ok) throw new Error("Cannot connect to sign-in service. Please retry.");
-  const data = await response.json();
-  csrf = data.csrf_token;
-  return data;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let response: Response | undefined;
+    try {
+      response = await fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" });
+    } catch {
+      if (attempt === 3) throw new Error("Cannot connect to the sign-in service. Please retry.");
+    }
+    if (response?.ok) {
+      const data = await response.json();
+      csrf = data.csrf_token;
+      return data;
+    }
+    if (response && ![502, 503, 504].includes(response.status)) break;
+    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  throw new Error("The server is taking longer than expected. Please retry.");
 }
 export function session() {
   // The boundary and login form both read sessions. One response must own the

@@ -238,7 +238,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
 
         <div className="content">
           {user?.demo && <aside className="prototype-notice" aria-label="Prototype workspace notice">
-            <strong>Shared prototype.</strong> These are sample records. Changes are visible to other visitors and may reset. Please don’t enter personal information.
+            <strong>Shared prototype.</strong> Sample records and illustrative priorities help you explore the workflow. Changes are visible to other visitors and may reset. Please don’t enter personal information.
           </aside>}
           <PageTransition>
             {children}

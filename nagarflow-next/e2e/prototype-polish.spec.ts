@@ -1,4 +1,4 @@
-import {test, expect} from '@playwright/test';
+import {test, expect} from './fixtures';
 
 test('a cold connection has a designed loading view and free-host explanation', async ({page}) => {
   let release!: () => void;
@@ -23,6 +23,13 @@ test('all three demo roles fill credentials below sign-in and open their real wo
     ['Field worker','worker@nagarflow.app','worker-portal'],
   ]) {
     await page.goto('/login');
+    if (name === 'Administrator') {
+      for (const width of [320,390,768,1440]) {
+        await page.setViewportSize({width,height:900});
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+        await page.screenshot({path:`test-results/demo-login-${width}.png`,fullPage:true});
+      }
+    }
     await page.getByRole('radio', {name, exact:true}).check();
     const signIn = page.getByRole('button', {name:'Sign in',exact:true});
     const fill = page.getByRole('button', {name:'Use demo credentials',exact:true});
@@ -35,4 +42,21 @@ test('all three demo roles fill credentials below sign-in and open their real wo
     await page.getByRole('button',{name:'Sign out',exact:true}).click();
     await expect(page).toHaveURL(/login$/);
   }
+});
+
+test('normal sidebar navigation keeps the verified workspace while checking its session', async ({page}) => {
+  await page.goto('/login');
+  await page.getByRole('button',{name:'Use demo credentials',exact:true}).click();
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await expect(page).toHaveURL(/dashboard$/);
+  await expect(page.getByRole('heading',{name:'City overview',exact:true})).toBeVisible();
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/auth/session', async route => { await pending; await route.continue(); });
+  try {
+    await page.getByRole('link',{name:'Dispatch',exact:true}).click();
+    await expect(page).toHaveURL(/dispatch$/);
+    await expect(page.getByRole('heading',{name:'Vehicle dispatch',exact:true})).toBeVisible();
+    await expect(page.getByRole('status',{name:'Connecting securely'})).toHaveCount(0);
+  } finally { release(); }
 });

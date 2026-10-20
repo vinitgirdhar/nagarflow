@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { session, home } from "../lib/api";
+import ConnectionScreen from "./ConnectionScreen";
 export type User = {
   id: string;
   email: string;
@@ -18,6 +19,14 @@ export type User = {
 };
 const Context = createContext<User | null>(null);
 export const useUser = () => useContext(Context);
+function destination(user: User | null, path: string) {
+  if (path === "/" || path === "/login") return null;
+  if (!user) return "/login";
+  if ((user.must_change_password || user.mfa_required) && path !== "/account") return "/account";
+  if (path !== "/account" && ((user.role === "worker" && !path.startsWith("/worker-portal")) ||
+      (user.role === "maintenance" && path !== "/maintenance"))) return home(user.role);
+  return null;
+}
 export default function AuthBoundary({
   children,
 }: {
@@ -26,7 +35,7 @@ export default function AuthBoundary({
   const path = usePathname(),
     router = useRouter();
   const [user, setUser] = useState<User | null>(null),
-    [approvedPath, setApprovedPath] = useState<string | null>(null),
+    [resolved, setResolved] = useState(false),
     [error, setError] = useState("");
   const publicPage = path === "/" || path === "/login";
   useEffect(() => {
@@ -37,25 +46,9 @@ export default function AuthBoundary({
         setError("");
         const u = data.user as User | null;
         setUser(u);
-        if (!u && !publicPage) {
-          router.replace("/login");
-          return;
-        }
-        if (u && (u.must_change_password || u.mfa_required) && !publicPage && path !== "/account") {
-          router.replace("/account");
-          return;
-        }
-        if (
-          u &&
-          !publicPage &&
-          path !== "/account" &&
-          ((u.role === "worker" && !path.startsWith("/worker-portal")) ||
-            (u.role === "maintenance" && path !== "/maintenance"))
-        ) {
-          router.replace(home(u.role));
-          return;
-        }
-        setApprovedPath(path);
+        setResolved(true);
+        const redirect = destination(u, path);
+        if (redirect) router.replace(redirect);
       })
       .catch((e) => {
         if (alive) setError(e.message);
@@ -64,18 +57,9 @@ export default function AuthBoundary({
       alive = false;
     };
   }, [path, publicPage, router]);
-  if (error)
-    return (
-      <main style={{ padding: "4rem" }}>
-        <p role="alert">{error}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
-      </main>
-    );
-  if (approvedPath !== path)
-    return (
-      <main style={{ padding: "4rem" }} role="status">
-        Connecting securely…
-      </main>
-    );
+  if (error) return <ConnectionScreen error={error} retry={() => window.location.reload()} />;
+  // Continue to verify the session on navigation, without replacing a known,
+  // authorized workspace with a full-screen connection message each time.
+  if ((!resolved && path !== "/") || (resolved && destination(user, path))) return <ConnectionScreen />;
   return <Context.Provider value={user}>{children}</Context.Provider>;
 }

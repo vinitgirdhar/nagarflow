@@ -6,6 +6,7 @@ services:
     runtime: docker
     repo: https://github.com/vinitgirdhar/nagarflow
     branch: main
+    autoDeployTrigger: commit
     region: singapore
     plan: free
     numInstances: 1

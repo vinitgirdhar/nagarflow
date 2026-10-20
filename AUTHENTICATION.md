@@ -14,6 +14,12 @@ Previously enrolled accounts can sign in with their password alone while MFA is 
 - Email: `demo@nagarflow.app`
 - Password: `NagarFlow Demo 2026!`
 
+The login page also offers Supervisor (`supervisor@nagarflow.app`) and Field worker
+(`worker@nagarflow.app`), using the same intentionally public sample password.
+The role controls select a distinct account's email; the server verifies its
+password and determines permissions. They never grant a role from browser state.
+The worker is assigned to the sample field team and has a sample work order.
+
 These intentionally public credentials appear on `/login`, alongside a button to
 fill the form. Trusted startup provisions the `prototype-demo` municipality,
 separate from the owner's `default` records, with a few explicitly synthetic

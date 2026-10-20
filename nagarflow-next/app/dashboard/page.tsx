@@ -1,6 +1,7 @@
 'use client';
 import { apiFetch } from '../lib/api';
 import { htmlText } from '../lib/html';
+import { OPENSTREETMAP_TILE_URL, OPENSTREETMAP_OPTIONS } from '../lib/map-tiles';
 import { acceptDispatch, type DispatchSuggestion } from '../lib/dispatch';
 import ActiveDispatches from '../components/ActiveDispatches';
 import { useEffect, useRef, useState } from 'react';
@@ -68,8 +69,8 @@ export default function DashboardPage() {
         layerGroupRef.current = null;
       }
 
-      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 14);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '©OSM' }).addTo(map);
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
+      L.tileLayer(OPENSTREETMAP_TILE_URL, OPENSTREETMAP_OPTIONS).addTo(map);
       mapObjRef.current = map;
       layerGroupRef.current = L.layerGroup().addTo(map);
 

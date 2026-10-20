@@ -147,6 +147,23 @@ class PrototypeAccessTest(unittest.TestCase):
         with sqlite3.connect(path) as conn:
             self.assertEqual(conn.execute("SELECT worker_notes FROM maintenance_tasks WHERE id='sample-assigned-task'").fetchone()[0], 'Visitor note')
 
+    def test_older_sample_store_gets_new_roles_and_data_without_overwriting_changes(self):
+        self.provision()
+        path = Path(m.app.config['TENANT_DATA_DIR']) / 'prototype-demo' / 'nagarflow.db'
+        with m.app.app_context(), auth_connection() as conn:
+            conn.execute("DELETE FROM auth_users WHERE email IN ('supervisor@nagarflow.app','worker@nagarflow.app')")
+        with sqlite3.connect(path) as conn:
+            conn.execute("DELETE FROM global_status WHERE key='prototype_sample_v2'")
+            conn.execute("DELETE FROM maintenance_tasks WHERE id='sample-assigned-task'")
+            conn.execute("UPDATE teams SET status='Idle',current_zone=NULL WHERE id='sample-team'")
+            conn.execute("UPDATE trucks SET name='Visitor vehicle name' WHERE id=1")
+        self.provision()
+        client, _ = self.login_demo('worker@nagarflow.app')
+        self.assertGreater(len(client.get('/api/worker/tasks').json), 0)
+        with sqlite3.connect(path) as conn:
+            self.assertEqual(conn.execute('SELECT name FROM trucks WHERE id=1').fetchone()[0], 'Visitor vehicle name')
+            self.assertEqual(conn.execute("SELECT status FROM teams WHERE id='sample-team'").fetchone()[0], 'Busy')
+
     def test_provisioning_refuses_an_existing_owner_email_or_reserved_tenant(self):
         from prototype_access import DEMO_EMAIL, provision
         with m.app.app_context(), auth_connection() as conn:

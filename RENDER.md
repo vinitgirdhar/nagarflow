@@ -54,6 +54,16 @@ public demo account and its synthetic sample records are recreated separately.
 Other accounts and operational data are not restored. Keep the
 initial passphrase private and rotate its configured hash if compromised.
 
+## Automatic deployment
+
+Both hosts track the GitHub repository's `main` branch. Render uses
+`autoDeployTrigger: commit`; Netlify's linked GitHub build is enabled with base
+`nagarflow-next`, `npm run build` and native Next.js runtime output. A normal push
+or merge to `main` deploys both services automatically. Feature branches do not
+replace production. No manual deploy command or deploy-hook secret is required.
+Use the hosts' deploy logs to follow each commit. Free Render still sleeps and
+can reset local sample changes; auto-deployment does not add persistent storage.
+
 ## Launch settings
 
 1. Deploy `main` from the repository root with `Dockerfile.backend`, Docker

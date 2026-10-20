@@ -34,6 +34,19 @@ Render Free has no server shell. Follow the private, hash-only initial-account c
 
 ## Verify the live connection
 
+Git continuous deployment is enabled for `main`. Push or merge there to deploy
+the native frontend automatically; Render independently deploys the same commit
+for the backend. No manual upload is part of the normal release workflow.
+
+The prototype uses OpenStreetMap standard raster tiles through Leaflet, without
+an API key. Keep the visible OpenStreetMap contributor attribution and normal
+browser caching; do not prefetch tiles or implement offline download against the
+community tile service. See the [OSM tile policy](https://operations.osmfoundation.org/policies/tiles/).
+The connection screen explains the free server's possible cold start, retries
+temporary gateway responses, and avoids replacing an already verified workspace
+on ordinary client-side navigation. It never claims all connection errors come
+from the hosting plan.
+
 Before inviting users, check the actual deployed HTTPS hosts:
 
 - Both `/api/health` URLs return a healthy response. The landing page and sign-in can reach the session API; a frontend deploy without a healthy backend is incomplete.
