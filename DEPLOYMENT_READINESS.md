@@ -67,9 +67,14 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 
 ## Verification scope
 
-The five deployment configuration tests, ESLint, TypeScript and production builds
-for Netlify and Render standalone output pass locally. The Blueprint passes the
-current official Render JSON Schema. The Render CLI is installed locally but
+The five deployment configuration tests, targeted deployment-configuration lint,
+TypeScript and production builds for Netlify and Render standalone output pass
+locally. The Python requirements audit reports no known vulnerabilities. Full
+application lint is not clean: the application source reports 32 errors and 39
+warnings across unchanged pages/components; an unrestricted `npm run lint` also
+includes generated `.netlify` artifacts. This preparation does not claim a clean
+application-wide lint run. The Blueprint passes the current official Render JSON
+Schema. The Render CLI is installed locally but
 requires its own login for platform-aware validation; the authenticated Render
 connector was used to inspect the confirmed workspace.
 
