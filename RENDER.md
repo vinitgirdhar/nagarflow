@@ -7,6 +7,11 @@ The root Blueprint uses **Render Free**, with no paid service or persistent disk
 the same service. Netlify serves the native Next.js frontend and proxies `/api/*`
 and `/uploads/*` to this backend.
 
+Deployed and smoke-checked on 20 October 2026:
+[backend health](https://nagarflow.onrender.com/api/health),
+[frontend](https://nagarflow.netlify.app). The Render service is `nagarflow` in
+the owner's confirmed workspace, with compute plan `free` and no disk.
+
 ## Free-plan behavior
 
 Render Free sleeps after 15 minutes without incoming traffic. Waking can take

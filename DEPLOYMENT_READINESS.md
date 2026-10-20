@@ -3,6 +3,27 @@
 Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 `02df58c2cc86cf4a27c2a199346a8e23fb3cc0aa`.
 
+## Live verification on 20 October 2026
+
+- Frontend: <https://nagarflow.netlify.app>, with the native Next.js runtime and
+  production Git branch `main`.
+- Backend: <https://nagarflow.onrender.com/api/health>, service
+  `srv-dbbh3t3bc2fs73b6irgg`, compute plan `free`, no persistent disk.
+- Application commit `3904417923309cb8032e2a8138e5c8e5326e82bc` was deployed
+  successfully to both hosts. GitHub Linux CI passed 114 backend tests, 21 browser
+  tests and five deployment configuration tests.
+- Live HTTPS checks passed through both hosts: health, private initial sign-in,
+  sign-out, Secure/HttpOnly/SameSite=Lax host-only cookies, no-store responses,
+  anonymous access denial, missing-CSRF rejection and untrusted-Origin rejection.
+  The actual homepage and sign-in form loaded in the browser.
+- The owner must change the private temporary passphrase and enroll an
+  authenticator at first sign-in. No provider delivery or live task-evidence
+  workflow was exercised, and no operational data was seeded.
+- Free Render local files can reset on sleep/restart/redeploy. This verification
+  does not establish data persistence or a production backup/restore procedure.
+
+The following preparation notes describe the setup inspected before launch.
+
 ## Source and dependency preparation
 
 - Keep the repository-root `render.yaml`, `Dockerfile.backend` and `netlify.toml` as the

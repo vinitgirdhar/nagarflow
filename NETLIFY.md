@@ -4,7 +4,7 @@ Netlify serves the Next.js frontend. The [free Render service](RENDER.md) runs t
 
 Netlify forwards `/api/*` and `/uploads/*` directly to the Python backend, so browser requests stay on the Netlify origin. Render does not build or run a second frontend in this setup.
 
-This repository prepares both connections. No live Netlify or Render service has been verified for this setup yet.
+Live smoke checks passed on 20 October 2026 at [nagarflow.netlify.app](https://nagarflow.netlify.app) and the [free Render API](https://nagarflow.onrender.com/api/health). Health, initial sign-in/sign-out, secure host-only cookies, no-store responses, anonymous denial, CSRF and Origin rejection were verified through both hosts. The actual homepage and sign-in form also loaded in the browser. Owner password change and authenticator enrollment remain first-sign-in steps; no live provider delivery or durable storage is claimed.
 
 ## Connect the services
 
