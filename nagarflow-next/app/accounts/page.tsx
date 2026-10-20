@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import DashboardShell from "../components/DashboardShell";
 import { apiFetch } from "../lib/api";
+import { useUser } from "../components/AuthBoundary";
 type Account = {
   id: string;
   email: string;
@@ -13,6 +14,7 @@ type Account = {
 };
 type Team = { id: string; name: string };
 export default function Accounts() {
+  const demo = useUser()?.demo;
   const [users, setUsers] = useState<Account[]>([]),
     [teams, setTeams] = useState<Team[]>([]),
     [message, setMessage] = useState(""),
@@ -76,11 +78,11 @@ export default function Accounts() {
   return (
     <DashboardShell title="Accounts">
       <h1>Workspace access</h1>
-      <p>
+      {demo ? <p>Public demo credentials stay the same for everyone. Account changes are unavailable in this sample workspace.</p> : <p>
         Give each person an account and assign workers to a team.
-      </p>
+      </p>}
       <p role="status">{message}</p>
-      <section className="card" style={{ padding: "1.5rem", margin: "1rem 0" }}>
+      {!demo && <section className="card" style={{ padding: "1.5rem", margin: "1rem 0" }}>
         <h2>Create account</h2>
         <form
           className="account-form"
@@ -137,7 +139,7 @@ export default function Accounts() {
             Create account
           </button>
         </form>
-      </section>
+      </section>}
       <section
         className="card"
         style={{ padding: "1.5rem", overflowX: "auto" }}
@@ -170,7 +172,7 @@ export default function Accounts() {
                 <td>
                   <button
                     className="btn"
-                    disabled={busy}
+                    disabled={busy || demo}
                     onClick={() =>
                       mutate("/api/auth/users/" + u.id, "PATCH", {
                         active: !u.active,
@@ -179,7 +181,7 @@ export default function Accounts() {
                   >
                     {u.active ? "Suspend" : "Reactivate"}
                   </button>
-                  <button className="btn" onClick={() => setSelected(u)}>
+                  <button className="btn" disabled={demo} onClick={() => setSelected(u)}>
                     Edit / reset password
                   </button>
                 </td>

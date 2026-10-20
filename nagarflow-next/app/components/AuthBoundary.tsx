@@ -13,6 +13,8 @@ export type User = {
   mfa_enabled: boolean;
   mfa_required: boolean;
   mfa_policy_required: boolean;
+  mfa_available: boolean;
+  demo: boolean;
 };
 const Context = createContext<User | null>(null);
 export const useUser = () => useContext(Context);

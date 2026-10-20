@@ -247,6 +247,14 @@ def main(arguments=None) -> int:
     except (ValueError, OSError) as error:
         print('[render] Initial administrator configuration failed: ' + str(error), file=sys.stderr)
         return 2
+    from app import app
+    from prototype_access import provision
+    try:
+        if provision(app):
+            print('[render] Shared prototype workspace provisioned.', flush=True)
+    except (ValueError, OSError) as error:
+        print('[render] Prototype configuration failed: ' + str(error), file=sys.stderr)
+        return 2
     # API and worker children do not need the trusted provisioning configuration.
     for key in ('NAGARFLOW_INITIAL_ADMIN_PASSWORD_HASH', 'NAGARFLOW_INITIAL_ADMIN_EMAIL', 'NAGARFLOW_INITIAL_ADMIN_NAME'):
         environment.pop(key, None)

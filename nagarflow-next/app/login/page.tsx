@@ -5,10 +5,18 @@ import { apiFetch, session, home } from "../lib/api";
 export default function LoginPage() {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [setup, setSetup] = useState(false);
+    [setup, setSetup] = useState(false),
+    [mfaAvailable, setMfaAvailable] = useState(false),
+    [demo, setDemo] = useState<{ email: string; password: string } | null>(null),
+    [email, setEmail] = useState(""),
+    [password, setPassword] = useState("");
   useEffect(() => {
     session()
-      .then((d) => setSetup(d.setup_required))
+      .then((d) => {
+        setSetup(d.setup_required);
+        setMfaAvailable(d.mfa_available === true);
+        setDemo(d.demo || null);
+      })
       .catch((e) => setError(e.message));
   }, []);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,6 +63,8 @@ export default function LoginPage() {
             <input
               className="input"
               name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               type="email"
               autoComplete="username"
               required
@@ -66,19 +76,36 @@ export default function LoginPage() {
             <input
               className="input"
               name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               type="password"
               autoComplete="current-password"
               required
               maxLength={128}
             />
           </label>
-          <label>Authenticator or recovery code (if enabled)<input className="input" name="otp" type="text" autoComplete="one-time-code" maxLength={40}/></label>
+          {mfaAvailable && <label>Authenticator or recovery code (if enabled)<input className="input" name="otp" type="text" autoComplete="one-time-code" maxLength={40}/></label>}
           {error && <p role="alert">{error}</p>}
           <button className="btn btn--primary" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <p>Need access? Contact your municipality administrator.</p>
+        {demo ? (
+          <section className="demo-credentials" aria-label="Prototype demo credentials">
+            <h2>Try the prototype</h2>
+            <p>Use these public credentials to explore the sample workspace. No authenticator or password change needed.</p>
+            <dl>
+              <div><dt>Email</dt><dd><code>{demo.email}</code></dd></div>
+              <div><dt>Password</dt><dd><code>{demo.password}</code></dd></div>
+            </dl>
+            <button className="btn" type="button" disabled={busy} onClick={() => {
+              setEmail(demo.email);
+              setPassword(demo.password);
+              setError("");
+            }}>Use demo credentials</button>
+            <p className="demo-note">Shared sample data. Changes are visible to other visitors and may reset. Please don’t enter personal information.</p>
+          </section>
+        ) : <p>Need access? Contact your municipality administrator.</p>}
       </section>
     </main>
   );

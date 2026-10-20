@@ -93,7 +93,7 @@ class PrototypeAccessTest(unittest.TestCase):
             ('patch', '/api/auth/users/' + user['id'], {'active': False}),
             ('post', '/api/auth/users/' + user['id'] + '/password', {}),
             ('post', '/api/auth/mfa/enroll', {}),
-            ('post', '/api/agent/chat', {}),
+            ('post', '/api/agent/respond-chat', {}),
         ]:
             with self.subTest(path=path):
                 self.assertIn(getattr(client, method)(path, json=body).status_code, (403, 404))
@@ -114,6 +114,18 @@ class PrototypeAccessTest(unittest.TestCase):
             self.assertEqual(original, dict(conn.execute("SELECT * FROM auth_users WHERE email='test@example.test'").fetchone()))
             self.assertEqual(conn.execute('SELECT COUNT(*) FROM auth_users').fetchone()[0], 2)
         self.assertEqual(client.get('/api/dashboard').status_code, 200)
+
+    def test_provisioning_refuses_an_existing_owner_email_or_reserved_tenant(self):
+        from prototype_access import DEMO_EMAIL, provision
+        with m.app.app_context(), auth_connection() as conn:
+            conn.execute('UPDATE auth_users SET email=?', (DEMO_EMAIL,))
+        with self.assertRaisesRegex(ValueError, 'outside the sample workspace'):
+            provision(m.app)
+        with m.app.app_context(), auth_connection() as conn:
+            conn.execute("UPDATE auth_users SET email='test@example.test'")
+            conn.execute("INSERT INTO municipalities (id,name) VALUES ('prototype-demo','Existing city')")
+        with self.assertRaisesRegex(ValueError, 'already in use'):
+            provision(m.app)
 
 
 if __name__ == '__main__':

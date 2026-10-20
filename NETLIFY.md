@@ -30,14 +30,14 @@ Keep provider keys and the signed-intake secret in Render, where the Python serv
 
 ## Create the administrator
 
-Render Free has no server shell. Follow the private, hash-only initial-account configuration in [RENDER.md](RENDER.md). Startup creates the administrator only when the account store is empty. Sign in through Netlify, change the temporary passphrase and enroll your own authenticator. Do not seed demo records. Free-plan filesystem resets recreate only the initial account and require password change and MFA enrollment again; they do not restore operational data.
+Render Free has no server shell. Follow the private, hash-only initial-account configuration in [RENDER.md](RENDER.md). Startup creates the owner only when the account store is empty. The prototype disables MFA and explicitly enables a separate public sample account. Its credentials are displayed on `/login`; visitors enter without password change or authenticator setup. See [AUTHENTICATION.md](AUTHENTICATION.md) for isolation and shared-sample restrictions. A filesystem reset recreates the initial owner and sample account; it does not restore visitor changes or other operational records.
 
 ## Verify the live connection
 
 Before inviting users, check the actual deployed HTTPS hosts:
 
 - Both `/api/health` URLs return a healthy response. The landing page and sign-in can reach the session API; a frontend deploy without a healthy backend is incomplete.
-- Sign-in, required passphrase change, MFA and sign-out work. The proxied session cookie retains `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/` and no `Domain` attribute. Session and private API responses retain `Cache-Control: no-store`.
+- Public demo sign-in goes directly to the dashboard without MFA or password setup; sign-out works. Private owner onboarding still requires changing the initial passphrase. The proxied session cookie retains `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/` and no `Domain` attribute. Session and private API responses retain `Cache-Control: no-store`.
 - An authorized write succeeds with its CSRF token. A missing token or untrusted `Origin` is rejected. Keep browser requests same-origin; do not replace the proxy with direct cross-origin API calls.
 - A worker uploads task evidence, an authorized supervisor views it and approves the work. Signed intake retains its original request body through the proxy and the worker processes the delivery once.
 - A Free Render restart can reset accounts, MFA enrollment, complaints and evidence. Verify that the initial account is recreated after a fresh store and do not claim restart persistence. The durable-storage backup/restore runbook in [DEPLOYMENT.md](DEPLOYMENT.md) describes a separate deployment requirement, not a capability of this free instance.

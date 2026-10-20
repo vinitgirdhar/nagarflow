@@ -1,7 +1,5 @@
 import {test,expect,type Page} from '@playwright/test';
-import {createHmac} from 'node:crypto';
-async function login(page:Page,email='admin@example.test',otp=''){await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('Synthetic browser passphrase!');if(otp)await page.getByLabel('Authenticator or recovery code (if enabled)',{exact:true}).fill(otp);await page.getByRole('button',{name:'Sign in',exact:true}).click();}
-function code(secret:string){const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';let bits='';for(const c of secret)bits+=alphabet.indexOf(c).toString(2).padStart(5,'0');const bytes=[];for(let i=0;i+8<=bits.length;i+=8)bytes.push(parseInt(bits.slice(i,i+8),2));const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));const hash=createHmac('sha1',Buffer.from(bytes)).update(counter).digest();const offset=hash[19]&15;return ((hash.readUInt32BE(offset)&0x7fffffff)%1000000).toString().padStart(6,'0');}
+async function login(page:Page,email='admin@example.test'){await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('Synthetic browser passphrase!');await page.getByRole('button',{name:'Sign in',exact:true}).click();}
 
 test('approved retrieval cites evidence and withdrawal removes it',async({page})=>{
  await login(page);await expect(page).toHaveURL(/dashboard$/);await page.goto('/knowledge');
@@ -22,9 +20,26 @@ test('empty operations view and fleet registration are usable',async({page})=>{
  await page.goto('/dispatch');await page.getByText('Register a fleet vehicle',{exact:true}).click();await page.getByLabel('Vehicle name',{exact:true}).fill('Browser registered truck');await page.getByLabel('Latitude',{exact:true}).fill('19.04');await page.getByLabel('Longitude',{exact:true}).fill('72.85');await page.getByRole('button',{name:'Register vehicle',exact:true}).click();await expect(page.getByText('Vehicle registered.',{exact:true})).toBeVisible();await expect(page.getByRole('cell',{name:'Browser registered truck',exact:true})).toBeVisible();
 });
 
-test('authenticator enrollment, recovery sign-in and disabling work in the browser',async({page})=>{
- await login(page,'security@example.test');await expect(page).toHaveURL(/dashboard$/);await page.goto('/account');await page.getByText('Authenticator security',{exact:true}).click();await page.getByLabel('Security password',{exact:true}).fill('Synthetic browser passphrase!');await page.getByRole('button',{name:'Set up authenticator',exact:true}).click();const secret=(await page.locator('code[aria-label="Authenticator setup key"]').textContent())!.trim();await page.getByLabel('Authenticator or recovery code',{exact:true}).fill(code(secret));await page.getByRole('button',{name:'Verify and enable authenticator',exact:true}).click();const recovery=page.getByRole('region',{name:'Recovery codes',exact:true});await expect(recovery).toBeVisible();const codes=await recovery.locator('code').allTextContents();expect(codes.length).toBe(8);await recovery.getByRole('button',{name:'I saved these codes',exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page).toHaveURL(/login$/);
- await login(page,'security@example.test');await expect(page.getByText('Enter a current authenticator code or an unused recovery code.',{exact:true})).toBeVisible();await page.getByLabel('Authenticator or recovery code (if enabled)',{exact:true}).fill(codes[0]);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page).toHaveURL(/dashboard$/);await page.goto('/account');await page.getByText('Authenticator security',{exact:true}).click();await page.getByLabel('Security password',{exact:true}).fill('Synthetic browser passphrase!');await page.getByLabel('Authenticator or recovery code',{exact:true}).fill(codes[1]);await page.getByRole('button',{name:'Disable authenticator',exact:true}).click();await expect(page.getByText('Authenticator disabled. Other sessions were signed out.',{exact:true})).toBeVisible();
+test('public prototype credentials work without authenticator or password setup',async({page})=>{
+ for (const width of [320,390,768,1440]) {
+  await page.setViewportSize({width,height:900});await page.goto('/login');
+  await expect(page.getByRole('region',{name:'Prototype demo credentials'})).toBeVisible();
+  await expect(page.getByLabel(/Authenticator or recovery code/)).toHaveCount(0);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+ }
+ await page.getByRole('button',{name:'Use demo credentials',exact:true}).click();
+ await expect(page.getByLabel('Email',{exact:true})).toHaveValue('demo@nagarflow.app');
+ await expect(page.getByLabel('Password',{exact:true})).toHaveValue('NagarFlow Demo 2026!');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(page).toHaveURL(/dashboard$/);
+ await expect(page.getByLabel('Prototype workspace notice')).toContainText('Shared prototype.');
+ await page.goto('/account');
+ await expect(page.getByText('Authenticator security',{exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Current password',{exact:true})).toHaveCount(0);
+ await expect(page.getByText(/public prototype account/)).toBeVisible();
+ await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page).toHaveURL(/login$/);
+ await login(page,'security@example.test');await expect(page).toHaveURL(/dashboard$/);
+ await page.goto('/account');await expect(page.getByText('Authenticator security',{exact:true})).toHaveCount(0);
 });
 
 test('complaint classification is linked to an idempotent work order',async({page})=>{
