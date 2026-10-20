@@ -1,4 +1,5 @@
-# Full application on one service so SQLite, uploads and the worker share a disk.
+# Free backend and colocated worker. Local data resets on sleep/restart/redeploy.
+# Netlify serves the native Next.js frontend; see RENDER.md for limitations.
 services:
   - type: web
     name: nagarflow
@@ -6,20 +7,22 @@ services:
     repo: https://github.com/vinitgirdhar/nagarflow
     branch: main
     region: singapore
-    plan: starter
+    plan: free
     numInstances: 1
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./Dockerfile.backend
     dockerContext: .
     healthCheckPath: /api/health
-    disk:
-      name: nagarflow-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NAGARFLOW_ENV
         value: production
       - key: NAGARFLOW_STORAGE_DIR
-        value: /var/data/nagarflow
+        value: /tmp/nagarflow
+      - key: NAGARFLOW_TRUSTED_ORIGINS
+        value: https://nagarflow.netlify.app
+      - key: NAGARFLOW_INITIAL_ADMIN_EMAIL
+        sync: false
+      - key: NAGARFLOW_INITIAL_ADMIN_PASSWORD_HASH
+        sync: false
       - key: NAGARFLOW_REQUIRE_ADMIN_MFA
         value: "true"
       - key: NAGARFLOW_WEBHOOK_SECRET
