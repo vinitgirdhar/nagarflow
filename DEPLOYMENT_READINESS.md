@@ -5,7 +5,7 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 
 ## Source and dependency preparation
 
-- Keep the repository-root `render.yaml`, `Dockerfile` and `netlify.toml` as the
+- Keep the repository-root `render.yaml`, `Dockerfile.backend` and `netlify.toml` as the
   deployment configuration. See [RENDER.md](RENDER.md) and [NETLIFY.md](NETLIFY.md).
 - Next.js and its ESLint configuration are pinned to 16.4.2. The lockfile also
   updates compatible transitive dependencies to address the advisories reported
@@ -21,10 +21,9 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 
 - Render workspace: **My Workspace**, `tea-d1g4c97fte5s7387uln0`, confirmed by the
   owner. No NagarFlow service existed in this workspace at inspection time.
-- The prepared Blueprint requests one **paid Starter Docker web service** and a
-  **1 GB persistent disk** in Singapore. Review the displayed recurring charges
-  before creating it. Keep one instance and its API, worker, stores, uploads and
-  MFA key together.
+- The owner selected **Render Free**. The Blueprint requests one free Python
+  Docker web service in Singapore with no disk. The API and worker run together;
+  local data resets on sleep/restart/redeploy and the worker pauses while asleep.
 - Existing Netlify project: **nagarflow**,
   `5fa7721e-7016-442a-bd66-1249ac7a251f`,
   <https://nagarflow.netlify.app>.
@@ -37,10 +36,10 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 1. Merge the reviewed dependency preparation into `main` after its Linux checks
    pass. The existing Netlify site follows `master`, so this merge alone does not
    switch its production branch.
-2. Create the Render service from the root Blueprint after approving its paid
-   compute and disk. Use the actual assigned HTTPS origin and wait for
-   `/api/health` to return `{"status":"ok"}`. The Docker service retains the
-   repository's Next gateway in front of Flask and the colocated worker.
+2. Create the free Render service using `Dockerfile.backend`, no disk, and private
+   initial-admin email/hash settings. Use the actual assigned HTTPS origin and
+   wait for `/api/health` to return `{"status":"ok"}`. This runs Flask and its
+   colocated worker; the frontend runs on Netlify.
 3. Set Render `NAGARFLOW_TRUSTED_ORIGINS` to the actual Render HTTPS origin plus
    `https://nagarflow.netlify.app`, comma-separated. Do not trust preview wildcards.
 4. Set Netlify `NAGARFLOW_BACKEND_URL` to that actual Render HTTPS origin, with
@@ -58,12 +57,13 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
    | Runtime | Netlify Next.js runtime, automatically detected |
 
 6. Build and publish the Git-backed Netlify deployment. Check its own
-   `/api/health`, then privately provision the initial administrator using the
-   Render Shell command in [NETLIFY.md](NETLIFY.md). Passwords, provider secrets and
-   authenticator material must stay out of source, build commands and chat.
-7. Complete the live session, CSRF, evidence, worker, restart-persistence and
-   coordinated backup/restore checks in [NETLIFY.md](NETLIFY.md) and
-   [DEPLOYMENT.md](DEPLOYMENT.md) before inviting users.
+   `/api/health` and the startup-provisioned initial account. Follow the
+   hash-only initial setup in [RENDER.md](RENDER.md); Free Render has no shell.
+   Passwords, provider secrets and authenticator material must stay out of
+   source, build commands and chat.
+7. Verify live sessions, CSRF and worker startup. This free deployment has no
+   restart-persistence or coordinated restore guarantee. Use disposable
+   evaluation data and distinguish it from a durable production deployment.
 
 ## Verification scope
 

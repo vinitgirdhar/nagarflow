@@ -1,57 +1,76 @@
-# Deploy the whole project on Render
+# Free Render backend
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/vinitgirdhar/nagarflow)
 
-This Blueprint builds the frontend, API and complaint worker together. You get one public HTTPS URL. The API listens only inside the service; Next.js forwards `/api/*` and `/uploads/*` to it.
+The root Blueprint uses **Render Free**, with no paid service or persistent disk.
+`Dockerfile.backend` runs Flask on the public `PORT` with its complaint worker in
+the same service. Netlify serves the native Next.js frontend and proxies `/api/*`
+and `/uploads/*` to this backend.
 
-The Blueprint selects one **paid Starter web service and a 1 GB persistent disk** in Singapore. Render displays current charges before you create it. Free ephemeral storage would lose accounts and complaints on restart. Keep one instance while using SQLite; do not split the worker into a service with its own disk.
+## Free-plan behavior
 
-## Launch
+Render Free sleeps after 15 minutes without incoming traffic. Waking can take
+about a minute. Its filesystem resets on sleep, restart and redeploy: complaints,
+accounts, sessions, uploaded evidence and MFA enrollment can be lost. The worker
+also stops while the service sleeps. This deployment is suitable for evaluation
+with disposable data; it does not provide durable municipal records.
 
-1. Click **Deploy to Render**, connect this repository and review the Blueprint.
-2. Create the service. Build the Dockerfile from the repository root, not `nagarflow-next`. No extra database service is required.
-3. Wait for the service to become healthy. Open the public URL Render assigns; the app uses that actual URL for secure sign-in automatically.
-4. In the service's **Shell**, provision your real administrator:
+These are [Render Free limitations](https://render.com/docs/free), not an
+application backup guarantee. Free compute is shared with the other free services
+in the workspace. Do not enable keep-alive traffic to evade idle sleep. No
+paid-provider keys or local databases are uploaded by deployment.
 
-   ```bash
-   python scripts/render_service.py manage-users create --email YOUR_EMAIL --name 'Municipality administrator'
-   ```
+## Initial administrator without a server shell
 
-   Replace `YOUR_EMAIL`. The command privately prompts for a temporary passphrase. No default accounts exist. Sign in, change the passphrase, then enroll your authenticator and save the recovery codes privately.
+Render Free has no dashboard/SSH shell. Configure the following privately before
+the first deploy:
 
-Do not put a password in a build command, environment variable or chat. Do not run demo seeding in production. A new deployment starts with empty stores; it does not copy databases or media from your computer.
+| Variable | Purpose |
+| --- | --- |
+| `NAGARFLOW_INITIAL_ADMIN_EMAIL` | The owner's sign-in email |
+| `NAGARFLOW_INITIAL_ADMIN_PASSWORD_HASH` | A Werkzeug `scrypt:32768:8:1` hash with a 16-character salt |
+| `NAGARFLOW_INITIAL_ADMIN_NAME` | Optional display name, default `Administrator` |
 
-## What stays on disk
+Generate a unique temporary passphrase locally and keep it in a private password
+manager or restricted local file. Generate its hash with
+`werkzeug.security.generate_password_hash(passphrase, method='scrypt:32768:8:1')`
+in that local trusted process. Configure only the hash in Render. Never put the
+passphrase in source, build commands, environment variables, logs or chat.
 
-`/var/data/nagarflow` contains the control database, authenticator host key, default database, municipality databases and uploaded evidence. Migrations run at startup **after** the disk mounts. The launcher initializes private directories, drops root privileges and supervises all three processes. If a process stops unexpectedly, the service exits so Render can restart it.
+Startup provisions exactly one administrator only when the entire account store
+is empty. Existing accounts are never overwritten. Sign in through Netlify,
+change the temporary passphrase, and enroll your own authenticator. No public
+account-creation endpoint or shared default password exists.
 
-The disk is attached to one service. It is not a substitute for an off-service backup. Follow DEPLOYMENT.md and the backup tool's consistency requirements for backup/restore operations. A single-instance disk also means deployment restarts can briefly interrupt service.
+After a filesystem reset, startup recreates only this initial account with its
+original temporary passphrase. Password change and authenticator enrollment must
+be repeated; other accounts and operational data are not restored. Keep the
+initial passphrase private and rotate its configured hash if compromised.
 
-## Optional configuration
+## Launch settings
 
-- **Custom domain:** add it in Render, then set `NAGARFLOW_TRUSTED_ORIGINS` to the exact HTTPS origin. Use comma-separated origins if you keep both the Render URL and custom domain. No paths or wildcards.
-- **Provider integrations:** add real `GROQ_API_KEY`, `SARVAM_API_KEY` and `TELEGRAM_BOT_TOKEN` privately in Render when needed. Core complaint, assignment, knowledge and forecast flows do not require paid-provider keys.
-- **Signed intake:** Render generates `NAGARFLOW_WEBHOOK_SECRET`. Configure your trusted provider gateway with the same secret using OPERATIONS.md. Native provider signatures still require validation by that gateway.
-- **Capacity:** Starter is an initial small-team configuration. Monitor memory, CPU and disk usage in Render; upgrade the instance/disk as usage grows. No load-capacity guarantee is implied.
-- **Trusted maintenance:** use `python scripts/render_service.py preflight --production` after provisioning. The `backup` mode forwards to the existing backup CLI with the same storage settings; plan a coordinated maintenance backup before claiming cross-database consistency.
+1. Deploy `main` from the repository root with `Dockerfile.backend`, Docker
+   runtime, **Free** compute, one instance and no disk.
+2. Set `NAGARFLOW_STORAGE_DIR=/tmp/nagarflow`, `NAGARFLOW_ENV=production`,
+   `NAGARFLOW_REQUIRE_ADMIN_MFA=true` and the private initial-account settings.
+3. Set `NAGARFLOW_TRUSTED_ORIGINS` to the exact production frontend origin
+   `https://nagarflow.netlify.app`. Add only actual HTTPS custom domains you use.
+4. Wait for the assigned Render origin's `/api/health` to return
+   `{"status":"ok"}`. Set that actual origin as Netlify's build-time
+   `NAGARFLOW_BACKEND_URL`; see [NETLIFY.md](NETLIFY.md).
+5. Verify secure sessions, CSRF and role enforcement through the live Netlify
+   proxy. Provider delivery requires separately configured credentials/gateway
+   validation; a healthy API does not certify external integrations.
 
-Health check: `https://YOUR_RENDER_HOST/api/health`. A healthy response verifies the proxied API and local storage. Verify real provider delivery separately after credentials are configured.
+The original `Dockerfile` and `serve` launcher remain available for a complete
+Next/API/worker container. This free deployment uses `serve-api`, which runs only
+Flask and its worker and does not build or run Node on Render.
 
-## Local container verification
+## Verification
 
-```bash
-docker build -t nagarflow-render .
-docker volume create nagarflow-data
-docker run --rm --name nagarflow -p 10000:10000 \
-  --mount source=nagarflow-data,target=/var/data \
-  -e RENDER_EXTERNAL_URL=https://your-app.onrender.com \
-  nagarflow-render
-```
-
-The example HTTPS origin is for configuration testing; it does not create a public URL. Secure-cookie browser sign-in needs the corresponding HTTPS host. Mount the same volume when replacing the container. Never embed local databases, uploaded media, credentials or `.env` files in the image.
-
-Deployment status is separate from repository readiness: a Blueprint in GitHub does not create a Render service until it is connected and applied in your Render account.
-
-## Verification record
-
-The local production image was verified with a real browser render, static assets, proxied API, private administrator provisioning, secure session cookies and authenticator enrollment. A signed complaint was processed by the co-located worker. Container restart preserved the administrator, MFA host key, complaint and delivery deduplication. Production preflight passed. Backend checks:107; browser checks:21. These checks do not assert that a live Render resource has been created.
+`tests/test_initial_admin.py` covers absent/invalid provisioning configuration,
+hash-only account creation, no overwrite of existing stores, recreation after a
+fresh ephemeral store, backend-only commands, and real Linux startup. Existing
+Render supervisor tests cover process cleanup and signal forwarding. Deployment
+configuration and local tests do not themselves establish a live deployment or
+durable storage.

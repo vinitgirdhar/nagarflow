@@ -1,4 +1,4 @@
-"""Run the complete application on one Render service and one private disk.
+"""Run the application, or its API and worker, on one Render service.
 
 This module deliberately imports no application code. Storage permissions and
 the unprivileged identity are established before migrations or app imports.
@@ -202,24 +202,28 @@ def supervise(commands, environment: dict[str, str], *, cwd: Path = ROOT, grace_
             signal.signal(signum, handler)
 
 
-def service_commands():
-    return [
-        ('api', [sys.executable, '-m', 'gunicorn', '--bind', '127.0.0.1:5000',
+def service_commands(environment=None, *, api_only=False):
+    environment = os.environ if environment is None else environment
+    bind = '0.0.0.0:' + environment['PORT'] if api_only else '127.0.0.1:5000'
+    commands = [
+        ('api', [sys.executable, '-m', 'gunicorn', '--bind', bind,
                  '--workers', '1', '--worker-class', 'gthread', '--threads', '4',
                  '--timeout', '60', '--no-control-socket', '--error-logfile', '-', '--access-logfile', os.devnull, 'app:app']),
         ('worker', [sys.executable, 'scripts/run_worker.py']),
-        ('web', ['node', '/app/web/server.js']),
     ]
+    if not api_only:
+        commands.append(('web', ['node', '/app/web/server.js']))
+    return commands
 
 
 def main(arguments=None) -> int:
     arguments = list(sys.argv[1:] if arguments is None else arguments)
     mode = arguments.pop(0) if arguments else 'serve'
     forwards = {'manage-users': 'scripts/manage_users.py', 'preflight': 'scripts/preflight.py', 'backup': 'scripts/backup.py'}
-    if mode != 'serve' and mode not in forwards:
-        print('Usage: render_service.py [serve|manage-users|preflight|backup] [arguments]', file=sys.stderr)
+    if mode not in ('serve', 'serve-api') and mode not in forwards:
+        print('Usage: render_service.py [serve|serve-api|manage-users|preflight|backup] [arguments]', file=sys.stderr)
         return 2
-    if mode == 'serve' and arguments:
+    if mode in ('serve', 'serve-api') and arguments:
         print('The serve command accepts no arguments.', file=sys.stderr)
         return 2
     try:
@@ -234,7 +238,20 @@ def main(arguments=None) -> int:
     result = subprocess.run([sys.executable, 'scripts/prepare_dev.py'], env=environment, check=False)
     if result.returncode:
         return 1
-    return supervise(service_commands(), environment)
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from scripts.initial_admin import provision_initial_admin
+    try:
+        if provision_initial_admin(environment):
+            print('[render] Initial administrator provisioned; password change is required at first sign-in.', flush=True)
+    except (ValueError, OSError) as error:
+        print('[render] Initial administrator configuration failed: ' + str(error), file=sys.stderr)
+        return 2
+    # API and worker children do not need the trusted provisioning configuration.
+    for key in ('NAGARFLOW_INITIAL_ADMIN_PASSWORD_HASH', 'NAGARFLOW_INITIAL_ADMIN_EMAIL', 'NAGARFLOW_INITIAL_ADMIN_NAME'):
+        environment.pop(key, None)
+        os.environ.pop(key, None)
+    return supervise(service_commands(environment, api_only=mode == 'serve-api'), environment)
 
 
 if __name__ == '__main__':

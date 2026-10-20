@@ -1,14 +1,14 @@
 # Deploy with Netlify and Render
 
-Netlify serves the Next.js frontend. The existing [Render service](RENDER.md) runs the API and complaint worker with persistent SQLite databases, uploaded evidence and the MFA host key. Keep that service and its disk together; Netlify Functions do not replace this persistent backend.
+Netlify serves the Next.js frontend. The [free Render service](RENDER.md) runs the Flask API and complaint worker. SQLite databases, uploaded evidence and the MFA host key are local ephemeral files: they can reset whenever Render sleeps, restarts or redeploys.
 
-The Render service also retains its own frontend. Netlify forwards `/api/*` and `/uploads/*` through that service to the private API, so browser requests stay on the Netlify origin.
+Netlify forwards `/api/*` and `/uploads/*` directly to the Python backend, so browser requests stay on the Netlify origin. Render does not build or run a second frontend in this setup.
 
 This repository prepares both connections. No live Netlify or Render service has been verified for this setup yet.
 
 ## Connect the services
 
-1. Deploy the root `render.yaml` using [the Render guide](RENDER.md). It uses a paid Starter service and a 1 GB persistent disk; review Render's current charges. Wait for `https://YOUR_RENDER_HOST/api/health` to return `{"status":"ok"}`.
+1. Deploy the root `render.yaml` using [the Render guide](RENDER.md). It uses a Free Python Docker service without a disk. Wait for `https://YOUR_RENDER_HOST/api/health` to return `{"status":"ok"}`.
 2. In Netlify, import `vinitgirdhar/nagarflow` from GitHub and select the **main** production branch. Use the repository-root `netlify.toml`: base `nagarflow-next`, build `npm run build`, publish `.next`, Node.js 22. Keep Netlify's Next.js runtime enabled.
 3. Before building, set this Netlify environment variable with build availability:
 
@@ -30,13 +30,7 @@ Keep provider keys and the signed-intake secret in Render, where the Python serv
 
 ## Create the administrator
 
-Open the Render service's **Shell** and run:
-
-```bash
-python scripts/render_service.py manage-users create --email YOUR_EMAIL --name 'Municipality administrator'
-```
-
-Replace `YOUR_EMAIL`. The command privately prompts for a temporary passphrase; no default account exists. Sign in through the Netlify URL, change the passphrase, then enroll an authenticator and save recovery codes privately. Do not seed demo records into production. See [RENDER.md](RENDER.md) for disk layout, maintenance and backups.
+Render Free has no server shell. Follow the private, hash-only initial-account configuration in [RENDER.md](RENDER.md). Startup creates the administrator only when the account store is empty. Sign in through Netlify, change the temporary passphrase and enroll your own authenticator. Do not seed demo records. Free-plan filesystem resets recreate only the initial account and require password change and MFA enrollment again; they do not restore operational data.
 
 ## Verify the live connection
 
@@ -46,7 +40,7 @@ Before inviting users, check the actual deployed HTTPS hosts:
 - Sign-in, required passphrase change, MFA and sign-out work. The proxied session cookie retains `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/` and no `Domain` attribute. Session and private API responses retain `Cache-Control: no-store`.
 - An authorized write succeeds with its CSRF token. A missing token or untrusted `Origin` is rejected. Keep browser requests same-origin; do not replace the proxy with direct cross-origin API calls.
 - A worker uploads task evidence, an authorized supervisor views it and approves the work. Signed intake retains its original request body through the proxy and the worker processes the delivery once.
-- A Render restart preserves accounts, MFA enrollment, complaints and evidence. Run `python scripts/render_service.py preflight --production` and follow the coordinated backup/restore checks in [DEPLOYMENT.md](DEPLOYMENT.md).
+- A Free Render restart can reset accounts, MFA enrollment, complaints and evidence. Verify that the initial account is recreated after a fresh store and do not claim restart persistence. The durable-storage backup/restore runbook in [DEPLOYMENT.md](DEPLOYMENT.md) describes a separate deployment requirement, not a capability of this free instance.
 
 Local builds, browser tests and container persistence checks do not establish that Netlify's live proxy, HTTPS cookies or external providers have been verified. Record those results after the services are connected.
 

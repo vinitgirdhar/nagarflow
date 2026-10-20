@@ -2,6 +2,8 @@
 .github
 .agents
 .codex
+.claude
+**/.netlify
 .aws
 venv
 env
