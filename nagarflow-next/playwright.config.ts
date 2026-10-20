@@ -4,6 +4,9 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: "http://127.0.0.1:3002",
+    // Functional journeys should not click moving controls. Motion specs opt
+    // back into animation explicitly and verify that behavior separately.
+    reducedMotion: "reduce",
     launchOptions: {
       executablePath: process.env.CHROMIUM_PATH || (process.env.CI || process.platform === "win32" ? undefined : "/usr/bin/chromium"),
       args: ["--no-sandbox"],

@@ -67,7 +67,7 @@ test('workspace panels enter once and stay usable when motion is reduced', async
   await page.getByLabel('Question',{exact:true}).fill('The field remains usable');
   await page.setViewportSize({width:390,height:844});
   await expect(page.getByLabel('Question',{exact:true})).toBeInViewport();
-  expect(await page.locator('#main-content').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(388);
+  await expect.poll(() => page.locator('#main-content').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(388);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await expect(page.getByLabel('Document title',{exact:true})).not.toBeVisible();
   await page.screenshot({path:'/tmp/nagarflow-simple-knowledge-mobile.png',fullPage:true});
