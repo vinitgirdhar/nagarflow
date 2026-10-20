@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page} from './fixtures';
 async function login(page:Page,email='admin@example.test'){await page.goto('/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill('Synthetic browser passphrase!');await page.getByRole('button',{name:'Sign in',exact:true}).click();}
 
 test('approved retrieval cites evidence and withdrawal removes it',async({page})=>{

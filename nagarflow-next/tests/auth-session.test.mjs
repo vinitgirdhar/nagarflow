@@ -1,6 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+test('a temporary cold-start gateway response recovers without a manual refresh', async () => {
+  const api = await import('../app/lib/api.ts?wakeup');
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => ++calls === 1
+    ? new Response('Server waking up', {status:503})
+    : Response.json({csrf_token:'awake',user:null});
+  try {
+    assert.equal((await api.session()).csrf_token, 'awake');
+    assert.equal(calls, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('concurrent session readers share one anonymous cookie challenge', async () => {
   const api = await import('../app/lib/api.ts?coalesce');
   const originalFetch = globalThis.fetch;

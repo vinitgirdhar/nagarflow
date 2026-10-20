@@ -1,6 +1,7 @@
 'use client';
 import { apiFetch } from '../lib/api';
 import { htmlText } from '../lib/html';
+import { OPENSTREETMAP_TILE_URL, OPENSTREETMAP_OPTIONS } from '../lib/map-tiles';
 import { acceptDispatch } from '../lib/dispatch';
 import ActiveDispatches from '../components/ActiveDispatches';
 import FleetRegistration from '../components/FleetRegistration';
@@ -223,10 +224,7 @@ export default function DispatchPage() {
       try {
         setMapUnavailable(false);
         mapInstanceRef.current = L.map(mapRef.current, { zoomControl: false }).setView([19.076, 72.8777], 12);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OSM &copy; CARTO',
-          maxZoom: 18,
-        }).addTo(mapInstanceRef.current);
+        L.tileLayer(OPENSTREETMAP_TILE_URL, OPENSTREETMAP_OPTIONS).addTo(mapInstanceRef.current);
         layerGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
       } catch (e) {
         console.warn("NagarFlow Map Sync Error:", e);

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('compact landing keeps city motion, useful previews and reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
