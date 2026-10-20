@@ -24,6 +24,10 @@ services:
       - key: NAGARFLOW_INITIAL_ADMIN_PASSWORD_HASH
         sync: false
       - key: NAGARFLOW_REQUIRE_ADMIN_MFA
+        value: "false"
+      - key: NAGARFLOW_MFA_ENABLED
+        value: "false"
+      - key: NAGARFLOW_DEMO_ENABLED
         value: "true"
       - key: NAGARFLOW_WEBHOOK_SECRET
         generateValue: true

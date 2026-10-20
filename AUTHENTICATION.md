@@ -2,6 +2,34 @@
 
 This milestone replaces the browser role picker with real accounts. The Flask API enforces permissions on every protected request. The frontend uses the same origin through Next.js rewrites; it no longer substitutes demo responses when the backend is unavailable.
 
+## Public prototype access
+
+The deployed prototype has authenticator setup and second-factor prompts disabled
+with `NAGARFLOW_MFA_ENABLED=false` and `NAGARFLOW_REQUIRE_ADMIN_MFA=false`.
+Password sessions, CSRF protection and municipality permissions remain active.
+Previously enrolled accounts can sign in with their password alone while MFA is disabled.
+
+`NAGARFLOW_DEMO_ENABLED=true` explicitly enables the public sample account:
+
+- Email: `demo@nagarflow.app`
+- Password: `NagarFlow Demo 2026!`
+
+These intentionally public credentials appear on `/login`, alongside a button to
+fill the form. Trusted startup provisions the `prototype-demo` municipality,
+separate from the owner's `default` records, with a few explicitly synthetic
+complaints, vehicles and a work order. No model accuracy/outcome records are
+invented. Demo sign-in does not require password change or MFA. Changes to sample
+operational records are shared between visitors; notices ask them not to enter
+personal information. Account creation/changes, credential changes, MFA and
+external voice/LLM calls are denied for the public account. Signing out still works.
+
+The demo is opt-in; disabling its setting revokes access on the next request.
+Repeat startup preserves existing owner and sample records. Render Free may reset
+both stores; startup recreates the private initial owner and public sample account.
+The remaining owner/provisioning instructions below describe private accounts,
+not the published sample password. Optional MFA code is retained for deployments
+that explicitly enable `NAGARFLOW_MFA_ENABLED=true`.
+
 ## Run locally
 
 ```bash
@@ -11,7 +39,7 @@ venv/bin/python scripts/manage_users.py create --email administrator@your-munici
 NAGARFLOW_COOKIE_SECURE=false venv/bin/python app.py
 ```
 
-The provisioning command prompts privately for a temporary passphrase and confirmation. No default accounts or passwords exist. Change the temporary password at first sign-in. Use an address belonging to your actual administrator. Never paste credentials into chat or put passwords in command-line arguments. Automation may pass a password through protected standard input with `--password-stdin`.
+The provisioning command prompts privately for a temporary passphrase and confirmation. Private owner accounts have no default passwords. Change the temporary password at first sign-in. Use an address belonging to your actual administrator. Never paste private credentials into chat or put passwords in command-line arguments. Automation may pass a password through protected standard input with `--password-stdin`.
 
 In a second terminal:
 
@@ -89,6 +117,6 @@ Browser tests start isolated services on ports 5002/3002 with temporary database
 
 Authenticator MFA, durable ingestion and evaluated retrieval/forecasting are implemented; see OPERATIONS.md and EVALUATION.md for scope and limits. Federated identity, email invitations and public password recovery remain unimplemented. Password recovery requires a trusted administrator or host operator. No production certification is implied.
 
-## Authenticator MFA
+## Optional authenticator MFA (disabled in the prototype)
 
-Enroll at `/account` with password reauthentication, then confirm a current TOTP code. Save the eight recovery codes privately; each works once. Production requires administrator enrollment by default. The private control-database `.mfa-key` companion must be backed up with the database. Missing keys never silently regenerate for enabled accounts. Host recovery uses `scripts/manage_users.py reset-mfa --email ...`; it revokes sessions and is audited.
+Only deployments explicitly setting `NAGARFLOW_MFA_ENABLED=true` expose enrollment at `/account` and second-factor sign-in. They can additionally enforce administrator enrollment with `NAGARFLOW_REQUIRE_ADMIN_MFA=true`. Enrollment uses password reauthentication and a current TOTP code. The eight recovery codes each work once. The private control-database `.mfa-key` companion must be backed up with the database in such deployments. Missing keys never silently regenerate for enabled accounts. Host recovery uses `scripts/manage_users.py reset-mfa --email ...`; it revokes sessions and is audited. None of these prompts appear in the deployed prototype.

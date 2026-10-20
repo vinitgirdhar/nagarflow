@@ -1,19 +1,23 @@
 let csrf = "";
-export async function session() {
-  const response = await fetch("/api/auth/session", {
-    cache: "no-store",
-    credentials: "same-origin",
-  });
-  if (!response.ok)
-    throw new Error("Cannot connect to sign-in service. Please retry.");
+let pendingSession: Promise<Awaited<ReturnType<typeof readSession>>> | null = null;
+async function readSession() {
+  const response = await fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" });
+  if (!response.ok) throw new Error("Cannot connect to sign-in service. Please retry.");
   const data = await response.json();
   csrf = data.csrf_token;
   return data;
+}
+export function session() {
+  // The boundary and login form both read sessions. One response must own the
+  // anonymous cookie challenge, otherwise their tokens can overwrite each other.
+  if (!pendingSession) pendingSession = readSession().finally(() => { pendingSession = null; });
+  return pendingSession;
 }
 export async function apiFetch(
   input: RequestInfo | URL,
   init: RequestInit = {},
 ) {
+  if (pendingSession) await pendingSession;
   if (!csrf) await session();
   const headers = new Headers(init.headers);
   if (

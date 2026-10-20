@@ -7,7 +7,7 @@ from auth_service import auth_connection
 from mfa import totp
 
 class MfaTest(unittest.TestCase):
-    def setUp(self):self.client=m.app.test_client();authenticate(self);self.mfa_time=(int(__import__('time').time())//30)*30
+    def setUp(self):self.client=m.app.test_client();authenticate(self);m.app.config['AUTH_MFA_ENABLED']=True;self.mfa_time=(int(__import__('time').time())//30)*30
     def enroll(self):
         r=self.client.post('/api/auth/mfa/enroll',json={'current_password':PASSWORD});self.assertEqual(r.status_code,200,r.json);secret=r.json['secret']
         with patch('auth_service.now',return_value=self.mfa_time):

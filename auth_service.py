@@ -14,6 +14,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database import DEFAULT_DB_PATH, MUNICIPALITY_ID, data_path
+from prototype_access import DEMO_MUNICIPALITY, DEMO_BLOCKED_ENDPOINTS, public_details
 
 auth = Blueprint('auth', __name__, url_prefix='/api/auth')
 ROLES = {'admin', 'maintenance', 'worker'}
@@ -133,7 +134,8 @@ def _load_session():
         if not row:
             return None
         expired = row['expires_at'] <= now() or row['last_seen'] + current_app.config['AUTH_IDLE_TTL'] <= now()
-        disabled = row['user_id'] and (not row['user_active'] or not row['municipality_active'])
+        disabled = row['user_id'] and (not row['user_active'] or not row['municipality_active'] or
+            (row['municipality_id'] == DEMO_MUNICIPALITY and not current_app.config.get('AUTH_DEMO_ENABLED')))
         if expired or disabled:
             conn.execute('DELETE FROM auth_sessions WHERE token_hash=?', (row['token_hash'],))
             return None
@@ -143,8 +145,14 @@ def _load_session():
 
 
 def _public_user(row):
+    demo = row['municipality_id'] == DEMO_MUNICIPALITY
+    mfa_available = bool(current_app.config.get('AUTH_MFA_ENABLED') and not demo)
+    mfa_policy = bool(mfa_available and current_app.config.get('AUTH_REQUIRE_ADMIN_MFA') and row['role'] == 'admin')
     return {key: row[key] for key in ('id', 'email', 'display_name', 'role', 'team_id', 'municipality_id', 'municipality_name')} | {
-        'mfa_policy_required': bool(current_app.config.get('AUTH_REQUIRE_ADMIN_MFA') and row['role']=='admin'), 'mfa_required': bool(current_app.config.get('AUTH_REQUIRE_ADMIN_MFA') and row['role']=='admin' and not row.get('mfa_enabled',0)), 'mfa_enabled': bool(row.get('mfa_enabled',0)), 'must_change_password': bool(row['must_change_password']), 'active': bool(row.get('user_active', row.get('active', 1)))}
+        'demo': demo, 'mfa_available': mfa_available,
+        'mfa_policy_required': mfa_policy, 'mfa_required': bool(mfa_policy and not row.get('mfa_enabled', 0)),
+        'mfa_enabled': bool(mfa_available and row.get('mfa_enabled', 0)),
+        'must_change_password': bool(row['must_change_password']), 'active': bool(row.get('user_active', row.get('active', 1)))}
 
 
 def _new_session(conn, user_id=None):
@@ -242,9 +250,10 @@ def create_user(email, display_name, password, role, municipality_id='default', 
 
 @auth.get('/session')
 def session_info():
+    options = {'mfa_available': bool(current_app.config.get('AUTH_MFA_ENABLED')), 'demo': public_details(current_app)}
     session = _load_session()
     if session:
-        return jsonify({'authenticated': bool(session['user_id']),
+        return jsonify({**options, 'authenticated': bool(session['user_id']),
                         'user': _public_user(session) if session['user_id'] else None,
                         'csrf_token': _csrf(session['raw_token']), 'expires_at': session['expires_at']})
     with auth_connection() as conn:
@@ -254,7 +263,7 @@ def session_info():
             return jsonify({'error': 'Too many requests. Try again shortly.'}), 429, {'Retry-After': str(retry)}
         token, ttl = _new_session(conn)
         setup_required = conn.execute('SELECT COUNT(*) FROM auth_users').fetchone()[0] == 0
-    return _set_cookie(jsonify({'authenticated': False, 'user': None, 'csrf_token': _csrf(token),
+    return _set_cookie(jsonify({**options, 'authenticated': False, 'user': None, 'csrf_token': _csrf(token),
                                'setup_required': setup_required, 'expires_at': now()+ttl}), token, ttl)
 
 
@@ -280,7 +289,8 @@ def sign_in():
             return jsonify({'error': 'Too many sign-in attempts. Try again later.', 'code': 'rate_limited'}), 429, {'Retry-After': str(retry)}
         user = conn.execute('SELECT u.*, m.name AS municipality_name,m.active AS municipality_active FROM auth_users u JOIN municipalities m ON m.id=u.municipality_id WHERE email=?', (email,)).fetchone()
     valid = check_password_hash(user['password_hash'] if user else DUMMY_HASH, password)
-    if not valid or not user or not user['active'] or not user['municipality_active']:
+    if not valid or not user or not user['active'] or not user['municipality_active'] or (
+            user['municipality_id'] == DEMO_MUNICIPALITY and not current_app.config.get('AUTH_DEMO_ENABLED')):
         with auth_connection() as conn:
             audit(conn, 'login_failed', target=user['id'] if user else None, municipality=user['municipality_id'] if user else None)
         return jsonify({'error': 'Invalid email or password.'}), 401
@@ -289,7 +299,7 @@ def sign_in():
         current = conn.execute('SELECT u.*,m.name AS municipality_name,m.active AS municipality_active FROM auth_users u JOIN municipalities m ON m.id=u.municipality_id WHERE u.id=?', (user['id'],)).fetchone()
         if not current['active'] or not current['municipality_active'] or current['password_hash'] != user['password_hash']:
             return jsonify({'error': 'Invalid email or password.'}), 401
-        if current['mfa_enabled']:
+        if current_app.config.get('AUTH_MFA_ENABLED') and current['mfa_enabled'] and current['municipality_id'] != DEMO_MUNICIPALITY:
             from mfa import verify
             if not verify(conn,current,payload.get('otp',''),now()):
                 audit(conn,'mfa_login_failed',actor=current['id'],municipality=current['municipality_id'])
@@ -533,6 +543,8 @@ def install_auth(app):
         AUTH_COOKIE_SECURE=production or os.getenv('NAGARFLOW_COOKIE_SECURE', 'true') != 'false',
         AUTH_TRUSTED_ORIGINS={origin.strip() for origin in (origins or 'http://localhost:3000,http://127.0.0.1:3000').split(',') if origin.strip()},
         AUTH_REQUIRE_ADMIN_MFA=os.getenv('NAGARFLOW_REQUIRE_ADMIN_MFA','true' if production else 'false')=='true',
+        AUTH_MFA_ENABLED=os.getenv('NAGARFLOW_MFA_ENABLED', 'false') == 'true',
+        AUTH_DEMO_ENABLED=os.getenv('NAGARFLOW_DEMO_ENABLED', 'false') == 'true',
         AUTH_SESSION_TTL=8*3600, AUTH_IDLE_TTL=1800,
         WEBHOOK_MUNICIPALITY=os.getenv('NAGARFLOW_WEBHOOK_MUNICIPALITY', 'default'),
     )
@@ -560,8 +572,13 @@ def install_auth(app):
                 return jsonify({'error': 'A valid JSON object is required.'}), 400
         if g.user['must_change_password'] and request.endpoint!='auth.change_password':
             return jsonify({'error': 'Change your temporary password before continuing.', 'code': 'password_change_required'}), 403
-        if current_app.config.get('AUTH_REQUIRE_ADMIN_MFA') and g.user['role']=='admin' and not g.user['mfa_enabled'] and request.endpoint not in {'auth.change_password','auth.mfa_enroll','auth.mfa_confirm'}:
+        if g.user['mfa_required'] and request.endpoint not in {'auth.change_password','auth.mfa_enroll','auth.mfa_confirm'}:
             return jsonify({'error':'Set up an authenticator before accessing this workspace.','code':'mfa_enrollment_required'}),403
+        if request.endpoint in {'auth.mfa_enroll','auth.mfa_confirm','auth.mfa_disable'} and not current_app.config.get('AUTH_MFA_ENABLED'):
+            return jsonify({'error': 'Authenticator setup is unavailable for this prototype.'}), 404
+        if g.user['demo'] and (request.endpoint in DEMO_BLOCKED_ENDPOINTS or
+                (request.endpoint == 'auth.accounts' and request.method != 'GET')):
+            return jsonify({'error': 'This shared demo does not change account credentials or contact external providers.', 'code': 'demo_restricted'}), 403
         if request.endpoint in {'auth.change_password','auth.mfa_enroll','auth.mfa_confirm','auth.mfa_disable'}:
             return None
         allowed = set()

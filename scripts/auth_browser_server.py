@@ -10,7 +10,7 @@ from auth_service import create_user
 from schema import initialize_database
 with tempfile.TemporaryDirectory(prefix='nagarflow-browser-') as directory:
     root=Path(directory);db=root/'data.db';initialize_database(db)
-    app.config.update(AUTH_DB_PATH=str(root/'auth.db'),DATA_DB_PATH=str(db),TENANT_DATA_DIR=str(root/'tenants'),AUTH_COOKIE_SECURE=False,AUTH_TRUSTED_ORIGINS={'http://127.0.0.1:3002'})
+    app.config.update(AUTH_DB_PATH=str(root/'auth.db'),DATA_DB_PATH=str(db),TENANT_DATA_DIR=str(root/'tenants'),AUTH_COOKIE_SECURE=False,AUTH_TRUSTED_ORIGINS={'http://127.0.0.1:3002'},AUTH_MFA_ENABLED=False,AUTH_DEMO_ENABLED=True)
     with sqlite3.connect(db) as conn:
         conn.execute("INSERT INTO teams VALUES ('test-team','Test team',2,'Garbage','Idle',NULL)")
         conn.execute("INSERT INTO maintenance_tasks (id,zone,type,priority,status,assigned_team_id) VALUES ('test-task','Dharavi','Garbage','High','ON GROUND','test-team')")
@@ -29,4 +29,6 @@ with tempfile.TemporaryDirectory(prefix='nagarflow-browser-') as directory:
         create_user('security@example.test','Security tester','Synthetic browser passphrase!','admin',must_change_password=False)
         create_user('flow@example.test','Flow worker','Synthetic browser passphrase!','worker',team_id='flow-team',must_change_password=False)
         create_user('temporary@example.test','New operator','Synthetic browser passphrase!','maintenance')
+    from prototype_access import provision
+    provision(app)
     app.run(host='127.0.0.1',port=5002,debug=False,use_reloader=False)

@@ -25,6 +25,8 @@ jobs:
       - run: venv/bin/python scripts/evaluate_intelligence.py
       - run: npm run test:deployment
         working-directory: nagarflow-next
+      - run: npm run test:auth
+        working-directory: nagarflow-next
       - run: npm run build
         working-directory: nagarflow-next
       - run: npx playwright install --with-deps chromium

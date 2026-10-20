@@ -42,7 +42,8 @@ export default function Account() {
         <p>
           {user?.display_name} · {user?.email}
         </p>
-        <details open={user?.must_change_password || undefined} style={{ margin: "20px 0" }}>
+        {user?.demo && <p>This is a public prototype account. Its shared credentials stay the same for every visitor.</p>}
+        {!user?.demo && <details open={user?.must_change_password || undefined} style={{ margin: "20px 0" }}>
         <summary>Update your password</summary>
         <p>
           {user?.must_change_password
@@ -91,8 +92,8 @@ export default function Account() {
             {busy ? "Saving…" : "Change password"}
           </button>
         </form>
-        </details>
-        {!user?.must_change_password && <MfaSettings initialEnabled={user?.mfa_enabled || false} policyRequired={user?.mfa_policy_required || false} />}
+        </details>}
+        {!user?.must_change_password && user?.mfa_available && <MfaSettings initialEnabled={user?.mfa_enabled || false} policyRequired={user?.mfa_policy_required || false} />}
         {!user?.must_change_password && !user?.mfa_required && (
           <Link href={home(user?.role || "")}>Back to workspace</Link>
         )}

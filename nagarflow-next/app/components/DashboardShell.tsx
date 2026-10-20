@@ -101,7 +101,7 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
 
   const roleLabel = role === 'worker' ? 'Field Worker' : role.charAt(0).toUpperCase() + role.slice(1);
   const initials = role.charAt(0).toUpperCase();
-  const linksToShow = role === 'admin' ? ADMIN_LINKS : role === 'worker' ? WORKER_LINKS : MAINTENANCE_LINKS;
+  const linksToShow = role === 'admin' ? ADMIN_LINKS.filter(item => !user?.demo || item.href !== '/complaint-simulator') : role === 'worker' ? WORKER_LINKS : MAINTENANCE_LINKS;
 
   return (
     <div className={`app ${isCollapsed ? 'collapsed' : ''}`}>
@@ -237,6 +237,9 @@ export default function DashboardShell({ title, badges, children }: SidebarProps
         </header>
 
         <div className="content">
+          {user?.demo && <aside className="prototype-notice" aria-label="Prototype workspace notice">
+            <strong>Shared prototype.</strong> These are sample records. Changes are visible to other visitors and may reset. Please don’t enter personal information.
+          </aside>}
           <PageTransition>
             {children}
           </PageTransition>

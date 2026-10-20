@@ -44,12 +44,14 @@ passphrase in source, build commands, environment variables, logs or chat.
 
 Startup provisions exactly one administrator only when the entire account store
 is empty. Existing accounts are never overwritten. Sign in through Netlify,
-change the temporary passphrase, and enroll your own authenticator. No public
-account-creation endpoint or shared default password exists.
+change the temporary passphrase. The prototype disables authenticator setup and
+second-factor prompts. The separately scoped public demo described in
+[AUTHENTICATION.md](AUTHENTICATION.md) publishes only sample-account credentials.
 
 After a filesystem reset, startup recreates only this initial account with its
-original temporary passphrase. Password change and authenticator enrollment must
-be repeated; other accounts and operational data are not restored. Keep the
+original temporary passphrase. The owner must change that password again; the
+public demo account and its synthetic sample records are recreated separately.
+Other accounts and operational data are not restored. Keep the
 initial passphrase private and rotate its configured hash if compromised.
 
 ## Launch settings
@@ -57,7 +59,8 @@ initial passphrase private and rotate its configured hash if compromised.
 1. Deploy `main` from the repository root with `Dockerfile.backend`, Docker
    runtime, **Free** compute, one instance and no disk.
 2. Set `NAGARFLOW_STORAGE_DIR=/tmp/nagarflow`, `NAGARFLOW_ENV=production`,
-   `NAGARFLOW_REQUIRE_ADMIN_MFA=true` and the private initial-account settings.
+   `NAGARFLOW_REQUIRE_ADMIN_MFA=false`, `NAGARFLOW_MFA_ENABLED=false`,
+   `NAGARFLOW_DEMO_ENABLED=true` and the private initial-account settings.
 3. Set `NAGARFLOW_TRUSTED_ORIGINS` to the exact production frontend origin
    `https://nagarflow.netlify.app`. Add only actual HTTPS custom domains you use.
 4. Wait for the assigned Render origin's `/api/health` to return

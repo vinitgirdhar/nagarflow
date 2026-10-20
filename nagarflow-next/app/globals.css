@@ -652,6 +652,15 @@ input[type="range"]::-webkit-slider-thumb {
 .auth-card form, .account-form { display: grid; gap: 1rem; }
 .auth-card label, .account-form label { display: grid; gap: .5rem; }
 .auth-card [role=alert] { color: #b42318; }
+.demo-credentials { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle); min-width: 0; }
+.demo-credentials h2 { font-size: 1.1rem; }
+.demo-credentials dl { display: grid; gap: .8rem; margin: 1rem 0; }
+.demo-credentials dt { font-size: .75rem; color: var(--secondary); margin-bottom: .3rem; }
+.demo-credentials dd { margin: 0; }
+.demo-credentials code { user-select: all; overflow-wrap: anywhere; font-size: .9rem; }
+.demo-credentials .btn { width: 100%; white-space: normal; }
+.auth-card .demo-note { color: var(--secondary); font-size: .8rem; margin-bottom: 0; }
+.prototype-notice { border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface); padding: 12px 16px; margin-bottom: 20px; color: var(--secondary); font-size: 13px; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 .product-home { background: var(--bg); color: var(--text-heading); min-height: 100vh; }

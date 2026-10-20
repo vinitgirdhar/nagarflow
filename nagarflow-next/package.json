@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:deployment": "node --experimental-strip-types --test tests/deployment-config.test.mjs",
+    "test:auth": "node --experimental-strip-types --test tests/auth-session.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {
