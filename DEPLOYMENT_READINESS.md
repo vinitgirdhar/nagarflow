@@ -3,6 +3,34 @@
 Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
 `02df58c2cc86cf4a27c2a199346a8e23fb3cc0aa`.
 
+## Prototype sign-in update on 20 October 2026
+
+Application commit `a4a92349866ac89abf7de5feb1425888455e7cb8` is live on both
+hosts. Render remains on Free compute without a persistent disk. Authenticator
+setup, enrollment requirements and second-factor sign-in are disabled for this
+prototype. The sign-in page publishes `demo@nagarflow.app` / `NagarFlow Demo 2026!`
+and provides a button to fill the form.
+
+The public account opens a separate `prototype-demo` municipality with explicitly
+synthetic sample records and no password-change prompt. It does not expose the
+private owner's municipality or credentials. Shared sample changes are visible to
+other visitors; account/credential changes and external voice/LLM calls are blocked.
+The page and workspace disclose the shared, disposable nature of this data.
+
+Live HTTPS checks passed through Render and Netlify for demo sign-in, dashboard
+access, absence of MFA/password onboarding, scoped account listings, secure
+host-only cookies, denied account changes, CSRF/Origin rejection and sign-out.
+The live browser displayed the credentials and no authenticator input. Linux CI
+passed 121 backend tests, 21 browser tests, five deployment configuration tests,
+two session-race regression tests and the production build. The new provisioning
+module has 100% statement coverage. All 21 browser tests also passed locally after
+fixing concurrent sign-in challenge requests. Production npm and Python dependency
+audits remain clear; the pre-existing five development-tooling npm advisories remain.
+
+Render deployment: `dep-dbbhqsdg1s2s7391ohdg`. Netlify published deployment:
+`6ad71d6bae4cc90f7e3119db`. No provider delivery, durable storage or backup/restore
+capability is claimed. The previous launch notes below are historical.
+
 ## Live verification on 20 October 2026
 
 - Frontend: <https://nagarflow.netlify.app>, with the native Next.js runtime and
@@ -16,8 +44,8 @@ Prepared on 20 October 2026 after fast-forwarding local `main` to GitHub commit
   sign-out, Secure/HttpOnly/SameSite=Lax host-only cookies, no-store responses,
   anonymous access denial, missing-CSRF rejection and untrusted-Origin rejection.
   The actual homepage and sign-in form loaded in the browser.
-- The owner must change the private temporary passphrase and enroll an
-  authenticator at first sign-in. No provider delivery or live task-evidence
+- At initial launch the owner had to change the private temporary passphrase and
+  enroll an authenticator; the prototype update above removes MFA. No provider delivery or live task-evidence
   workflow was exercised, and no operational data was seeded.
 - Free Render local files can reset on sleep/restart/redeploy. This verification
   does not establish data persistence or a production backup/restore procedure.
