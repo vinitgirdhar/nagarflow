@@ -117,6 +117,6 @@ Browser tests start isolated services on ports 5002/3002 with temporary database
 
 Authenticator MFA, durable ingestion and evaluated retrieval/forecasting are implemented; see OPERATIONS.md and EVALUATION.md for scope and limits. Federated identity, email invitations and public password recovery remain unimplemented. Password recovery requires a trusted administrator or host operator. No production certification is implied.
 
-## Authenticator MFA
+## Optional authenticator MFA (disabled in the prototype)
 
-Enroll at `/account` with password reauthentication, then confirm a current TOTP code. Save the eight recovery codes privately; each works once. Production requires administrator enrollment by default. The private control-database `.mfa-key` companion must be backed up with the database. Missing keys never silently regenerate for enabled accounts. Host recovery uses `scripts/manage_users.py reset-mfa --email ...`; it revokes sessions and is audited.
+Only deployments explicitly setting `NAGARFLOW_MFA_ENABLED=true` expose enrollment at `/account` and second-factor sign-in. They can additionally enforce administrator enrollment with `NAGARFLOW_REQUIRE_ADMIN_MFA=true`. Enrollment uses password reauthentication and a current TOTP code. The eight recovery codes each work once. The private control-database `.mfa-key` companion must be backed up with the database in such deployments. Missing keys never silently regenerate for enabled accounts. Host recovery uses `scripts/manage_users.py reset-mfa --email ...`; it revokes sessions and is audited. None of these prompts appear in the deployed prototype.
