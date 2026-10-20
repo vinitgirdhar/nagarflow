@@ -2,6 +2,7 @@
 import sqlite3
 import unittest
 import gc
+from pathlib import Path
 
 import app as m
 from auth_helpers import authenticate, PASSWORD
@@ -20,12 +21,12 @@ class PrototypeAccessTest(unittest.TestCase):
         from prototype_access import provision
         provision(m.app)
 
-    def login_demo(self):
+    def login_demo(self, email=None):
         from prototype_access import DEMO_EMAIL, DEMO_PASSWORD
         client = m.app.test_client()
         challenge = client.get('/api/auth/session').json
         response = client.post('/api/auth/login', json={
-            'email': DEMO_EMAIL, 'password': DEMO_PASSWORD,
+            'email': email or DEMO_EMAIL, 'password': DEMO_PASSWORD,
         }, headers={'X-CSRF-Token': challenge['csrf_token']})
         self.assertEqual(response.status_code, 200, response.json)
         client.environ_base['HTTP_X_CSRF_TOKEN'] = response.json['csrf_token']
@@ -74,7 +75,7 @@ class PrototypeAccessTest(unittest.TestCase):
         self.assertEqual(user['municipality_id'], 'prototype-demo')
         self.assertEqual(client.get('/api/dashboard').status_code, 200)
         accounts = client.get('/api/auth/users').json['users']
-        self.assertEqual(len(accounts), 1)
+        self.assertEqual(len(accounts), 3)
         self.assertNotEqual(accounts[0]['email'], 'test@example.test')
         # Normal operational writes remain usable, but only in the sample tenant.
         response = client.post('/api/fleet/vehicles', json={
@@ -112,8 +113,39 @@ class PrototypeAccessTest(unittest.TestCase):
         self.provision()
         with m.app.app_context(), auth_connection() as conn:
             self.assertEqual(original, dict(conn.execute("SELECT * FROM auth_users WHERE email='test@example.test'").fetchone()))
-            self.assertEqual(conn.execute('SELECT COUNT(*) FROM auth_users').fetchone()[0], 2)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM auth_users').fetchone()[0], 4)
         self.assertEqual(client.get('/api/dashboard').status_code, 200)
+
+    def test_each_public_role_uses_real_permissions_and_worker_has_sample_tasks(self):
+        self.provision()
+        details = self.client.get('/api/auth/session').json['demo']
+        self.assertEqual({account['role'] for account in details['accounts']}, {'admin', 'maintenance', 'worker'})
+        for account in details['accounts']:
+            client, user = self.login_demo(account['email'])
+            self.assertEqual(user['role'], account['role'])
+            self.assertFalse(user['must_change_password'])
+            self.assertFalse(user['mfa_required'])
+            if user['role'] == 'admin':
+                self.assertEqual(client.get('/api/dashboard').status_code, 200)
+            elif user['role'] == 'maintenance':
+                self.assertEqual(client.get('/api/maintenance/data').status_code, 200)
+                self.assertEqual(client.get('/api/dashboard').status_code, 403)
+            else:
+                tasks = client.get('/api/worker/tasks').json
+                self.assertGreater(len(tasks), 0)
+                self.assertTrue(all(task['assigned_team_id'] == user['team_id'] for task in tasks))
+                self.assertEqual(client.get('/api/auth/users').status_code, 403)
+
+    def test_sample_upgrade_is_repeatable_and_never_creates_fake_outcome_metrics(self):
+        self.provision()
+        path = Path(m.app.config['TENANT_DATA_DIR']) / 'prototype-demo' / 'nagarflow.db'
+        with sqlite3.connect(path) as conn:
+            self.assertGreaterEqual(conn.execute('SELECT COUNT(*) FROM predictions').fetchone()[0], 2)
+            self.assertEqual(conn.execute('SELECT COUNT(*) FROM prediction_outcomes').fetchone()[0], 0)
+            conn.execute("UPDATE maintenance_tasks SET worker_notes='Visitor note' WHERE id='sample-assigned-task'")
+        self.provision()
+        with sqlite3.connect(path) as conn:
+            self.assertEqual(conn.execute("SELECT worker_notes FROM maintenance_tasks WHERE id='sample-assigned-task'").fetchone()[0], 'Visitor note')
 
     def test_provisioning_refuses_an_existing_owner_email_or_reserved_tenant(self):
         from prototype_access import DEMO_EMAIL, provision
