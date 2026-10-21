@@ -45,7 +45,7 @@ next-env.d.ts
 
 # Local media and browser test artifacts
 uploads/
-static/uploads/
+backend/static/uploads/
 test-results/
 playwright-report/
 

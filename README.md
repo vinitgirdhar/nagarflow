@@ -93,11 +93,11 @@ Open the [prototype sign-in page](https://nagarflow.netlify.app/login). When pub
 
 Vehicle arrival records a visit; it does not approve a field task. The public sample is shared between visitors, so available records and assignments can change. Use disposable sample data for demonstrations.
 
-The public Field worker is tied to the sample field team. Use that team's assigned task for the evidence/approval steps, or provision a worker for the selected team when demonstrating a new report from start to finish. See [account and team provisioning](AUTHENTICATION.md).
+The public Field worker is tied to the sample field team. Use that team's assigned task for the evidence/approval steps, or provision a worker for the selected team when demonstrating a new report from start to finish. See [account and team provisioning](docs/AUTHENTICATION.md).
 
 ### Prototype status
 
-The hosted prototype uses **Netlify for Next.js and Render Free for Flask and the worker**. The free backend can sleep, and its local files can reset on sleep, restart or redeployment. Accounts, sample changes and uploaded evidence are not durable municipal records on this hosting configuration. See [hosting behavior](RENDER.md).
+The hosted prototype uses **Netlify for Next.js and Render Free for Flask and the worker**. The free backend can sleep, and its local files can reset on sleep, restart or redeployment. Accounts, sample changes and uploaded evidence are not durable municipal records on this hosting configuration. See [hosting behavior](docs/RENDER.md).
 
 The repository implements the workflows above. It does not establish municipal adoption, field-validated forecast accuracy, autonomous emergency response or live vehicle GPS tracking. Provider integrations require separate configuration and live validation. The public prototype disables MFA prompts; MFA remains an optional deployment capability.
 
@@ -146,7 +146,7 @@ OpenStreetMap attribution is preserved wherever maps appear. Live voice, languag
 git clone --branch main https://github.com/vinitgirdhar/nagarflow.git
 cd nagarflow
 bash scripts/setup_cloud.sh
-venv/bin/python scripts/manage_users.py create --email you@example.org --name 'Municipality administrator'
+venv/bin/python -m scripts.admin.manage_users create --email you@example.org --name 'Municipality administrator'
 ```
 
 Replace the example email with your administrator's address. The account command privately prompts for a temporary passphrase. Sign in and change it on first use. Private accounts have no default password.
@@ -154,7 +154,7 @@ Replace the example email with your administrator's address. The account command
 Start the backend from the repository root:
 
 ```bash
-NAGARFLOW_COOKIE_SECURE=false venv/bin/python app.py
+NAGARFLOW_COOKIE_SECURE=false venv/bin/python -m backend
 ```
 
 In a second terminal, from the repository root:
@@ -173,12 +173,12 @@ From a fresh clone's repository root:
 
 ```powershell
 py -3.12 -m venv venv
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe -m pip install -r backend/requirements.txt
 npm --prefix nagarflow-next ci
-.\venv\Scripts\python.exe scripts/prepare_dev.py
-.\venv\Scripts\python.exe scripts/manage_users.py create --email you@example.org --name "Municipality administrator"
+.\venv\Scripts\python.exe -m scripts.admin.prepare_dev
+.\venv\Scripts\python.exe -m scripts.admin.manage_users create --email you@example.org --name "Municipality administrator"
 $env:NAGARFLOW_COOKIE_SECURE="false"
-.\venv\Scripts\python.exe app.py
+.\venv\Scripts\python.exe -m backend
 ```
 
 In another PowerShell terminal, from the repository root:
@@ -192,7 +192,7 @@ npm run dev -- --hostname 127.0.0.1
 
 Check API readiness with `curl http://127.0.0.1:5000/api/health`; the ready response is `{"status":"ok"}`. Stop an older instance if its port is occupied. A server on a remote machine requires that machine's forwarded address rather than your own localhost.
 
-Setup migrates existing stores without automatically importing synthetic history. Follow [Authentication and workspace access](AUTHENTICATION.md) for sample-data and public-demo provisioning. Keep secrets, account stores, evidence, backups and MFA keys outside version control. `NAGARFLOW_COOKIE_SECURE=false` is for local HTTP; production requires secure cookies.
+Setup migrates existing stores without automatically importing synthetic history. Follow [Authentication and workspace access](docs/AUTHENTICATION.md) for sample-data and public-demo provisioning. Keep secrets, account stores, evidence, backups and MFA keys outside version control. `NAGARFLOW_COOKIE_SECURE=false` is for local HTTP; production requires secure cookies.
 
 ### Configuration
 
@@ -206,16 +206,16 @@ Setup migrates existing stores without automatically importing synthetic history
 | `NAGARFLOW_MFA_ENABLED`, `NAGARFLOW_REQUIRE_ADMIN_MFA` | Optional authenticator and administrator enrollment policy. |
 | `NAGARFLOW_WEBHOOK_SECRET` | Private shared secret for normalized, signed gateway intake. |
 
-See [Operations](OPERATIONS.md) and [Deployment](DEPLOYMENT.md) for provider settings, worker supervision and private storage. Credentials belong on the backend, never in frontend source or `NEXT_PUBLIC_*` variables.
+See [Operations](docs/OPERATIONS.md) and [Deployment](docs/DEPLOYMENT.md) for provider settings, worker supervision and private storage. Credentials belong on the backend, never in frontend source or `NEXT_PUBLIC_*` variables.
 
 ## Verification and evaluation
 
 From the repository root, using Bash/WSL:
 
 ```bash
-venv/bin/python -m unittest discover -s tests
-venv/bin/python scripts/evaluate_intelligence.py
-venv/bin/python scripts/preflight.py
+venv/bin/python -m unittest discover -s backend/tests -t .
+venv/bin/python -m scripts.evaluation.evaluate_intelligence
+venv/bin/python -m scripts.admin.preflight
 cd nagarflow-next
 npm run test:deployment
 npm run test:auth
@@ -226,33 +226,51 @@ CI=1 npm run test:e2e
 
 The [GitHub Actions workflow](.github/workflows/ci.yml) runs backend tests, intelligence evaluation, frontend configuration/auth checks, the production build and browser journeys. Tests use isolated synthetic fixtures. Check [Actions](https://github.com/vinitgirdhar/nagarflow/actions) for the result of the commit you are reviewing.
 
-**Interpreting intelligence results:** retrieval is extractive lexical search, not open-ended generative AI. Forecasts compare baselines and fitted regression using rolling-origin historical checks. Model selection and reported backtest errors are not independent holdout validation. Sparse or stale histories withhold forecasts, and residual ranges are not calibrated confidence intervals. [Evaluation methodology](EVALUATION.md) documents the synthetic fixtures and measured limits.
+**Interpreting intelligence results:** retrieval is extractive lexical search, not open-ended generative AI. Forecasts compare baselines and fitted regression using rolling-origin historical checks. Model selection and reported backtest errors are not independent holdout validation. Sparse or stale histories withhold forecasts, and residual ranges are not calibrated confidence intervals. [Evaluation methodology](docs/EVALUATION.md) documents the synthetic fixtures and measured limits.
 
 ## Repository guide
 
+See [Project structure](docs/PROJECT_STRUCTURE.md) for ownership boundaries and commands. Run Python entrypoints as modules from the repository root; runtime stores and credentials remain private and ignored.
+
 ```text
+backend/
+  api/                    Product API blueprint
+  auth/                   Sessions, roles, MFA and public prototype accounts
+  core/                   Storage, migrations, privacy, logs and backups
+  intake/                 Complaint parsing, locality matching and receipt worker
+  operations/             Fleet, assignments, work orders and reports
+  intelligence/           Forecasting, knowledge retrieval and priority scoring
+  integrations/           Agency, speech and weather providers
+  static/                 Backend-served assets
+  tests/                  Backend, CLI and deployment regression checks
+  app.py                  Flask application; start with python -m backend
+  requirements.txt        Python runtime dependencies
 nagarflow-next/
-  app/                    Pages, components and typed API helpers
-  public/media/           Product film, poster and English captions
-  tests/                  Frontend and browser checks
-app.py                    Flask routes and development entrypoint
-auth_service.py           Sessions, roles and account administration
-product_api.py            Complaint, knowledge, forecast and resource APIs
-ingestion.py, worker.py   Durable receipt intake and processing
-dispatch_service.py       Dispatch lifecycle and observation records
-workflows.py              Resource registration, work orders and what-if planning
-knowledge.py              Approved-document indexing and retrieval
-forecasting.py            Historical comparisons and two-day forecasts
-schema.py, database.py    Migrations and municipality-scoped storage
-scripts/                  Provisioning, evaluation, backups and launchers
-tests/                    Backend and integration checks
-docs/images/              Actual screenshots with sample records
+  app/                    Next.js pages, components and typed API helpers
+  public/media/           Web film, poster and English captions
+  e2e/                    Browser journeys
+  tests/                  Frontend configuration and authentication checks
+scripts/
+  admin/                  Accounts, migrations, readiness and backup commands
+  deployment/             Production supervisor and initial administrator setup
+  dev/                    Isolated browser fixtures and explicit sample seeders
+  diagnostics/            Manual inspection utilities
+  evaluation/             Reproducible intelligence evaluation
+  integrations/           Provider polling commands
+  data/                   Explicit historical complaint import
+  legacy/                 Historical optional-provider diagnostics
+  run_worker.py           Worker command; run as a module
+  setup_cloud.sh          Local setup
+  start_production.sh     Production service commands
+data/                     Bundled synthetic datasets and locality reference
+media/launch-film/        Finished 4K film, poster, captions and production notes
+docs/                     Product, operations, deployment guides and screenshots
 ```
 
 ## Deployment
 
-- **Current prototype:** deploy the Next.js frontend with the root [Netlify configuration](netlify.toml) and the backend/worker with the free [Render Blueprint](render.yaml). Follow [NETLIFY.md](NETLIFY.md) and [RENDER.md](RENDER.md). Free-host files are disposable.
-- **Durable deployment:** a combined frontend/API/worker [Dockerfile](Dockerfile) and [deployment runbook](DEPLOYMENT.md) are also included. Establish persistent private storage, HTTPS, account provisioning, backup/restore drills and operator acceptance on the target host.
+- **Current prototype:** deploy the Next.js frontend with the root [Netlify configuration](netlify.toml) and the backend/worker with the free [Render Blueprint](render.yaml). Follow [NETLIFY.md](docs/NETLIFY.md) and [RENDER.md](docs/RENDER.md). Free-host files are disposable.
+- **Durable deployment:** a combined frontend/API/worker [Dockerfile](Dockerfile) and [deployment runbook](docs/DEPLOYMENT.md) are also included. Establish persistent private storage, HTTPS, account provisioning, backup/restore drills and operator acceptance on the target host.
 
 The Netlify build uses the native Next.js runtime. This authenticated application is not a static export. Set the actual backend HTTPS origin before building, and trust the exact frontend origin on the backend.
 
@@ -260,20 +278,20 @@ The Netlify build uses the native Next.js runtime. This authenticated applicatio
 
 The connected complaint-to-verification workflow, scoped accounts, grounded retrieval, forecast comparison and operational tooling are implemented. Next priorities are representative municipal field evaluation, durable hosted operations, forecast uncertainty calibration, broader human-reviewed retrieval evaluation and organization-specific access/retention requirements.
 
-See the [product roadmap](PRODUCT_ROADMAP.md) for external launch gates and the [implementation report](IMPLEMENTATION_REPORT.md) for supporting evidence.
+See the [product roadmap](docs/PRODUCT_ROADMAP.md) for external launch gates and the [implementation report](docs/IMPLEMENTATION_REPORT.md) for supporting evidence.
 
 ## Documentation
 
 | Guide | Contents |
 | --- | --- |
-| [Authentication](AUTHENTICATION.md) | Roles, public sample accounts, municipality isolation and optional MFA |
-| [Dispatch](DISPATCH.md) | Acceptance, arrival, cancellation and observation handling |
-| [Operations](OPERATIONS.md) | Signed intake, worker retries, retrieval, forecasts and monitoring |
-| [Evaluation](EVALUATION.md) | Synthetic fixtures, model comparisons and interpretation limits |
-| [Deployment](DEPLOYMENT.md) | Production requirements, backups and recovery |
-| [Netlify](NETLIFY.md) / [Render](RENDER.md) | Frontend/backend deployment and free-host behavior |
-| [Implementation report](IMPLEMENTATION_REPORT.md) | Implemented work and verification record |
-| [Roadmap](PRODUCT_ROADMAP.md) | Remaining launch gates and future work |
+| [Authentication](docs/AUTHENTICATION.md) | Roles, public sample accounts, municipality isolation and optional MFA |
+| [Dispatch](docs/DISPATCH.md) | Acceptance, arrival, cancellation and observation handling |
+| [Operations](docs/OPERATIONS.md) | Signed intake, worker retries, retrieval, forecasts and monitoring |
+| [Evaluation](docs/EVALUATION.md) | Synthetic fixtures, model comparisons and interpretation limits |
+| [Deployment](docs/DEPLOYMENT.md) | Production requirements, backups and recovery |
+| [Netlify](docs/NETLIFY.md) / [Render](docs/RENDER.md) | Frontend/backend deployment and free-host behavior |
+| [Implementation report](docs/IMPLEMENTATION_REPORT.md) | Implemented work and verification record |
+| [Roadmap](docs/PRODUCT_ROADMAP.md) | Remaining launch gates and future work |
 
 ## Contributing and acknowledgements
 

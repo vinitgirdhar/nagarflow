@@ -14,7 +14,8 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${process.platform === "win32" ? '"..\\venv\\Scripts\\python.exe"' : "../venv/bin/python"} ../scripts/auth_browser_server.py`,
+      command: `${process.platform === "win32" ? '"venv\\Scripts\\python.exe"' : "venv/bin/python"} -m scripts.dev.auth_browser_server`,
+      cwd: "..",
       url: "http://127.0.0.1:5002/api/health",
       reuseExistingServer: false,
     },
