@@ -74,7 +74,7 @@ class ProductTest(unittest.TestCase):
         ingestion.process_one(self.path);self.assertEqual(self.sql('SELECT status FROM ingestion_events'),[('REVIEW',)])
         self.assertEqual(self.sql('SELECT zone,issue_type FROM complaints'),[('Unknown','General')])
     def test_request_ids_and_logs_do_not_contain_payloads_or_queries(self):
-        with self.assertLogs('app',level='INFO') as logs:
+        with self.assertLogs(m.app.logger.name,level='INFO') as logs:
             response=self.client.post('/api/knowledge/query?private=secret-query',json={'question':'secret citizen prose'})
         self.assertEqual(len(response.headers['X-Request-ID']),32)
         combined=' '.join(logs.output)

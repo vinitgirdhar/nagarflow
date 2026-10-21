@@ -126,7 +126,7 @@ class DispatchTest(unittest.TestCase):
     def test_transaction_rolls_back_if_any_write_fails(self):
         row=self.accepted()
         with sqlite3.connect(self.path) as conn:conn.execute("CREATE TRIGGER break_outcomes BEFORE INSERT ON prediction_outcomes BEGIN SELECT RAISE(ABORT,'test failure'); END")
-        with self.assertLogs('app',level='ERROR'):
+        with self.assertLogs(m.app.logger.name,level='ERROR'):
             response=self.post('arrive',{'dispatch_id':row['id'],'actual_demand':55})
         self.assertEqual(response.status_code,503)
         self.assertEqual(self.query('SELECT status FROM dispatches'),[('EN_ROUTE',)])
@@ -236,7 +236,7 @@ class DispatchTest(unittest.TestCase):
         for table in ['dispatch_requests','dispatch_events']:
             with self.subTest(table=table):
                 with sqlite3.connect(self.path) as conn:conn.execute(f"CREATE TRIGGER break_accept BEFORE INSERT ON {table} BEGIN SELECT RAISE(ABORT,'test failure'); END")
-                with self.assertLogs('app',level='ERROR'):
+                with self.assertLogs(m.app.logger.name,level='ERROR'):
                     response=self.post('accept',self.payload)
                 self.assertEqual(response.status_code,503)
                 self.assertEqual(self.query('SELECT count(*) FROM dispatches')[0][0],0)
