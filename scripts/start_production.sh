@@ -8,8 +8,8 @@ export NAGARFLOW_ENV=production
 : "${NAGARFLOW_DB_PATH:?Set the persistent default data database path}"
 : "${NAGARFLOW_TENANT_DATA_DIR:?Set the persistent tenant directory}"
 case "${1:-}" in
-  api) exec venv/bin/gunicorn --bind "${NAGARFLOW_BIND:-127.0.0.1:5000}" --workers 2 --timeout 60 app:app ;;
-  worker) exec venv/bin/python scripts/run_worker.py ;;
+  api) exec venv/bin/gunicorn --bind "${NAGARFLOW_BIND:-127.0.0.1:5000}" --workers 2 --timeout 60 backend.app:app ;;
+  worker) exec venv/bin/python -m scripts.run_worker ;;
   web)
     cd nagarflow-next
     test -f .next/standalone/server.js || { echo 'Build the frontend before starting it.' >&2; exit 1; }

@@ -12,17 +12,18 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: backend/requirements.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: nagarflow-next/package-lock.json
       - run: python -m venv venv
-      - run: venv/bin/python -m pip install -r requirements.txt
+      - run: venv/bin/python -m pip install -r backend/requirements.txt
       - run: npm ci
         working-directory: nagarflow-next
-      - run: venv/bin/python -m unittest discover -s tests
-      - run: venv/bin/python scripts/evaluate_intelligence.py
+      - run: venv/bin/python -m unittest discover -s backend/tests -t .
+      - run: venv/bin/python -m scripts.evaluation.evaluate_intelligence
       - run: npm run test:deployment
         working-directory: nagarflow-next
       - run: npm run test:auth
@@ -33,6 +34,19 @@ jobs:
         working-directory: nagarflow-next
       - run: npm run test:e2e
         working-directory: nagarflow-next
+      - name: Build backend deployment image
+        run: docker build -f Dockerfile.backend -t nagarflow-backend:ci .
+      - name: Smoke-test packaged backend startup
+        shell: bash
+        run: |
+          trap 'docker logs nagarflow-backend-ci; docker rm -f nagarflow-backend-ci' EXIT
+          docker run -d --name nagarflow-backend-ci -p 127.0.0.1:10000:10000 \
+            -e NAGARFLOW_TRUSTED_ORIGINS=https://nagarflow.example.test \
+            -e NAGARFLOW_DEMO_ENABLED=true \
+            -e NAGARFLOW_MFA_ENABLED=false \
+            -e NAGARFLOW_REQUIRE_ADMIN_MFA=false \
+            nagarflow-backend:ci
+          curl --fail --retry 20 --retry-all-errors --retry-delay 2 http://127.0.0.1:10000/api/health
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

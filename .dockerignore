@@ -23,7 +23,9 @@ env
 **/*.key
 backups
 uploads
-static/uploads
+backend/static/uploads
+backend/tests
+media/launch-film/work
 **/test-results
 **/playwright-report
 **/*.tsbuildinfo

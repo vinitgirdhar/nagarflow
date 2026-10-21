@@ -23,22 +23,21 @@ RUN apt-get update \
     && useradd --uid 10001 --user-group --create-home --shell /usr/sbin/nologin nagarflow
 COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
-COPY requirements.txt ./
+COPY backend/requirements.txt ./backend/requirements.txt
 RUN --mount=type=secret,id=proxy_bundle \
     if [ -s /run/secrets/proxy_bundle ]; then export PIP_CERT=/run/secrets/proxy_bundle; fi; \
-    python -m pip install --no-cache-dir -r requirements.txt
-COPY --chown=10001:10001 *.py ./
+    python -m pip install --no-cache-dir -r backend/requirements.txt
+COPY --chown=10001:10001 backend/ ./backend/
 COPY --chown=10001:10001 scripts/ ./scripts/
-COPY --chown=10001:10001 static/ ./static/
 COPY --from=frontend-build --chown=10001:10001 /build/.next/standalone/ ./web/
 COPY --from=frontend-build --chown=10001:10001 /build/.next/static/ ./web/.next/static/
 COPY --from=frontend-build --chown=10001:10001 /build/public/ ./web/public/
-RUN mkdir -p /app/static/uploads /var/data/nagarflow \
-    && chown 10001:10001 /app/static/uploads /var/data/nagarflow \
+RUN mkdir -p /app/backend/static/uploads /var/data/nagarflow \
+    && chown 10001:10001 /app/backend/static/uploads /var/data/nagarflow \
     && chmod 700 /var/data/nagarflow
 EXPOSE 10000
 # Entrypoint initializes the mounted directory, then drops to uid/gid 10001.
-ENTRYPOINT ["python", "scripts/render_service.py"]
+ENTRYPOINT ["python", "-m", "scripts.deployment.render_service"]
 CMD ["serve"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD python -c "import os,urllib.request; urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://127.0.0.1:'+os.environ.get('PORT','10000')+'/api/health',timeout=4).read()"
