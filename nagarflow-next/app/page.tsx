@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowUpRight, Layers3, Radio, Route, Search, ChartNoAxesCombined, Pause, Play, Check } from "lucide-react";
@@ -38,6 +38,17 @@ export default function Home() {
   const cityX = useSpring(0, { stiffness: 65, damping: 22 });
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const filmRef = useRef<HTMLVideoElement>(null);
+  const [filmStarted, setFilmStarted] = useState(false);
+  const [filmError, setFilmError] = useState(false);
+  async function playFilm() {
+    setFilmError(false);
+    try {
+      await filmRef.current?.play();
+    } catch {
+      setFilmError(true);
+    }
+  }
   const preview = previews[active];
   const reveal = { initial: reduced ? false as const : { opacity: 0, y: 12 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: .1 }, transition: { duration: .35 } };
 
@@ -59,6 +70,50 @@ export default function Home() {
         <h1 id="hero-heading"><span className={styles.titleWord}>City complaints.</span><br /><em className={styles.titleWord}>Clear action.</em></h1>
         <p className={styles.heroIntro}><strong>Complaints get lost between teams.</strong><br />Track reports, assign work and verify the result.</p>
         <Link href="/login" className={styles.primary} aria-label="Sign in to your workspace">Open your workspace <ArrowUpRight size={17} /></Link>
+      </div>
+    </section>
+
+    <section className={styles.productFilm} aria-labelledby="product-film-heading">
+      <div className={styles.filmHeading}>
+        <div>
+          <h2 id="product-film-heading">See NagarFlow in action.</h2>
+          <p>From complaint to verified completion.</p>
+        </div>
+        <span className={styles.filmDuration}>45 seconds</span>
+      </div>
+      <div className={styles.filmFrame}>
+      <video
+        ref={filmRef}
+        className={styles.filmPlayer}
+        aria-label="NagarFlow product film"
+        aria-describedby="product-film-caption"
+        controls={filmStarted}
+        onPlay={() => setFilmStarted(true)}
+        onError={() => setFilmError(true)}
+        playsInline
+        preload="none"
+        width={1920}
+        height={1080}
+        poster="/media/nagarflow-product-film.webp"
+      >
+        <source src="/media/nagarflow-product-film.mp4" type="video/mp4" />
+        <track
+          kind="captions"
+          src="/media/nagarflow-product-film.vtt"
+          srcLang="en"
+          label="English"
+        />
+        Your browser does not support embedded video.{" "}
+        <a href="/media/nagarflow-product-film.mp4">Watch the NagarFlow product film.</a>
+      </video>
+      {!filmStarted && <button type="button" className={styles.filmPlay} onClick={playFilm} aria-label="Play NagarFlow product film">
+        <span><Play size={24} fill="currentColor" aria-hidden="true" /> Watch the film</span>
+      </button>}
+      </div>
+      {filmError && <p className={styles.filmError} role="alert">The video could not play. Try again or use the “Open video” link below.</p>}
+      <div className={styles.filmCaption}>
+        <p id="product-film-caption">Product demonstration with sample data.</p>
+        <a href="/media/nagarflow-product-film.mp4">Open video <ArrowUpRight size={13} aria-hidden="true" /></a>
       </div>
     </section>
 

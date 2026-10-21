@@ -1,0 +1,37 @@
+{
+  "video": {
+    "codec_name": "h264",
+    "width": 3840,
+    "height": 2160,
+    "pix_fmt": "yuv420p",
+    "r_frame_rate": "30/1",
+    "nb_frames": "1350",
+    "duration": "45.000000"
+  },
+  "audio": {
+    "codec_name": "aac",
+    "sample_rate": "48000",
+    "channels": 2,
+    "duration": "45.000000"
+  },
+  "full_decode": "passed",
+  "poster_frame_mean_pixel_error": 0.2918,
+  "size_bytes": 13258000,
+  "sha256": "43d518e6d6ed71854e3d6ec7e846416c81c14917a8a371cb3052fa0527caae2e",
+  "visual_sample_times": [
+    0,
+    1.8,
+    6.9,
+    11.2,
+    15.6,
+    18.1,
+    20.5,
+    23.5,
+    26.5,
+    30.2,
+    33.5,
+    36.5,
+    39.2,
+    44.0
+  ]
+}
